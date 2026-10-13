@@ -76,8 +76,8 @@ Code review and security review found no outstanding issues at `e68a0b8`.
 The discovery flag defaults to false in release workflows. `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true` enables the shared footer and voting notice in production.
 Each destination still obeys its domain flag. `NEXT_PUBLIC_ENABLE_DAO` independently controls DAO access and the stYFI voting link.
 
-The accepted standalone build serves the local preview at `http://localhost:3318`. It uses deterministic mock data for design review.
-The preview uses `NEXT_PUBLIC_RUNTIME_MODE=preview`, `NEXT_PUBLIC_USE_MOCKS=true`, `NEXT_PUBLIC_E2E=true`, and `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true`.
+The accepted standalone build serves the local preview at `http://127.0.0.1:3318`. It uses deterministic mock data for design review.
+The preview uses `NEXT_PUBLIC_RUNTIME_MODE=development`, `NEXT_PUBLIC_USE_MOCKS=true`, `NEXT_PUBLIC_E2E=true`, and `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true`.
 
 No production deployment or remote push occurred.
 
