@@ -439,7 +439,7 @@ test("uses clean client-side paths on the guarded DAO beta host", async ({
     page.getByRole("heading", { name: "Create proposal", level: 1 })
   ).toBeVisible();
   expect(new URL(page.url()).pathname).toBe("/propose");
-  await expect(page.getByRole("link", { name: "Proposals" })).toHaveAttribute(
+  await expect(page.getByRole("navigation", { name: "Proposal hierarchy" }).getByRole("link", { name: "Proposals", exact: true })).toHaveAttribute(
     "href",
     "/"
   );
@@ -624,7 +624,7 @@ test("contains every DAO route at 390px", async ({ page }) => {
     await expect(readyState).toBeVisible();
     await expectNoDocumentOverflow(page);
     await expectMinimumHitArea(
-      page.getByRole("link", { name: route.linkName }).first()
+      page.getByRole("link", { name: route.linkName, exact: true }).first()
     );
   }
 });

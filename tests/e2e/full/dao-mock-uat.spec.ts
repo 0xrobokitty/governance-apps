@@ -292,7 +292,7 @@ test("makes the mobile menu a contained modal for every closure path", async ({
 
   await page.getByRole("button", { name: "Open navigation menu" }).click();
   await page.getByRole("button", { name: "Products" }).click();
-  await page.getByRole("link", { name: /stYFI/i }).click();
+  await page.getByRole("dialog", { name: "Navigation menu" }).getByRole("link", { name: /stYFI/i }).click();
   await expect(page).toHaveURL(/\/styfi$/);
   await expect(
     page.getByRole("button", { name: "Open navigation menu" })
