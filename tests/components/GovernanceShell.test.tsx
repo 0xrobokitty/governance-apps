@@ -15,12 +15,13 @@ beforeEach(() => {
 afterEach(() => vi.unstubAllEnvs());
 
 describe("governance discovery shell", () => {
-  it("provides local routes and real veYFI section anchors", () => {
+  it("provides local routes and one combined veYFI destination", () => {
     render(<GovernanceAppFooter />);
     const footer = screen.getByRole("contentinfo");
     expect(within(footer).getByRole("link", { name: /Voting & Proposals/ })).toHaveAttribute("href", "/dao");
-    expect(within(footer).getByRole("link", { name: /veYFI migration/ })).toHaveAttribute("href", "/veyfi#migration-card");
-    expect(within(footer).getByRole("link", { name: /Liquid Lockers/ })).toHaveAttribute("href", "/veyfi#llyfi-ledger");
+    expect(within(footer).getByRole("heading", { name: "Yearn DAO" })).toBeInTheDocument();
+    expect(within(footer).getAllByRole("link", { name: /veYFI/ })).toHaveLength(1);
+    expect(within(footer).getByRole("link", { name: /veYFI & Liquid Lockers/ })).toHaveAttribute("href", "/veyfi");
     expect(within(footer).getByRole("link", { name: /Stake YFI/ })).toHaveAttribute("aria-current", "location");
     expect(within(footer).getByRole("link", { name: /GitHub/ })).toHaveAttribute("href", "https://github.com/yearn/governance-apps");
   });
@@ -34,6 +35,23 @@ describe("governance discovery shell", () => {
     host.mockReturnValue(hostname);
     render(<GovernanceAppFooter />);
     expect(screen.getByRole("link", { name: /Voting & Proposals/ })).toHaveAttribute("href", href);
+  });
+
+  it.each([
+    ["localhost", "/styfi", "After stats"],
+    ["localhost", "/veyfi", "After stats"],
+    ["styfi.yearn.fi", "/", "After stats"],
+    ["veyfi.yearn.fi", "/", "After stats"],
+    ["localhost", "/teams", "Shell"],
+  ])("mounts only one notice in the right place for %s%s", (hostname, pathname, region) => {
+    host.mockReturnValue(hostname);
+    path.mockReturnValue(pathname);
+    render(<>
+      <section aria-label="Shell"><GovernanceAppNotice /></section>
+      <section aria-label="After stats"><GovernanceAppNotice placement="after-stats" /></section>
+    </>);
+    expect(screen.getAllByTestId("mounted-notice")).toHaveLength(1);
+    expect(within(screen.getByRole("region", { name: region })).getByTestId("mounted-notice")).toBeInTheDocument();
   });
 
   it("does not mount discovery on non-app routes", () => {
@@ -56,17 +74,17 @@ describe("governance discovery shell", () => {
   it("gates the production directory and notice, then filters unreleased destinations", () => {
     vi.stubEnv("NEXT_PUBLIC_RUNTIME_MODE", "production");
     vi.stubEnv("NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY", "false");
-    const view = render(<><GovernanceAppFooter /><GovernanceAppNotice /></>);
+    const view = render(<><GovernanceAppFooter /><GovernanceAppNotice placement="after-stats" /></>);
     expect(screen.queryByRole("contentinfo")).not.toBeInTheDocument();
     expect(screen.queryByTestId("mounted-notice")).not.toBeInTheDocument();
     vi.stubEnv("NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY", "true");
     for (const key of ["DAO", "TEAMS", "TREASURY", "YBC", "YETH"]) vi.stubEnv("NEXT_PUBLIC_ENABLE_" + key, "false");
-    view.rerender(<><GovernanceAppFooter /><GovernanceAppNotice /></>);
+    view.rerender(<><GovernanceAppFooter /><GovernanceAppNotice placement="after-stats" /></>);
     expect(screen.getByRole("contentinfo")).toBeInTheDocument();
     expect(screen.queryByRole("link", { name: /Voting & Proposals|Team Finances|Treasury|Builder|yETH/ })).not.toBeInTheDocument();
     expect(screen.queryByTestId("mounted-notice")).not.toBeInTheDocument();
     vi.stubEnv("NEXT_PUBLIC_ENABLE_DAO", "true");
-    view.rerender(<><GovernanceAppFooter /><GovernanceAppNotice /></>);
+    view.rerender(<><GovernanceAppFooter /><GovernanceAppNotice placement="after-stats" /></>);
     expect(screen.getByTestId("mounted-notice")).toBeInTheDocument();
   });
 });

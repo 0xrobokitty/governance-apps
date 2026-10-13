@@ -35,8 +35,10 @@ export function GovernanceAppFooter() {
   return <AppDirectoryFooter {...copy} groups={groups} />;
 }
 
-export function GovernanceAppNotice() {
+export function GovernanceAppNotice({ placement = "shell" }: { placement?: "shell" | "after-stats" }) {
   const { app, hostname, visible } = useGovernanceShellRoute();
   if (!visible || app === "dao" || !isDaoEnabled()) return null;
+  const afterStats = app === "styfi" || app === "veyfi";
+  if (afterStats !== (placement === "after-stats")) return null;
   return <GovernanceVotingNotice href={resolveGovernanceAppPathHref("dao", "/", hostname)} />;
 }

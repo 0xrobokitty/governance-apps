@@ -177,11 +177,12 @@ The frontend requires a new `getGlobalStats()` method from the VeyfiClient to po
 ## Shared app discovery
 
 The shared footer groups links to staking, governance, and contributor apps.
+Its heading is “Yearn DAO”. A single “veYFI & Liquid Lockers” link opens `/veyfi` to manage both types of position.
 It includes the public governance-apps GitHub repository.
 Links stay within the current local, preview, or production environment.
 Destination links respect each app's release flag.
 
-The shared voting notice appears below the header during an open DAO decision vote.
+The shared voting notice appears immediately below the Migrated veYFI, Max Boost, and LLYFI Staked stats bar during an open DAO decision vote.
 It shows the proposal count and the earliest closing time.
 A dismissal applies to that deployment and voting period on the current browser origin.
 A later voting period can show the notice again.

@@ -204,7 +204,7 @@ Always visible and owns all write interactions.
 
 - **Permanent access:** The stYFI header links to `Voting & Proposals` after `Resources` on desktop and below `Tools` on mobile.
 - **Destination:** The link opens the DAO app in a new tab. It respects the current host environment and the DAO release flag.
-- **Active notice:** The shared notice appears below the header during an open DAO decision vote. stYFI no longer requests Snapshot proposals.
+- **Active notice:** The shared notice appears immediately below the Total Supply, Staked, and APR stats bar during an open DAO decision vote. stYFI no longer requests Snapshot proposals.
 - **Closing time:** The notice shows the proposal count and the earliest closing time. It disappears at the deadline without a page reload.
 - **Dismissal:** The browser remembers each dismissed deployment and voting period. A later period can show the notice again.
 - **Unavailable data:** Loading, feed errors, stale observations, and invalid data do not produce an active notice.
@@ -212,6 +212,7 @@ Always visible and owns all write interactions.
 - **Scope:** Proposal discovery and links only. Eligibility checks and voting remain in the DAO app.
 
 The shared app footer groups staking, governance, and contributor destinations.
+Its heading is “Yearn DAO”. A single “veYFI & Liquid Lockers” link opens `/veyfi` to manage both types of position.
 Its links preserve the current host environment and respect app release flags.
 It also links to the public governance-apps GitHub repository.
 

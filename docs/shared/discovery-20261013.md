@@ -14,8 +14,8 @@ The global Yearn menu keeps its existing contents. The stYFI-specific voting lin
 - Links preserve local paths, shared hosts, preproduction hosts, and production hosts.
 - The footer links to the public `yearn/governance-apps` GitHub repository.
 - Team Finances links to `/teams`. The footer does not invent a second Teams app.
-- veYFI migration and liquid lockers link to their existing page sections.
-- The notice appears on non-DAO app routes only.
+- One “veYFI & Liquid Lockers” footer link opens `/veyfi` to manage both types of position.
+- The notice appears on non-DAO app routes only. On stYFI and veYFI, it sits immediately below the stats bar.
 - The notice requires a current decision vote in the validated DAO feed.
 - Empty, loading, stale, and failed feed states do not show the notice.
 - Retracted, flagged, and vetoed proposals do not trigger the notice.
@@ -27,6 +27,10 @@ The global Yearn menu keeps its existing contents. The stYFI-specific voting lin
 - Desktop, mobile, light mode, dark mode, and keyboard controls remain usable.
 
 ## Review decisions
+
+The footer heading is “Yearn DAO”. The combined “veYFI & Liquid Lockers” entry describes both positions and opens the full veYFI page.
+
+stYFI and veYFI mount the shared notice after their stats bars. Other apps use the shared header placement. A placement prop keeps one notice mounted, with one shared feed and dismissal implementation.
 
 The notice advertises decision votes. Some vetoed proposals still accept votes for participation credit. These proposals remain accessible in the DAO app.
 
@@ -81,7 +85,7 @@ The preview uses `NEXT_PUBLIC_RUNTIME_MODE=development`, `NEXT_PUBLIC_USE_MOCKS=
 
 No production deployment or remote push occurred.
 
-## Validation
+## Initial validation
 
 | Check | Result and scope |
 | --- | --- |
@@ -105,3 +109,24 @@ The third failure came from the DAO beta-host test on plain HTTP. Production-sty
 The isolated guard test passed on the HTTP development server. Security review confirmed the transport mismatch. The CSP policy was not relaxed.
 
 Earlier development-server runs also had cold-compilation timeouts and interrupted navigation during hot reload. The stable build checks replaced those results.
+
+## Footer and notice placement refinement
+
+The footer heading is now “Yearn DAO”. A single “veYFI & Liquid Lockers” link replaces the two section links.
+Its description reads “Manage your veYFI and liquid locker positions”, and it opens the full veYFI page.
+
+On stYFI and veYFI, the shared voting notice sits directly below the stats bar.
+A placement prop selects one mounted notice. Feed reads, release gates, voting-period checks, and dismissal behavior remain shared.
+
+Review found no outstanding issues. Validation for this refinement passed:
+
+| Check | Result |
+| --- | --- |
+| Typecheck and lint | Passed. |
+| Unit and component tests | 191 files and 2,139 tests passed. |
+| Built preview | Passed; refreshed at `http://127.0.0.1:3318/styfi` with the same mock configuration. |
+| Focused smoke tests | 17 passed: discovery, both banner placements, dismissal, stYFI governance access, and stYFI/veYFI flows. |
+| Full end-to-end suite | 46 passed. |
+| Visual checks | Eight views: both affected apps, desktop/mobile, and light/dark. One banner directly below the stats bar, one combined footer link, no JavaScript errors or horizontal overflow. |
+
+The preview serves the refined application code. No production deployment or remote push occurred.

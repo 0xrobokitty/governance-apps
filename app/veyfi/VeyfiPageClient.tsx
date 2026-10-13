@@ -1,5 +1,6 @@
 "use client";
 
+import { GovernanceAppNotice } from "../GovernanceShell";
 import { useEffect } from "react";
 import { VeyfiStatsBar } from "./components/VeyfiStatsBar";
 import { VeyfiCockpit } from "./components/VeyfiCockpit";
@@ -47,6 +48,7 @@ export function VeyfiPageClient({ hostname }: VeyfiPageClientProps) {
   return (
     <div className="space-y-0">
       <VeyfiStatsBar />
+      <GovernanceAppNotice placement="after-stats" />
 
       <main className="container mx-auto px-4 md:px-6 pt-8 space-y-8 pb-24">
         <CrossAppNudge nudge={nudge} onDismiss={dismiss} />

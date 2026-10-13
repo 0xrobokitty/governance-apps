@@ -29,6 +29,7 @@ export function VeyfiStatsBar() {
 
   return (
     <StatsBar
+      data-testid="veyfi-stats"
       items={[
         { label: copy.page.stats.migrated.label, value: migratedLabel },
         { label: copy.page.stats.boost.label, value: boostLabel },

@@ -1,5 +1,6 @@
 "use client";
 
+import { GovernanceAppNotice } from "../GovernanceShell";
 import { useConnectModal } from "@rainbow-me/rainbowkit";
 import { useIdentity } from "@/state/identity";
 import { StatsBar } from "@/components/ui/StatsBar";
@@ -237,6 +238,7 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
   return (
     <div className="space-y-0">
       <StatsBar
+        data-testid="styfi-stats"
         items={[
           {
             label: copy.page.stats.totalSupply.label,
@@ -252,6 +254,7 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
           },
         ]}
       />
+      <GovernanceAppNotice placement="after-stats" />
 
       <main className="container mx-auto px-4 md:px-6 pt-8 space-y-6 pb-24">
         <CrossAppNudge nudge={nudge} onDismiss={dismiss} />

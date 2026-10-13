@@ -34,9 +34,9 @@ export const homeCopy = {
 
 export const governanceShellCopy = {
   directory: {
-    title: "Yearn DAO apps",
+    title: "Yearn DAO",
     description: "Participate in governance. Put your YFI to work. Build Yearn together.",
-    navigationLabel: "Explore Yearn DAO apps",
+    navigationLabel: "Explore Yearn DAO",
     currentApp: "Current app",
     sourceLabel: "View source on GitHub",
     sourceHref: "https://github.com/yearn/governance-apps",
@@ -46,8 +46,7 @@ export const governanceShellCopy = {
         title: "Stake & lock",
         links: [
           { app: "styfi", path: "/", label: "Stake YFI", description: "Stake with stYFI or stYFIx" },
-          { app: "veyfi", path: "/#migration-card", label: "veYFI migration", description: "Move your veYFI position" },
-          { app: "veyfi", path: "/#llyfi-ledger", label: "Liquid Lockers", description: "Manage liquid YFI positions" },
+          { app: "veyfi", path: "/", label: "veYFI & Liquid Lockers", description: "Manage your veYFI and liquid locker positions" },
         ],
       },
       {
