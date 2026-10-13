@@ -5,6 +5,7 @@ import ts from "typescript";
 import { DAO_PUBLICATION_DEFAULT_LIMITS } from "@/lib/server/dao-publication-policy";
 
 const expectedRuntimeEnv: Record<string, string> = {
+  NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY: "${{ vars.NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY || 'false' }}",
   NODE_ENV: "production",
   NEXT_PUBLIC_RUNTIME_MODE: "production",
   NEXT_PUBLIC_USE_MOCKS: '"false"',
