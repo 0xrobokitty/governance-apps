@@ -18,7 +18,8 @@ import { TypeMarkYearn } from "@/components/icons/TypeMarkYearn";
 import { HeaderNavMenu } from "@/components/header/HeaderNavMenu";
 import { MobileNavMenu } from "@/components/header/MobileNavMenu";
 import { useHostname } from "@/lib/hooks/useHostname";
-import { STYFI_SNAPSHOT_SPACE_URL } from "@/lib/clients/styfi/snapshot";
+import { resolveGovernanceAppHref } from "@/lib/governance-links";
+import { isDaoEnabled } from "@/lib/runtime/features";
 import { styfiCopy } from "@/app/styfi/messages";
 import { useDaoMockRuntime } from "@/lib/hooks/useDao";
 
@@ -63,10 +64,10 @@ export function Header() {
     : { label: null, path: "/" };
   const showEpochPill =
     shouldShowEpochPill && (!!publicClient || !isGlobalLoading);
-  const snapshotVotingLink =
-    appKey === "styfi"
+  const governanceLink =
+    appKey === "styfi" && isDaoEnabled()
       ? {
-          href: STYFI_SNAPSHOT_SPACE_URL,
+          href: resolveGovernanceAppHref("dao", hostname),
           label: styfiCopy.governance.headerLabel,
         }
       : undefined;
@@ -90,7 +91,7 @@ export function Header() {
             ) : null}
             <div className="hidden h-6 w-px bg-border md:block" />
             <div className="hidden md:block">
-              <HeaderNavMenu snapshotVotingLink={snapshotVotingLink} />
+              <HeaderNavMenu governanceLink={governanceLink} />
             </div>
           </div>
 
@@ -126,7 +127,7 @@ export function Header() {
         onClose={() => setIsMobileMenuOpen(false)}
         returnFocusRef={mobileMenuTriggerRef}
         e2eWalletPresentation={e2eWalletPresentation}
-        snapshotVotingLink={snapshotVotingLink}
+        governanceLink={governanceLink}
       />
     </>
   );

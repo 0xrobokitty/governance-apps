@@ -335,7 +335,7 @@ These stories explicitly **not** part of this domain:
 - veYFI migration
 - LLYFI flows
 - Redemption caps
-- In-app governance voting (external Snapshot proposal discovery and linking are in scope)
+- In-app governance voting (shared DAO proposal discovery and linking are in scope)
 - Voting power decay visuals
 - YBC-specific behaviour
 - Historical metrics / analytics

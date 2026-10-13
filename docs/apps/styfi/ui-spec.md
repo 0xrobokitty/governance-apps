@@ -40,9 +40,9 @@ It specifically addresses:
 
 ## 3. Page Structure
 
-1. **Global Header** (standard Yearn header) with a Styfi-only **Snapshot Voting** external link on desktop and in the mobile navigation.
+1. **Global Header** (standard Yearn header) with a stYFI-only **Voting & Proposals** link to the DAO app on desktop and mobile.
 2. **Protocol Stats Bar** (Total Supply, Staked, APR). Show **"Epoch 1 APR"** when current epoch == 0 from the canonical clock. **Staked** should use `styfi.staked` (excludes cooldown balances; `styfi.unstaking` is the cooldown amount).
-3. **Active Snapshot Proposal Banner** when one or more votes are open.
+3. **Shared DAO Voting Notice** below the header when a decision vote is open.
 4. **AccountSummary** (Hero for new users, positions list for returning users)
 5. **Cockpit** (StakeManageCard + Rewards)
 6. **Contracts Footer** (`<details>` disclosure with Etherscan links for YFI, stYFI, stYFIx, Reward Claimer, and reward token)
@@ -200,13 +200,21 @@ Always visible and owns all write interactions.
 
 ---
 
-## 11. Snapshot Governance Discovery
+## 11. DAO Governance Discovery
 
-- **Permanent access:** Show `Snapshot Voting` as a direct external link after the desktop `Resources` navigation item and at the bottom of the mobile navigation, below the `Tools` section. The link always opens the `styfi.eth` Snapshot space in a new tab.
-- **Active proposal query:** Query Snapshot's public GraphQL API for active proposals in `styfi.eth`. Request only proposal ID, title, end timestamp, and state; do not add the Snapshot SDK.
-- **Active banner:** When exactly one proposal is active, show the shared brand banner above `AccountSummary`, link directly to the proposal, and display `Voting open`, the proposal title, its UTC closing time, and `Review & vote`.
-- **Multiple proposals:** Show the number of active proposals, the earliest UTC closing time, and link to the Snapshot space.
-- **Expiry:** Treat a proposal as inactive locally once its end timestamp passes, even if cached API data still reports it as active.
-- **Failure behavior:** Loading, API failure, rate limiting, or malformed data must not block the Styfi page. Do not show an inactive-state page banner; the permanent header link remains available.
-- **Priority:** While an active proposal banner is visible, suppress the cross-app nudge to avoid stacked calls to action. If the Snapshot request completes without an active proposal or fails, the cross-app nudge may render normally.
-- **Scope:** Proposal discovery and outbound linking only. Eligibility checks, voting power, vote totals, embedded voting, and proposal writes remain outside the Styfi app.
+- **Permanent access:** The stYFI header links to `Voting & Proposals` after `Resources` on desktop and below `Tools` on mobile.
+- **Destination:** The link opens the DAO app in a new tab. It respects the current host environment and the DAO release flag.
+- **Active notice:** The shared notice appears below the header during an open DAO decision vote. stYFI no longer requests Snapshot proposals.
+- **Closing time:** The notice shows the proposal count and the earliest closing time. It disappears at the deadline without a page reload.
+- **Dismissal:** The browser remembers each dismissed deployment and voting period. A later period can show the notice again.
+- **Unavailable data:** Loading, feed errors, stale observations, and invalid data do not produce an active notice.
+- **Existing nudges:** The stYFI cross-app nudge operates independently of the shared voting notice.
+- **Scope:** Proposal discovery and links only. Eligibility checks and voting remain in the DAO app.
+
+The shared app footer groups staking, governance, and contributor destinations.
+Its links preserve the current host environment and respect app release flags.
+It also links to the public governance-apps GitHub repository.
+
+In production, the footer and notice require `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true`.
+The header correction does not depend on that discovery flag.
+See [shared discovery delivery notes](../../shared/discovery-20261013.md) for rollout details.

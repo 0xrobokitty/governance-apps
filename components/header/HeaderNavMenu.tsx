@@ -75,14 +75,14 @@ function NavTile({
 }
 
 type HeaderNavMenuProps = {
-  snapshotVotingLink?: {
+  governanceLink?: {
     href: string;
     label: string;
   };
 };
 
 export function HeaderNavMenu({
-  snapshotVotingLink,
+  governanceLink,
 }: HeaderNavMenuProps): ReactElement {
   const [activeMenu, setActiveMenu] = useState<TMenuKey | null>(null);
   const [pinnedMenu, setPinnedMenu] = useState<TMenuKey | null>(null);
@@ -247,15 +247,15 @@ export function HeaderNavMenu({
         </DropdownPanel>
       </div>
 
-      {snapshotVotingLink ? (
+      {governanceLink ? (
         <Link
-          href={snapshotVotingLink.href}
+          href={governanceLink.href}
           target="_blank"
           rel="noopener noreferrer"
           className={cn("group min-h-10", navTriggerClass(false))}
-          aria-label={`${snapshotVotingLink.label} (opens in a new tab)`}
+          aria-label={`${governanceLink.label} (opens in a new tab)`}
         >
-          <span>{snapshotVotingLink.label}</span>
+          <span>{governanceLink.label}</span>
           <IconLinkOut
             className="size-3 text-text-tertiary transition-colors group-hover:text-text-primary"
             aria-hidden

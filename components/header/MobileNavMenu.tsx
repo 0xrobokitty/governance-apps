@@ -55,7 +55,7 @@ type MobileNavMenuProps = {
   onClose: () => void;
   returnFocusRef: RefObject<HTMLButtonElement | null>;
   e2eWalletPresentation?: E2EWalletPresentation;
-  snapshotVotingLink?: {
+  governanceLink?: {
     href: string;
     label: string;
   };
@@ -86,7 +86,7 @@ export function MobileNavMenu({
   isOpen,
   onClose,
   returnFocusRef,
-  snapshotVotingLink,
+  governanceLink,
 }: MobileNavMenuProps): ReactElement | null {
   const pathname = usePathname();
   const { theme, toggleTheme } = useTheme();
@@ -313,17 +313,17 @@ export function MobileNavMenu({
                 </div>
               );
             })}
-            {snapshotVotingLink ? (
+            {governanceLink ? (
               <div onClick={handleClose}>
                 <Link
-                  href={snapshotVotingLink.href}
+                  href={governanceLink.href}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={LIST_BUTTON_CLASS}
-                  aria-label={`${snapshotVotingLink.label} (opens in a new tab)`}
+                  aria-label={`${governanceLink.label} (opens in a new tab)`}
                 >
                   <span className="min-w-0 flex-1 truncate">
-                    {snapshotVotingLink.label}
+                    {governanceLink.label}
                   </span>
                   <IconLinkOut
                     className="size-4 shrink-0 text-text-tertiary"

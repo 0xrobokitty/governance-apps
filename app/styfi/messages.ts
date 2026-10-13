@@ -56,15 +56,7 @@ export const styfiCopy = {
     },
   },
   governance: {
-    headerLabel: "Snapshot Voting",
-    activeLabel: "Voting open",
-    singleBody: "Voting is open on Snapshot.",
-    multipleTitle: (count: number) =>
-      `${count} governance proposals are open for voting`,
-    multipleBody: "Multiple votes are open on Snapshot.",
-    singleClosesLabel: "Vote closes",
-    multipleClosesLabel: "Next vote closes",
-    ctaLabel: "Review & vote",
+    headerLabel: "Voting & Proposals",
   },
   hero: {
     kicker: "Choose your path",
