@@ -6,6 +6,7 @@ import { ProtocolProvider } from "@/state/protocol";
 import { IdentityProvider } from "@/state/identity";
 import { Toaster } from "@/components/ui/Toast";
 import { Header } from "@/components/Header";
+import { GovernanceAppFooter, GovernanceAppNotice } from "./GovernanceShell";
 
 export default function RootLayout({
   children,
@@ -28,7 +29,9 @@ export default function RootLayout({
             <IdentityProvider>
               <div className="flex min-h-screen flex-col bg-app text-text-primary font-sans">
                 <Header />
+                <GovernanceAppNotice />
                 <main className="flex-1">{children}</main>
+                <GovernanceAppFooter />
               </div>
               <Toaster />
             </IdentityProvider>

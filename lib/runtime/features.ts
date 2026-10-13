@@ -11,6 +11,8 @@ function getPublicFeatureEnv(): FeatureEnv {
     NEXT_PUBLIC_RUNTIME_MODE: process.env.NEXT_PUBLIC_RUNTIME_MODE,
     NEXT_PUBLIC_USE_MOCKS: process.env.NEXT_PUBLIC_USE_MOCKS,
     NEXT_PUBLIC_ENABLE_DAO: process.env.NEXT_PUBLIC_ENABLE_DAO,
+    NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY:
+      process.env.NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY,
     NEXT_PUBLIC_ENABLE_TREASURY: process.env.NEXT_PUBLIC_ENABLE_TREASURY,
     NEXT_PUBLIC_ENABLE_DAO_REVIEW_CONTROLS:
       process.env.NEXT_PUBLIC_ENABLE_DAO_REVIEW_CONTROLS,
@@ -92,4 +94,9 @@ export function isTreasuryEnabled(env: FeatureEnv = getPublicFeatureEnv()) {
 /** Mock data requires an explicit selection outside production. */
 export function isTreasuryMockRuntimeEnabled(env: FeatureEnv = getPublicFeatureEnv()) {
   return isTreasuryEnabled(env) && !isProductionRuntime(env) && isEnabled(env.NEXT_PUBLIC_USE_MOCKS);
+}
+
+/** Shared app directory and voting notice are staged with one production gate. */
+export function isGovernanceDiscoveryEnabled(env: FeatureEnv = getPublicFeatureEnv()) {
+  return !isProductionRuntime(env) || isEnabled(env.NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY);
 }

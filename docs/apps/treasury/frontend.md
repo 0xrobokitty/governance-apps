@@ -116,3 +116,20 @@ For an existing live endpoint, update the consumer before the producer emits thi
 Run `npm run test:e2e:treasury-rollout` for the enabled build. Run `npm run test:e2e:treasury-rollout -- --disabled` for the disabled build. Each command copies tracked source and locked dependencies to temporary storage, without local environment files. It builds with explicit fixture inputs and tests the shared path and both recognized treasury hostnames. The enabled browser receives a live-shaped fixture through its same-origin feed request. The real endpoint separately checks missing runtime configuration and disabled-route responses. These checks do not contact R2 or prove deployed configuration.
 
 The deployment workflows run typecheck, lint, unit tests, production environment validation, a fresh OpenNext build, and the Worker size check. Browser rollout checks remain an explicit release gate. Preserve the existing application flags, runtime values, and bindings. No treasury DNS record or Worker custom domain is created by this package.
+
+## Shared app discovery
+
+The shared footer groups links to staking, governance, and contributor apps.
+It includes the public governance-apps GitHub repository.
+Links stay within the current local, preview, or production environment.
+Destination links respect each app's release flag.
+
+The shared voting notice appears below the header during an open DAO decision vote.
+It shows the proposal count and the earliest closing time.
+A dismissal applies to that deployment and voting period on the current browser origin.
+A later voting period can show the notice again.
+The notice stays hidden during loading, feed errors, stale data, and closed voting windows.
+
+Both features require `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true` in production.
+Development and preview enable them by default.
+See [shared discovery delivery notes](../../shared/discovery-20261013.md) for validation and rollout details.

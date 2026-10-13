@@ -292,3 +292,20 @@ Avoid:
 - implying instant full weight for new stake
 - implying expired proposals can be revived
 - implying YBC has a fully generic arbitrary-execution UI in scope
+
+## Shared app discovery
+
+The shared footer groups links to staking, governance, and contributor apps.
+It includes the public governance-apps GitHub repository.
+Links stay within the current local, preview, or production environment.
+Destination links respect each app's release flag.
+
+The shared voting notice appears below the header during an open DAO decision vote.
+It shows the proposal count and the earliest closing time.
+A dismissal applies to that deployment and voting period on the current browser origin.
+A later voting period can show the notice again.
+The notice stays hidden during loading, feed errors, stale data, and closed voting windows.
+
+Both features require `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true` in production.
+Development and preview enable them by default.
+See [shared discovery delivery notes](../../shared/discovery-20261013.md) for validation and rollout details.

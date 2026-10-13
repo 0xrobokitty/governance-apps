@@ -631,3 +631,28 @@ Reviewed production actions require current eligibility and exact-call simulatio
 ## 16. V2 review evidence
 
 Review phone 390×844, tablet 768×1024, desktop 1280×900 and short desktop 1280×600. Check native keyboard links/disclosures/retry, screen-reader labels, raw byte wrapping, content failures and signal completion. Saved consumer response route tests do not count as producer interoperability evidence.
+
+## Discovery across DAO apps
+
+The shared footer links to other released governance apps and the public source repository.
+It preserves the current host environment.
+DAO routes include the footer but exclude the shared voting notice.
+
+Other app routes can show a notice for current DAO decision votes.
+The notice uses the validated DAO feed and its trusted deployment configuration.
+It includes trusted older deployments with open votes.
+It excludes vetoed participation votes, flagged proposals, retracted proposals, and closed voting windows.
+
+Both the publication time and canonical block time must be within the existing five-minute freshness limit.
+Future timestamps beyond the existing one-minute allowance also hide the notice.
+Feed errors hide retained data from this promotional notice.
+The DAO app keeps its existing detailed stale-data behavior.
+
+Each dismissal includes the runtime, chain, Voting address, and voting window.
+The browser stores at most 64 period identities per origin.
+If storage writes fail, the notice still closes for the browser session.
+Separate subdomains retain separate dismissal state.
+
+In production, discovery requires `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true` and the existing domain release flags.
+No wallet connection or transaction is required for the notice.
+See [shared discovery delivery notes](../../shared/discovery-20261013.md) for validation and rollout details.

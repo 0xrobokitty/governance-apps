@@ -21,7 +21,7 @@ export function LlyfiTokenTable() {
 
   if (!isGlobalDataReady || tokens.length === 0) {
     return (
-      <div id="llyfi-ledger" className="space-y-4">
+      <div id="llyfi-ledger" className="scroll-mt-24 space-y-4">
         <h3 className="text-xl font-bold text-neutral-900 px-1">
           {copy.manage.title}
         </h3>
@@ -72,7 +72,7 @@ export function LlyfiTokenTable() {
   }
 
   return (
-    <div id="llyfi-ledger" className="space-y-4">
+    <div id="llyfi-ledger" className="scroll-mt-24 space-y-4">
       <h3 className="text-xl font-bold text-neutral-900 px-1">
         {copy.manage.title}
       </h3>

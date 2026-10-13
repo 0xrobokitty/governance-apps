@@ -99,7 +99,7 @@ export function MigrationCard() {
     return (
       <Card
         id="migration-card"
-        className="bg-neutral-900 text-neutral-0 border-neutral-700 overflow-hidden relative dark:bg-surface dark:text-text-primary dark:border-border"
+        className="scroll-mt-24 bg-neutral-900 text-neutral-0 border-neutral-700 overflow-hidden relative dark:bg-surface dark:text-text-primary dark:border-border"
       >
         {/* Ambient glow effect */}
         <div className="absolute top-0 right-0 w-64 h-64 bg-disco-900/20 blur-3xl rounded-full -translate-y-1/2 translate-x-1/3 pointer-events-none" />
@@ -151,7 +151,7 @@ export function MigrationCard() {
     return (
       <Card
         id="migration-card"
-        className="border-disco-200 bg-disco-50/50 dark:bg-surface dark:border-disco-700/60"
+        className="scroll-mt-24 border-disco-200 bg-disco-50/50 dark:bg-surface dark:border-disco-700/60"
       >
         <div className="flex flex-col md:flex-row items-stretch gap-8">
           {/* Left: Info */}

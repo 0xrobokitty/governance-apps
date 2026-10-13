@@ -1,6 +1,7 @@
 import { describe, expect, it } from "vitest";
 import {
   isDaoEnabled,
+  isGovernanceDiscoveryEnabled,
   isDaoMockRuntimeEnabled,
   isDaoReviewControlsEnabled,
   isDebugUiEnabled,
@@ -126,5 +127,14 @@ describe("DAO client selection", () => {
       expect(isDaoMockRuntimeEnabled(env)).toBe(mode !== "production" && flag === "true");
       expect(isDaoEnabled(env)).toBe(true);
     }
+  });
+});
+
+describe("governance discovery rollout", () => {
+  it("requires an explicit production opt-in", () => {
+    expect(isGovernanceDiscoveryEnabled({ NEXT_PUBLIC_RUNTIME_MODE: "production" })).toBe(false);
+    expect(isGovernanceDiscoveryEnabled({ NEXT_PUBLIC_RUNTIME_MODE: "production", NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY: "true" })).toBe(true);
+    expect(isGovernanceDiscoveryEnabled({ NEXT_PUBLIC_RUNTIME_MODE: "development" })).toBe(true);
+    expect(isGovernanceDiscoveryEnabled({ NEXT_PUBLIC_RUNTIME_MODE: "preview" })).toBe(true);
   });
 });
