@@ -4,6 +4,9 @@ import { YethPageClient } from "./YethPageClient";
 import { createGovernanceAppMetadata } from "@/lib/runtime/discoverability";
 import { isYethEnabled } from "@/lib/runtime/features";
 
+// Per-request CSP nonces require fresh HTML, including on dedicated app hosts.
+export const dynamic = "force-dynamic";
+
 export const viewport: Viewport = {
   themeColor: "#000000",
 };

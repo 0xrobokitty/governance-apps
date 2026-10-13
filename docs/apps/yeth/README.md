@@ -45,3 +45,9 @@ The notice stays hidden during loading, feed errors, stale data, and closed voti
 Both features require `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true` in production.
 Development and preview enable them by default.
 See [shared discovery delivery notes](../../shared/discovery-20261013.md) for validation and rollout details.
+
+### Rendering and script security
+
+The app route renders for each request so its HTML uses the current CSP nonce.
+This prevents cached build output from blocking hydration on hosts with strict script policies.
+The root layout retains its existing rendering mode.

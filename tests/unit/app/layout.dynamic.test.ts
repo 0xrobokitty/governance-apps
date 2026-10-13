@@ -21,3 +21,13 @@ describe("root layout rendering mode", () => {
     expect(source).toContain('crossOrigin="use-credentials"');
   });
 });
+
+describe("governance routes with per-request CSP nonces", () => {
+  it.each(["yeth", "teams"])("does not prerender the %s interactive app shell", (app) => {
+    const source = readFileSync(path.join(process.cwd(), "app", app, "page.tsx"), "utf8");
+
+    // Static HTML cannot carry middleware's nonce for the incoming request.
+    // Without this boundary, the browser blocks Next's inline hydration scripts.
+    expect(source).toContain('export const dynamic = "force-dynamic";');
+  });
+});
