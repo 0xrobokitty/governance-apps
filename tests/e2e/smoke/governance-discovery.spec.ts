@@ -39,3 +39,31 @@ test("remembers a voting-period dismissal across app navigation and reload", asy
   await expect(page.getByTestId("governance-app-footer")).toBeVisible();
   await expect(page.getByTestId("governance-voting-notice")).toHaveCount(0);
 });
+
+test("keeps the app directory readable at 200% text scaling", async ({ page }) => {
+  test.skip(DISABLED_PRODUCTION);
+  await page.setViewportSize({ width: 390, height: 844 });
+  await page.goto("/dao");
+  await page.addStyleTag({ content: "html { font-size: 200%; }" });
+  const footer = page.getByTestId("governance-app-footer");
+  await expect(footer).toBeVisible();
+
+  // Measure text itself: overflowing glyphs can extend beyond a grid item's box.
+  const layout = await footer.evaluate((element) => {
+    const walker = document.createTreeWalker(element, NodeFilter.SHOW_TEXT);
+    let rightmostText = 0;
+    while (walker.nextNode()) {
+      if (!walker.currentNode.textContent?.trim()) continue;
+      const range = document.createRange();
+      range.selectNode(walker.currentNode);
+      rightmostText = Math.max(rightmostText, range.getBoundingClientRect().right);
+    }
+    return {
+      rightmostText,
+      documentWidth: document.documentElement.scrollWidth,
+      viewportWidth: window.innerWidth,
+    };
+  });
+  expect(layout.rightmostText).toBeLessThanOrEqual(layout.viewportWidth);
+  expect(layout.documentWidth).toBeLessThanOrEqual(layout.viewportWidth);
+});

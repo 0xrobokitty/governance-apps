@@ -28,7 +28,7 @@ export function AppDirectoryFooter({ title, description, navigationLabel, curren
             <h2 className="text-balance text-xl font-semibold">{title}</h2>
             <p className="mt-3 text-pretty text-sm leading-6 text-text-secondary">{description}</p>
           </div>
-          <nav aria-label={navigationLabel} className="grid grid-cols-2 gap-x-6 gap-y-7 sm:grid-cols-3 sm:gap-x-8">
+          <nav aria-label={navigationLabel} className="grid grid-cols-[repeat(auto-fit,minmax(min(100%,9rem),1fr))] gap-x-6 gap-y-7 sm:gap-x-8">
             {groups.map((group) => (
               <div key={group.title}>
                 <h3 className="mb-3 text-xs font-semibold uppercase tracking-wider text-text-secondary">{group.title}</h3>
