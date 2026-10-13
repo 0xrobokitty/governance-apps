@@ -36,7 +36,7 @@ export function AppDirectoryFooter({ title, description, navigationLabel, curren
                   {group.links.map((link) => (
                     <li key={link.href}>
                       <a href={link.href} aria-current={link.current ? "location" : undefined} className={`group flex min-h-10 flex-col justify-center py-1 text-sm ${linkClass}`}>
-                        <span className="flex items-center gap-2 font-medium transition-colors group-hover:text-yearn-blue motion-reduce:transition-none">
+                        <span className="flex items-center gap-2 font-medium transition-colors group-hover:text-yearn-blue dark:group-hover:text-blue-300 motion-reduce:transition-none">
                           {link.label}
                           {link.current ? <span className="size-1.5 shrink-0 rounded-full bg-text-tertiary" role="img" aria-label={currentApp} /> : null}
                         </span>

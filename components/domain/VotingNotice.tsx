@@ -23,7 +23,7 @@ export function VotingNotice({ title, description, deadline, deadlineTitle, href
             <span className="text-text-secondary">{description}</span>
           </p>
           <span title={deadlineTitle} className="font-number text-xs leading-6 text-text-secondary tabular-nums">{deadline}</span>
-          <a href={href} className="inline-flex min-h-10 w-fit items-center gap-2 rounded-md text-sm font-medium text-yearn-blue transition-colors hover:text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary motion-reduce:transition-none sm:ml-auto">
+          <a href={href} className="inline-flex min-h-10 w-fit items-center gap-2 rounded-md text-sm font-medium text-yearn-blue transition-colors hover:text-text-primary dark:text-blue-300 dark:hover:text-blue-200 focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary motion-reduce:transition-none sm:ml-auto">
             {reviewLabel}<IconChevron className="size-4 -rotate-90" aria-hidden />
           </a>
         </div>
