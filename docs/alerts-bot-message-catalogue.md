@@ -928,6 +928,11 @@ Block 25,123,456 · 27 Aug 2026 14:20 UTC
 Variant rules for Y8 and Y9:
 
 - Omit a zero driver row.
+- Include proved direct manual recovery payouts in `Net claim flow`.
+- Pair a manual payout with its recipient's entitlement clearance in the same transaction.
+- Use each checkpoint's own assets and outstanding debt for its coverage percentage.
+- Asset capacity can decrease while coverage improves after a debt reduction.
+- The residual gain or loss equals the asset change minus the attributed net claim flow.
 - Use the direction proved by the asset delta, not the action-kind name alone.
 - If the action kind contradicts the asset delta, stop cursor advancement and
   record a structured processing error.

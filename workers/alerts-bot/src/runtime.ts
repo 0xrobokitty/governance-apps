@@ -87,6 +87,8 @@ interface StoredDomainState {
   readonly telegramRetryAfterUntil: number | null;
   readonly yethState: StoredYethState | null;
   readonly yethMetrics: StoredYethRepaymentMetrics | null;
+  /** Absent on legacy state. Null means the next checkpoint establishes a baseline. */
+  readonly yethCheckpointMetrics?: StoredYethRepaymentMetrics | null;
   readonly yethDailyFlow: {
     readonly recoveryNetFlowEth: string;
     readonly yieldNetFlowEth: string;
@@ -101,6 +103,7 @@ interface ScanOutcome {
   readonly actions: readonly AlertAction[];
   readonly yethState: YethState | null;
   readonly yethMetrics: YethRepaymentMetrics | null;
+  readonly yethCheckpointMetrics?: YethRepaymentMetrics | null;
   readonly yethDailyFlow: YethFlowSummary;
   readonly teamsState: TeamsState | null;
   readonly ybcState: YbcState | null;
@@ -234,6 +237,7 @@ function initialState(domainId: ActiveAlertDomainId): StoredDomainState {
     telegramRetryAfterUntil: null,
     yethState: domainId === "yeth" ? serializeYethState(createEmptyYethState()) : null,
     yethMetrics: null,
+    yethCheckpointMetrics: null,
     yethDailyFlow:
       domainId === "yeth"
         ? { recoveryNetFlowEth: "0", yieldNetFlowEth: "0" }
@@ -566,6 +570,15 @@ async function scanRange(params: {
       ? createEmptyYethState()
       : loadYethState(params.state.yethState);
   const previousMetrics = loadYethRepaymentMetrics(params.state.yethMetrics);
+  // Legacy metrics are consistent only when the saved cursor is a checkpoint.
+  // A mid-interval upgrade must establish a fresh baseline, including fresh flows.
+  const previousCheckpointMetrics = params.state.yethCheckpointMetrics === undefined
+    ? (params.state.cursorBlock > ALERT_DOMAIN_GENESIS_BLOCKS.yeth - 1 &&
+        nextYethCheckpoint(params.state.cursorBlock, params.config.yethDailyCheckpointBlocks) -
+          params.config.yethDailyCheckpointBlocks === params.state.cursorBlock
+        ? previousMetrics
+        : null)
+    : loadYethRepaymentMetrics(params.state.yethCheckpointMetrics);
   const scan = await scanYethRange({
     rpc: params.rpc,
     fromBlock,
@@ -604,6 +617,7 @@ async function scanRange(params: {
         left.blockNumber - right.blockNumber || left.logIndex - right.logIndex),
       yethState: scan.state,
       yethMetrics: stateMetrics,
+      yethCheckpointMetrics: previousCheckpointMetrics,
       yethDailyFlow: accumulatedFlow,
       teamsState: null,
       ybcState: null,
@@ -621,23 +635,25 @@ async function scanRange(params: {
     yieldAssets,
   );
   const dailyCandidates = buildYethRepaymentAlertActions({
-    previous: stateMetrics,
+    previous: previousCheckpointMetrics,
     current: dailyMetrics,
     flow: accumulatedFlow,
     blockNumber: checkpoint,
     blockHash: checkpointBlock.hash,
   }).filter((action) => action.kind !== "yeth_debt_paid_down");
-  const previousShortfall = recoveryShortfall(stateMetrics);
+  const previousShortfall = previousCheckpointMetrics === null
+    ? null
+    : recoveryShortfall(previousCheckpointMetrics);
   const currentShortfall = recoveryShortfall(dailyMetrics);
   const rawRecoveryDelta =
     previousShortfall === null || currentShortfall === null
       ? null
       : abs(currentShortfall - previousShortfall);
   const rawYieldDelta =
-    stateMetrics.yieldVaultAssetsEth === null ||
+    previousCheckpointMetrics?.yieldVaultAssetsEth == null ||
     dailyMetrics.yieldVaultAssetsEth === null
       ? null
-      : abs(dailyMetrics.yieldVaultAssetsEth - stateMetrics.yieldVaultAssetsEth);
+      : abs(dailyMetrics.yieldVaultAssetsEth - previousCheckpointMetrics.yieldVaultAssetsEth);
   console.log(JSON.stringify({
     event: "alert_yeth_daily_checkpoint",
     block: checkpoint,
@@ -661,6 +677,7 @@ async function scanRange(params: {
       left.blockNumber - right.blockNumber || left.logIndex - right.logIndex),
     yethState: scan.state,
     yethMetrics: dailyMetrics,
+    yethCheckpointMetrics: dailyMetrics,
     yethDailyFlow: { ...ZERO_FLOW },
     teamsState: null,
     ybcState: null,
@@ -890,6 +907,11 @@ export class AlertState implements DurableObject {
               : serializeYethRepaymentMetrics(scan.yethMetrics),
           yethDailyFlow:
             domainId === "yeth" ? storeFlow(scan.yethDailyFlow) : stored.yethDailyFlow,
+          yethCheckpointMetrics: scan.yethCheckpointMetrics === undefined
+            ? stored.yethCheckpointMetrics
+            : scan.yethCheckpointMetrics === null
+              ? null
+              : serializeYethRepaymentMetrics(scan.yethCheckpointMetrics),
           teamsState:
             scan.teamsState === null ? stored.teamsState : serializeTeamsState(scan.teamsState),
           ybcState:

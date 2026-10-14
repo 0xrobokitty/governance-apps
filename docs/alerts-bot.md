@@ -125,6 +125,18 @@ recipient and exactly one entitlement event: `SetClaim(account, 0)`.
 An ordinary `Claim` already supplies its outflow and cannot receive this attribution again.
 An unmatched withdrawal or claim adjustment does not prove a manual payout.
 
+Daily coverage uses assets and debt from the same checkpoint on each side of the
+comparison. `yethCheckpointMetrics` preserves the complete previous checkpoint.
+`yethMetrics` continues to track current debt for transaction alerts. The checkpoint
+baseline and accumulated flows advance together only after successful processing.
+
+Legacy state at a checkpoint can reuse its complete metrics as the baseline.
+Legacy state between checkpoints establishes a new baseline at the next checkpoint
+and sends no daily metric alerts for that interval. That checkpoint also clears
+accumulated flows. This avoids comparisons that mix old assets with current debt.
+See the [yETH alert accounting notes](apps/yeth/telegram-alerts.md) for the historical
+regression and rollout limits.
+
 The Recovery Vault can mint and burn vault-owned shares without `Deposit` or
 `Withdraw` events during canonical V3 report, fee, and profit-locking
 accounting. These events update the internal share ledger but do not produce a
