@@ -21,6 +21,8 @@ import {
   YETH_CLAIM_DEPLOY_BLOCK,
   YETH_RECOVERY_VAULT,
   YETH_RECOVERY_VAULT_DEPLOY_BLOCK,
+  YETH_YIELD_VAULT,
+  YETH_YIELD_VAULT_DEPLOY_BLOCK,
 } from "../../contracts";
 import type { RpcBlock, RpcClient, RpcLog } from "../../rpc";
 import { isRpcRangeTooLargeError } from "../../rpc";
@@ -61,6 +63,11 @@ export const YETH_LOG_QUERY_PARTITIONS: readonly YethLogQueryPartition[] =
       ]),
       startBlock: YETH_RECOVERY_VAULT_DEPLOY_BLOCK,
     }),
+    Object.freeze({
+      address: Object.freeze([YETH_YIELD_VAULT]),
+      topics: Object.freeze([ERC4626_WITHDRAW_TOPIC]),
+      startBlock: YETH_YIELD_VAULT_DEPLOY_BLOCK,
+    }),
   ]);
 
 type YethDecodedEvent =
@@ -88,6 +95,15 @@ type YethDecodedEvent =
     }
   | {
       readonly kind: "withdraw";
+      readonly sender: Address;
+      readonly receiver: Address;
+      readonly owner: Address;
+      readonly assets: bigint;
+      readonly shares: bigint;
+      readonly log: RpcLog;
+    }
+  | {
+      readonly kind: "yield_withdraw";
       readonly sender: Address;
       readonly receiver: Address;
       readonly owner: Address;
@@ -286,7 +302,8 @@ function decodeYethLog(log: RpcLog): YethDecodedEvent {
     };
   }
   if (
-    address === normalizeYethAddress(YETH_RECOVERY_VAULT) &&
+    (address === normalizeYethAddress(YETH_RECOVERY_VAULT) ||
+      address === normalizeYethAddress(YETH_YIELD_VAULT)) &&
     topic0 === ERC4626_WITHDRAW_TOPIC.toLowerCase()
   ) {
     assertCanonicalAddressTopics(log.topics, 4, [1, 2, 3]);
@@ -304,7 +321,9 @@ function decodeYethLog(log: RpcLog): YethDecodedEvent {
       shares: bigint;
     };
     return {
-      kind: "withdraw",
+      kind: address === normalizeYethAddress(YETH_YIELD_VAULT)
+        ? "yield_withdraw"
+        : "withdraw",
       ...args,
       sender: requireYethPrincipal(args.sender, "withdraw_sender"),
       receiver: requireYethPrincipal(args.receiver, "withdraw_receiver"),
@@ -352,7 +371,9 @@ function isKnownYethAddressTopicPair(log: RpcLog): boolean {
     (address === normalizeYethAddress(YETH_RECOVERY_VAULT) &&
       (topic0 === ERC4626_DEPOSIT_TOPIC.toLowerCase() ||
         topic0 === ERC4626_WITHDRAW_TOPIC.toLowerCase() ||
-        topic0 === ERC20_TRANSFER_TOPIC.toLowerCase()))
+        topic0 === ERC20_TRANSFER_TOPIC.toLowerCase())) ||
+    (address === normalizeYethAddress(YETH_YIELD_VAULT) &&
+      topic0 === ERC4626_WITHDRAW_TOPIC.toLowerCase())
   );
 }
 
@@ -449,13 +470,47 @@ function attributionKey(owner: string, shares: bigint): string {
   return `${normalizeYethAddress(owner)}:${shares.toString()}`;
 }
 
+/** Pair only atomic, direct manual payouts. Separate transactions remain unclassified. */
+function manualRecoveryOutflow(
+  state: YethState,
+  events: readonly YethDecodedEvent[],
+): bigint {
+  let outflow = 0n;
+  for (const event of events) {
+    if (event.kind !== "yield_withdraw" || event.assets <= 0n || event.shares <= 0n) {
+      continue;
+    }
+    const account = normalizeYethAddress(event.receiver);
+    if ((state.accounts.get(account)?.snapshotEth ?? 0n) <= 0n) continue;
+    const entitlements = events.filter(
+      (candidate) =>
+        (candidate.kind === "set_claim" || candidate.kind === "claim") &&
+        normalizeYethAddress(candidate.account) === account,
+    );
+    const clearance = entitlements[0];
+    const withdrawals = events.filter(
+      (candidate) => candidate.kind === "yield_withdraw" &&
+        normalizeYethAddress(candidate.receiver) === account,
+    );
+    if (
+      entitlements.length === 1 &&
+      clearance?.kind === "set_claim" &&
+      clearance.amount === 0n &&
+      withdrawals.length === 1
+    ) {
+      outflow += event.assets;
+    }
+  }
+  return outflow;
+}
+
 function applyTransactionEvents(
   state: YethState,
   events: readonly YethDecodedEvent[],
 ): { readonly actions: NormalizedAction[]; readonly flow: YethFlowSummary } {
   const actions: NormalizedAction[] = [];
   let recoveryNetFlowEth = 0n;
-  let yieldNetFlowEth = 0n;
+  let yieldNetFlowEth = -manualRecoveryOutflow(state, events);
   const deposits = events.filter(
     (event): event is Extract<YethDecodedEvent, { kind: "deposit" }> =>
       event.kind === "deposit",
@@ -579,7 +634,10 @@ function applyTransactionEvents(
   const pendingAttributions = new Map<string, YethWithdrawalAttribution[]>();
 
   for (const event of events) {
-    if (event.kind === "set_claim") {
+    if (event.kind === "yield_withdraw") {
+      // Ordinary Claim events already account for their underlying withdrawal.
+      continue;
+    } else if (event.kind === "set_claim") {
       applyYethSetClaim(state, event.account, event.amount);
     } else if (event.kind === "claim") {
       const claimExit = event.shares === 0n;

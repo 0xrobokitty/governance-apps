@@ -118,6 +118,13 @@ events reduce outstanding recovery debt. Y6–Y9 are evaluated once per fixed
 7,200-block checkpoint. The scanner does not inspect every block for protocol
 metric changes.
 
+The scanner also reads Yield Vault `Withdraw` events. It includes a direct manual
+recovery payout in `Net claim flow` when the same transaction clears that recipient's
+positive entitlement. The transaction must contain exactly one withdrawal to that
+recipient and exactly one entitlement event: `SetClaim(account, 0)`.
+An ordinary `Claim` already supplies its outflow and cannot receive this attribution again.
+An unmatched withdrawal or claim adjustment does not prove a manual payout.
+
 The Recovery Vault can mint and burn vault-owned shares without `Deposit` or
 `Withdraw` events during canonical V3 report, fee, and profit-locking
 accounting. These events update the internal share ledger but do not produce a
