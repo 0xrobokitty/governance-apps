@@ -118,6 +118,25 @@ events reduce outstanding recovery debt. Y6–Y9 are evaluated once per fixed
 7,200-block checkpoint. The scanner does not inspect every block for protocol
 metric changes.
 
+The scanner also reads Yield Vault `Withdraw` events. It includes a direct manual
+recovery payout in `Net claim flow` when the same transaction clears that recipient's
+positive entitlement. The transaction must contain exactly one withdrawal to that
+recipient and exactly one entitlement event: `SetClaim(account, 0)`.
+An ordinary `Claim` already supplies its outflow and cannot receive this attribution again.
+An unmatched withdrawal or claim adjustment does not prove a manual payout.
+
+Daily coverage uses assets and debt from the same checkpoint on each side of the
+comparison. `yethCheckpointMetrics` preserves the complete previous checkpoint.
+`yethMetrics` continues to track current debt for transaction alerts. The checkpoint
+baseline and accumulated flows advance together only after successful processing.
+
+Legacy state at a checkpoint can reuse its complete metrics as the baseline.
+Legacy state between checkpoints establishes a new baseline at the next checkpoint
+and sends no daily metric alerts for that interval. That checkpoint also clears
+accumulated flows. This avoids comparisons that mix old assets with current debt.
+See the [yETH alert accounting notes](apps/yeth/telegram-alerts.md) for the historical
+regression and rollout limits.
+
 The Recovery Vault can mint and burn vault-owned shares without `Deposit` or
 `Withdraw` events during canonical V3 report, fee, and profit-locking
 accounting. These events update the internal share ledger but do not produce a

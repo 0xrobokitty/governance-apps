@@ -21,6 +21,7 @@ import {
   YETH_CLAIM,
   YETH_CLAIM_DEPLOY_BLOCK,
   YETH_RECOVERY_VAULT,
+  YETH_YIELD_VAULT,
 } from "@/workers/alerts-bot/src/contracts";
 import {
   applyYethSetClaim,
@@ -81,7 +82,8 @@ function rpcWithLogs(logs: RpcLog[]): RpcClient {
         (log) =>
           requested.has(log.address.toLowerCase()) ||
           (log.address.toLowerCase() !== YETH_CLAIM.toLowerCase() &&
-            log.address.toLowerCase() !== YETH_RECOVERY_VAULT.toLowerCase()),
+            log.address.toLowerCase() !== YETH_RECOVERY_VAULT.toLowerCase() &&
+            log.address.toLowerCase() !== YETH_YIELD_VAULT.toLowerCase()),
       );
     }),
     getBlockByNumber: vi.fn(async (number: number) =>
