@@ -86,3 +86,76 @@ The regression runs offline and does not send Telegram messages or call a live R
 Validation covers the historical payouts, false matches, ordinary-claim deduplication, genuine residual losses, and Recovery Vault coverage.
 It also covers stored-state migration, multiple scan ranges, restarts, failed delivery, and retry without duplicate attribution.
 The change adds no dependency or environment variable.
+
+## In-place rollout commands
+
+These commands upgrade the existing `governance-alerts-bot-v2` Worker from `agent/integration`.
+The initial private-replay procedure in the operations guide does not apply to this patch.
+Keep the existing Worker name, `alerts:yeth:v1` object name, storage, secrets, and sent-message receipts.
+No storage reset, new Durable Object migration, or historical replay is required for the live upgrade.
+
+Run these commands in fish:
+
+```fish
+cd /Users/hydra/Developer/yearn/governance-apps.agent.integration
+git status --short
+git branch --show-current
+git log -1 --oneline
+npx wrangler whoami
+npx wrangler deployments status --config wrangler.alerts.jsonc
+```
+
+The branch must be `agent/integration`, and the working tree must be clean.
+Review the configured domain flags before deployment:
+
+```fish
+rg '"name"|"ALERTS_.*_ENABLED"|"YETH_DAILY_' wrangler.alerts.jsonc
+npx wrangler deploy --dry-run --config wrangler.alerts.jsonc
+```
+
+The committed configuration enables all six domains.
+If production intentionally disables a domain, preserve that choice before deployment.
+The `--keep-vars` option preserves additional remote variables, but explicit configuration values still apply.
+The [Wrangler command reference](https://developers.cloudflare.com/workers/wrangler/commands/workers/#deploy) describes these options.
+
+Deploy the patch:
+
+```fish
+npx wrangler deploy --config wrangler.alerts.jsonc --keep-vars
+```
+
+In a second terminal, follow the Worker logs:
+
+```fish
+cd /Users/hydra/Developer/yearn/governance-apps.agent.integration
+npx wrangler tail --config wrangler.alerts.jsonc --format pretty
+```
+
+After the next one-minute cron invocation, read the authenticated status:
+
+```fish
+read --prompt-str 'Alerts Worker URL, without a trailing slash: ' alerts_url
+read --silent --prompt-str 'Existing ADMIN_TOKEN: ' alerts_admin_token
+printf 'header = "Authorization: Bearer %s"\n' "$alerts_admin_token" \
+  | curl --config - --fail --silent --show-error "$alerts_url/status" \
+  | jq '.domains[] | select(.domain == "yeth")'
+set -e alerts_admin_token
+```
+
+Check that the cursor advances, `lastErrorCode` is null, and `caughtUp` becomes true.
+Check the logs for `alert_run_failed` and `alert_dispatch_failed` events.
+The first daily checkpoint can establish a baseline without a daily alert, as described above.
+The upgrade does not correct the previously sent 12 October message.
+
+If yETH reports a new failure, pause its processing while you investigate:
+
+```fish
+npx wrangler deploy --config wrangler.alerts.jsonc --keep-vars \
+  --var ALERTS_YETH_ENABLED:false
+```
+
+This override preserves yETH storage and leaves other configured domains enabled.
+After you resolve the failure, the normal deploy command restores the committed yETH enable flag.
+
+The merged code passed typecheck, lint, and all 2,155 tests.
+The dependency policy check, catalogue checks, and deployment dry run also passed.
