@@ -40,10 +40,6 @@ const allowedInstallScriptPackages = new Map([
     "Optional macOS file watcher dependency captured by Playwright.",
   ],
   [
-    "node_modules/sharp@0.34.5",
-    "Next.js image pipeline uses sharp's native binary selection.",
-  ],
-  [
     "node_modules/unrs-resolver@1.11.1",
     "Resolver package validates its native binding selection after install.",
   ],

@@ -40,10 +40,6 @@ const allowlistedInstallScriptLockPackages = {
     version: "2.3.2",
     hasInstallScript: true,
   },
-  "node_modules/sharp": {
-    version: "0.34.5",
-    hasInstallScript: true,
-  },
   "node_modules/unrs-resolver": {
     version: "1.11.1",
     hasInstallScript: true,
