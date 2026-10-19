@@ -214,7 +214,7 @@ export const teamsCopy = {
       currentState: "Current state",
     },
     periodDetailSummary: "View period detail and math",
-    periodClaimable: "Period bonus (gross)",
+    periodClaimable: "Gross bonus",
     periodLabel: (period: number) => `Period ${period}`,
     periodCount: (count: number) =>
       `${count.toLocaleString("en-US")} ${count === 1 ? "period" : "periods"}`,
