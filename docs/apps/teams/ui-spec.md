@@ -270,11 +270,12 @@ cost bucket and remain permissionless where the contract allows them.
 
 Keep the default presentation simple:
 
-- finalized gross bonus, including the YBC share
+- unclaimed gross bonus, including the YBC share
 - period count included
 - primary CTA
 - short detail rows
 
+The displayed amount falls to zero after a claim; claimed history remains separate.
 Finalized bonus amounts do not guarantee pool funding. Claims require sufficient YFI
 in the bonus pool and pass through the shared transaction simulation. Mock mode keeps
 deterministic claimable and blocked states for debugging.

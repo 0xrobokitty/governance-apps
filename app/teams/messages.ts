@@ -189,7 +189,7 @@ export const teamsCopy = {
       bonusBody:
         "Bonus YFI comes from finalized period profit.",
       bonusStatus: "Bonus state",
-      bonusClaimable: "Claimable now",
+      bonusClaimable: "Unclaimed bonus (gross)",
       bonusPeriods: "Periods included",
       bonusPending: "Awaiting finalization",
       bonusCta: "Open bonus claim",
@@ -207,14 +207,14 @@ export const teamsCopy = {
         "Open a team from the directory to see its bonus.",
     },
     summary: {
-      claimable: "Finalized bonus (gross)",
+      claimable: "Unclaimed bonus (gross)",
       periods: "Periods included",
       awaitingFinalization: "Awaiting finalization",
       noPendingFinalization: "None",
       currentState: "Current state",
     },
     periodDetailSummary: "View period detail and math",
-    periodClaimable: "Gross bonus",
+    periodClaimable: "Unclaimed gross bonus",
     periodLabel: (period: number) => `Period ${period}`,
     periodCount: (count: number) =>
       `${count.toLocaleString("en-US")} ${count === 1 ? "period" : "periods"}`,
@@ -224,7 +224,7 @@ export const teamsCopy = {
       adjustedPrice: "Adjusted price",
       bonusFactor: "Bonus factor",
       ybcSplit: "YBC split",
-      yfiOutput: "Gross YFI output",
+      yfiOutput: "Unclaimed gross YFI",
     },
     action: {
       title: "Primary action",

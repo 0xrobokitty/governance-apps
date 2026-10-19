@@ -820,7 +820,7 @@
             "bonus": {
               "tokenSymbol": "YFI",
               "status": "claimable",
-              "totalClaimable": "14.5",
+              "totalClaimable": "9.259259259259259259",
               "includedPeriodCount": 2,
               "periods": [
                 {
@@ -832,8 +832,8 @@
                   "adjustedPriceUsd": "2700.00",
                   "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
-                  "claimableYfi": "14.5",
-                  "claimableYfiRaw": "14500000000000000000"
+                  "claimableYfi": "9.259259259259259259",
+                  "claimableYfiRaw": "9259259259259259259"
                 },
                 {
                   "period": 4,
@@ -849,7 +849,7 @@
                 }
               ],
               "tokenDecimals": 18,
-              "totalClaimableRaw": "14500000000000000000"
+              "totalClaimableRaw": "9259259259259259259"
             }
           }
         ]

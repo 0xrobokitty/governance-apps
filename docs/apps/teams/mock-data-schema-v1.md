@@ -277,8 +277,8 @@ type AdminBonusQueueEntry = {
 
 - Token amounts are decimal strings in display units, never wei integers.
 - USD values are decimal strings with no currency symbol or thousands separators.
-- Basis-point fields are integers. Split fields use `0` to `10000`; growth factors may exceed
-  `10000` when the multiplier is greater than 1x.
+- Basis-point fields are integers. YBC splits use `0` to `10000`; bonus factors use
+  `0` to `20000`, as bounded by `BonusDistributor`.
 - All timestamps are Unix seconds.
 - Period fields are non-negative protocol period numbers.
 - Aggregate totals are period-scoped. `totals.currentPeriod` and `totals.lifetime` must
@@ -288,4 +288,7 @@ type AdminBonusQueueEntry = {
 - Revenue deposit is permissionless. `viewer.canDepositRevenue` may be true even when the
   viewer is not the team owner.
 - Bonus periods with `pending-finalization` status must keep `claimableYfi` at `"0"`.
+- `claimableYfi` is unclaimed gross YFI, including the YBC share. Claimed periods
+  show zero; finalized unclaimed periods use the distributor's profit, factor, and
+  adjusted-price formula.
 - Retired teams must set a non-null `readOnlyReason`.

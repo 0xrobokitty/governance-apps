@@ -478,8 +478,8 @@ test("keeps bonus math inside the viewport at 375px", async ({ page }) => {
   await expect(tooltip.getByText("Growth factor", { exact: true })).toHaveCount(0);
   await expect(tooltip.getByText("Bonus factor", { exact: true })).toBeVisible();
   await expect(tooltip.getByText("50%", { exact: true })).toBeVisible();
-  await expect(tooltip.getByText("Gross YFI output", { exact: true })).toBeVisible();
-  await expect(page.getByText("Finalized bonus (gross)", { exact: true })).toBeVisible();
+  await expect(tooltip.getByText("Unclaimed gross YFI", { exact: true })).toBeVisible();
+  await expect(page.getByText("Unclaimed bonus (gross)", { exact: true }).first()).toBeVisible();
   await expect(page.getByText(/Claims require a funded bonus pool/)).toBeVisible();
   const containment = await tooltip.evaluate((element) => {
     const bounds = element.getBoundingClientRect();
