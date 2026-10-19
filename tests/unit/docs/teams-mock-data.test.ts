@@ -328,9 +328,8 @@ function assertBonusPeriod(value: unknown): void {
   assertBoolean(value.finalized);
   assertBoolean(value.claimed);
   assertDecimalString(value.profitUsd);
-  assertDecimalString(value.spotPriceUsd);
   assertDecimalString(value.adjustedPriceUsd);
-  assertNumber(value.growthFactorBps);
+  assertNumber(value.bonusFactorBps);
   assertNumber(value.ybcSplitBps);
   assertRawAmountString(value.claimableYfiRaw);
   assertDecimalString(value.claimableYfi);

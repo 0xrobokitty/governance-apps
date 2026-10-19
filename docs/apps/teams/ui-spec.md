@@ -270,20 +270,22 @@ cost bucket and remain permissionless where the contract allows them.
 
 Keep the default presentation simple:
 
-- total claimable bonus
+- finalized gross bonus, including the YBC share
 - period count included
 - primary CTA
 - short detail rows
 
-`Claim Bonus` is available only when the verified current state supports it. Mock mode
-keeps deterministic claimable and blocked states for debugging.
+Finalized bonus amounts do not guarantee pool funding. Claims require sufficient YFI
+in the bonus pool and pass through the shared transaction simulation. Mock mode keeps
+deterministic claimable and blocked states for debugging.
 
 Hide the heavier math in expandable details or tooltip copy:
 - team profit
-- spot price
 - adjusted bonus price
-- growth factor / cap note
+- bonus factor (the profit payout percentage, not revenue growth)
 - YBC split
+
+The feed only supplies the adjusted bonus price; do not display it as a spot price.
 
 The tooltip must remain inside the viewport and wrap long values.
 

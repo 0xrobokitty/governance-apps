@@ -198,7 +198,7 @@ export const teamsCopy = {
   bonus: {
     title: "Bonus",
     description:
-      "Check claimable YFI and the periods behind it.",
+      "Calculated YFI includes the YBC share. Claims require a funded bonus pool.",
     placeholders: {
       loading: "Loading bonus totals and period detail.",
       empty:
@@ -207,25 +207,24 @@ export const teamsCopy = {
         "Open a team from the directory to see its bonus.",
     },
     summary: {
-      claimable: "Claimable now",
+      claimable: "Finalized bonus (gross)",
       periods: "Periods included",
       awaitingFinalization: "Awaiting finalization",
       noPendingFinalization: "None",
       currentState: "Current state",
     },
     periodDetailSummary: "View period detail and math",
-    periodClaimable: "Period output",
+    periodClaimable: "Period bonus (gross)",
     periodLabel: (period: number) => `Period ${period}`,
     periodCount: (count: number) =>
       `${count.toLocaleString("en-US")} ${count === 1 ? "period" : "periods"}`,
     mathTrigger: "Math inputs",
     math: {
       profit: "Team profit",
-      spotPrice: "Spot price",
       adjustedPrice: "Adjusted price",
-      growthFactor: "Growth factor",
+      bonusFactor: "Bonus factor",
       ybcSplit: "YBC split",
-      yfiOutput: "YFI output",
+      yfiOutput: "Gross YFI output",
     },
     action: {
       title: "Primary action",
@@ -252,9 +251,9 @@ export const teamsCopy = {
     },
     summaries: {
       claimable: (amount: string) =>
-        `${amount} is finalized and available now.`,
+        `${amount} is finalized before the YBC split.`,
       claimableWithPending: (amount: string, pendingPeriods: number) =>
-        `${amount} is finalized and available now. ${pendingPeriods.toLocaleString("en-US")} ${pendingPeriods === 1 ? "period is" : "periods are"} still waiting for finalization.`,
+        `${amount} is finalized before the YBC split. ${pendingPeriods.toLocaleString("en-US")} ${pendingPeriods === 1 ? "period is" : "periods are"} still waiting for finalization.`,
       pendingFinalization: (pendingPeriods: number) =>
         `No YFI is claimable yet. ${pendingPeriods.toLocaleString("en-US")} ${pendingPeriods === 1 ? "period is" : "periods are"} still waiting for finalization.`,
       claimed:
@@ -274,7 +273,7 @@ export const teamsCopy = {
         variant: "warning",
       },
       claimable: {
-        label: "Claimable",
+        label: "Finalized",
         variant: "success",
       },
       claimed: {

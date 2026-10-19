@@ -999,7 +999,7 @@ function mapBonusPeriod(
       : finalized
         ? "finalized-zero"
         : "pending-finalization";
-  const price = bonus.parameters?.bonusPriceUsd ?? "0";
+  const adjustedPrice = bonus.parameters?.bonusPriceUsd ?? "0";
 
   return {
     period: bonus.period,
@@ -1007,9 +1007,8 @@ function mapBonusPeriod(
     finalized,
     claimed,
     profitUsd: mapFinancials(feed, period.financials).profitUsd,
-    spotPriceUsd: fromUsd(feed, price),
-    adjustedPriceUsd: fromUsd(feed, price),
-    growthFactorBps: bonus.parameters?.bonusFactorBps ?? 0,
+    adjustedPriceUsd: fromUsd(feed, adjustedPrice),
+    bonusFactorBps: bonus.parameters?.bonusFactorBps ?? 0,
     ybcSplitBps: bonus.parameters?.ybcSplitBps ?? 0,
     claimableYfiRaw: bonus.claimableYfi,
     claimableYfi: formatTeamsRawTokenAmount(
