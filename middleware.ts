@@ -9,6 +9,7 @@ import { resolveRequestHostname } from "@/lib/runtime/request-host";
 import {
   buildSecurityHeaders,
   resolveAdditionalConnectSrc,
+  resolveAddressLabelsFrameSource,
 } from "@/lib/runtime/security-headers";
 import { isIndexableGovernanceHostname } from "@/lib/runtime/discoverability";
 
@@ -39,6 +40,7 @@ function withSecurityHeaders(
     allowUnsafeInlineScripts: boolean;
     allowSafeFrameEmbedding: boolean;
     allowIndexing: boolean;
+    addressLabelsFrameSource: string | null;
   }
 ) {
   const securityHeaders = buildSecurityHeaders({
@@ -48,6 +50,7 @@ function withSecurityHeaders(
     allowUnsafeInlineScripts: options.allowUnsafeInlineScripts,
     allowSafeFrameEmbedding: options.allowSafeFrameEmbedding,
     additionalConnectSrc: ADDITIONAL_CONNECT_SRC,
+    addressLabelsFrameSource: options.addressLabelsFrameSource,
   });
 
   for (const [key, value] of Object.entries(securityHeaders)) {
@@ -74,6 +77,12 @@ export function middleware(request: NextRequest) {
   const requestHeaders = new Headers(request.headers);
   requestHeaders.set("x-nonce", nonce);
 
+  // This isolated document supplies its own nonce policy and exact parent
+  // allowlist. Applying the app's frame-ancestors policy would block the bridge.
+  if (url.pathname === "/api/address-labels") {
+    return NextResponse.next({ request: { headers: requestHeaders } });
+  }
+
   // 1. Determine the intended application based on the Host header
   const prefix = resolveHostPrefix(requestHostname);
   const shouldUseStrictCsp = isStrictCspPath(url.pathname, prefix);
@@ -82,6 +91,7 @@ export function middleware(request: NextRequest) {
     allowUnsafeInlineScripts: !shouldUseStrictCsp,
     allowSafeFrameEmbedding,
     allowIndexing: isIndexableGovernanceHostname(requestHostname),
+    addressLabelsFrameSource: resolveAddressLabelsFrameSource(requestHostname),
   };
 
   const isHeadRequest = request.method === "HEAD";
@@ -95,6 +105,7 @@ export function middleware(request: NextRequest) {
     url.pathname.startsWith("/fonts") ||
     url.pathname.startsWith("/.well-known") ||
     url.pathname === "/manifest.json" ||
+    url.pathname === "/dao-title-overrides.json" ||
     PUBLIC_FILE.test(url.pathname);
 
   if (isHeadRequest && !isSkippablePath) {
