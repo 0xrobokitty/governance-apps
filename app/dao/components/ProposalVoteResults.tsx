@@ -36,9 +36,7 @@ export function ProposalVoteResults({ proposal, hostname }: { proposal: DaoPropo
   const highlighted = highlightYbc && ybc.state === "voted";
   const segments = highlighted ? results.highlightedSegments : results.canonicalSegments;
   const visibleSegments = segments.filter((part) => part.units > 0);
-  const segmentLabel = (part: DaoVoteResultSegment) => highlighted && (part.kind === "yea" || part.kind === "nay")
-    ? daoCopy.voteResults.remainingLabels[part.kind]
-    : daoCopy.voteResults.segmentLabels[part.kind];
+  const segmentLabel = (part: DaoVoteResultSegment) => daoCopy.voteResults.segmentLabels[part.kind];
 
   return (
     <div className="min-w-0 space-y-3" data-testid="dao-vote-results">

@@ -26,7 +26,7 @@ describe("YBC within canonical vote results", () => {
     expect(screen.getByRole("link", { name: "Explore YBC" })).toHaveAttribute("href", "https://ybc-beta.dao-ops.com");
     expect(screen.getByText("Vote breakdown details").closest("details")).not.toHaveAttribute("open");
     const shares = screen.getByLabelText("Share of total votes cast");
-    expect(within(shares).getByText("Remaining Yea (non-YBC)")).toBeInTheDocument();
+    expect(within(shares).getByText("Yea", { exact: true })).toBeInTheDocument();
     expect(within(shares).getByText("13.64% of total votes cast")).toBeInTheDocument();
     expect(within(shares).getByText("4.55% of total votes cast")).toBeInTheDocument();
     const totals = screen.getByTestId("dao-canonical-vote-totals").textContent;
@@ -36,7 +36,7 @@ describe("YBC within canonical vote results", () => {
     expect(screen.queryByText("YBC Yea weight")).not.toBeInTheDocument();
     expect(screen.getByTestId("dao-canonical-vote-totals")).toHaveTextContent(totals!);
     expect(within(shares).getByText("68.18% of total votes cast")).toBeInTheDocument();
-    expect(within(shares).queryByText("Remaining Yea (non-YBC)")).not.toBeInTheDocument();
+    expect(within(shares).queryByText("YBC Yea", { exact: true })).not.toBeInTheDocument();
     fireEvent.click(checkbox);
     expect(screen.getByText("1.5")).toBeVisible();
     expect(screen.getByTestId("dao-canonical-vote-totals").textContent).toBe(totals);

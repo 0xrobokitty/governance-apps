@@ -71,3 +71,11 @@ Phone and desktop browser checks cover the same layout and interactions.
 
 The demo uses deterministic mock data and a test wallet. Existing production flags and transaction checks remain in place.
 The milestone is tagged `integration/dao-voting-clarity-refinement-20261023`.
+
+## Final label review
+
+The follow-up review shortened “Remaining Yea (non-YBC)” and “Remaining Nay (non-YBC)” to “Yea” and “Nay”.
+Tooltips and the breakdown disclosure now share the same labels. YBC labels and all calculations remain unchanged.
+Typecheck, lint, the optimized build, and all 2,279 unit tests passed.
+The four affected browser checks passed on the compiled demo, including mobile, touch, and 200% text scaling.
+The first unit run was interrupted after local worker-service failures in the restricted environment; the unrestricted rerun passed.

@@ -7,7 +7,7 @@ Turning off the highlight changes only the bar segments and legend. Total weight
 There is no result that excludes YBC votes.
 
 Each visible segment has a hover tooltip with its percentage of total votes cast.
-Remaining portions are labeled “non-YBC” while highlighting is enabled.
+Tooltips and breakdown details use the short labels “YBC Yea”, “Yea”, “Nay”, and “YBC Nay”.
 The “Vote breakdown details” disclosure gives the same percentages for keyboard and touch users, including contributions too small to draw.
 It also gives the recorded update time and configured collective address.
 The “Explore YBC” link follows the existing host routing rules. Proposal-board summaries keep their compact display.

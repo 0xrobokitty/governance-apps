@@ -53,7 +53,6 @@ export const daoCopy = {
   voteResults: {
     unavailable: "Vote totals are unavailable in this snapshot.",
     segmentLabels: { yea: "Yea", nay: "Nay", "ybc-yea": "YBC Yea", "ybc-nay": "YBC Nay" },
-    remainingLabels: { yea: "Remaining Yea (non-YBC)", nay: "Remaining Nay (non-YBC)" },
     share: (percent: string) => `${percent} of total votes cast`,
     shares: "Share of total votes cast",
   },

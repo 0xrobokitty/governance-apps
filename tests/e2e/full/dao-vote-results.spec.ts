@@ -14,14 +14,14 @@ for (const width of [390, 1280]) {
     expect(await bar.locator("[data-vote-segment]").evaluateAll((parts) => parts.map((part) => part.getAttribute("data-vote-segment"))))
       .toEqual(["ybc-yea", "yea", "nay", "ybc-nay"]);
     for (const [kind, label, share] of [
-      ["ybc-yea", "YBC Yea", "13.64%"], ["yea", "Remaining Yea (non-YBC)", "54.55%"],
-      ["nay", "Remaining Nay (non-YBC)", "27.27%"], ["ybc-nay", "YBC Nay", "4.55%"],
+      ["ybc-yea", "YBC Yea", "13.64%"], ["yea", "Yea", "54.55%"],
+      ["nay", "Nay", "27.27%"], ["ybc-nay", "YBC Nay", "4.55%"],
     ]) {
       const part = bar.locator(`[data-vote-segment="${kind}"]`);
       await part.hover();
       const tooltip = part.locator('[role="tooltip"]');
       await expect(tooltip).toBeVisible();
-      await expect(tooltip).toContainText(label);
+      await expect(tooltip.locator("strong")).toHaveText(label);
       await expect(tooltip).toContainText(`${share} of total votes cast`);
       const bounds = (await tooltip.boundingBox())!;
       expect(bounds.x).toBeGreaterThanOrEqual(0);
@@ -55,7 +55,7 @@ for (const width of [390, 1280]) {
     await disclosure.focus();
     await disclosure.press("Enter");
     const shares = results.getByLabel("Share of total votes cast", { exact: true });
-    await expect(shares.getByText("Remaining Yea (non-YBC)", { exact: true })).toBeVisible();
+    await expect(shares.getByText("Yea", { exact: true })).toBeVisible();
     await expect(shares.getByText("13.64% of total votes cast", { exact: true })).toBeVisible();
     await expect(shares.getByText("4.55% of total votes cast", { exact: true })).toBeVisible();
     await expect(results.getByText(/Last vote update:/)).toBeVisible();
@@ -98,7 +98,7 @@ test.describe("touch vote breakdown", () => {
     for (const value of ["13.64%", "54.55%", "27.27%", "4.55%"]) {
       await expect(shares.getByText(`${value} of total votes cast`, { exact: true })).toBeVisible();
     }
-    await expect(shares.getByText("Remaining Nay (non-YBC)", { exact: true })).toBeVisible();
+    await expect(shares.getByText("Nay", { exact: true })).toBeVisible();
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   });
 });
