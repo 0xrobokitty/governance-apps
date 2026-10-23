@@ -4,6 +4,9 @@ Proposal pages show the latest recorded vote for each address. Each row includes
 the choice, UTC timestamp, transaction, effective YFI voting weight, and share of
 recorded voting weight. Split votes show both percentages. Search matches names
 and full addresses; sorting supports recent votes, older votes, and voting power.
+The header links directly to the voter table. The table appears before lifecycle
+history. ENS names resolve as pages are viewed; ENS search covers those resolved
+names. Full-address and generated or custom-name search covers all rows.
 
 The client orders events by block, transaction index, and log index. A later vote
 replaces the earlier vote from that address. This prevents collective updates

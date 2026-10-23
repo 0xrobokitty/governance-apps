@@ -12,6 +12,7 @@ export const daoCopy = {
     unchanged: "The published proposal text is unchanged.",
   },
   voters: {
+    viewVotes: "View votes",
     title: "Votes", latest: "Latest vote per address · snapshot data", table: "Proposal votes",
     voter: "Voter", choice: "Choice", date: "Last voted (UTC)", power: "Voting power",
     search: "Search name or address", sort: "Sort votes", newest: "Newest first", oldest: "Oldest first", highestPower: "Most voting power",

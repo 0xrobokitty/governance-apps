@@ -66,7 +66,7 @@ export const daoProposeCopy = {
     byteCount: (count: number, limit: number) =>
       `${count.toLocaleString("en-US")} / ${limit.toLocaleString("en-US")} UTF-8 bytes`,
     grammar:
-      "Start with a plain summary paragraph, or put ## Summary above it (up to 500 characters). That paragraph can be the whole proposal. Add more detail with paragraphs or ## headings as needed. Leave the title out of the body. Line numbers below refer to the body.",
+      "Start with a summary paragraph of up to 500 characters, with or without ## Summary. More sections are optional. Keep the title in its field. Error line numbers refer to the body.",
     validation: "Markdown validation",
     valid: "Body structure is valid",
     previewInvalid: "Fix the body errors listed below to see the final preview.",

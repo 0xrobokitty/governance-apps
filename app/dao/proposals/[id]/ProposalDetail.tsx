@@ -123,12 +123,18 @@ export function ProposalDetail({
           <ProposalTiming now={now} proposal={proposal} showExact />
         </div>
 
-        {getDaoDiscussionUrl(proposal.discussion.url) || snapshotNotice ? (
-          <div className="flex min-w-0 flex-col gap-x-6 gap-y-2 border-t border-border pt-3 sm:flex-row sm:items-start sm:justify-between">
+        <div className="flex min-w-0 flex-col gap-x-6 gap-y-2 border-t border-border pt-3 sm:flex-row sm:items-start sm:justify-between">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-1">
+            <a
+              href="#dao-proposal-votes"
+              className="inline-flex min-h-10 items-center rounded text-sm font-bold text-yearn-blue transition-colors hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary motion-reduce:transition-none dark:text-blue-300 dark:hover:text-blue-200"
+            >
+              {daoCopy.voters.viewVotes}
+            </a>
             <DiscussionLink proposal={proposal} />
-            {snapshotNotice}
           </div>
-        ) : null}
+          {snapshotNotice}
+        </div>
         <ContentWarning proposal={proposal} />
       </Card>
 
@@ -179,8 +185,8 @@ export function ProposalDetail({
             parsed={parsedContent}
             proposal={proposal}
           />
-          <ProposalLifecycle now={now} proposal={proposal} />
           {voterPanel ?? <ProposalVoters proposal={proposal} />}
+          <ProposalLifecycle now={now} proposal={proposal} />
           <ExecutionAnalysis proposal={proposal} />
           <TechnicalDetails feed={feed} proposal={proposal} />
         </div>

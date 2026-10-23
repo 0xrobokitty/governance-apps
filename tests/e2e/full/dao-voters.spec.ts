@@ -22,7 +22,8 @@ for (const viewport of VIEWPORTS) {
 
     const table = page.getByRole("table", { name: "Proposal votes" });
     const rows = table.getByRole("rowgroup").getByRole("row");
-    await table.scrollIntoViewIfNeeded();
+    await page.getByRole("link", { name: "View votes", exact: true }).click();
+    await expect(page.getByLabel("Votes", { exact: true })).toBeFocused();
     // Six vote events yield four voters: collective replacements never become extra rows.
     await expect(rows).toHaveCount(4);
     await expect(table.getByText("75% For", { exact: true })).toHaveCount(2);

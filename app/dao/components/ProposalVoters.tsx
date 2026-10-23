@@ -80,7 +80,7 @@ export function ProposalVoters({ proposal, verifiedEns = EMPTY_ENS, onVisibleAdd
   }, [onVisibleAddressesChange, visibleAddressKey]);
 
   return (
-    <Card className="min-w-0 space-y-5" aria-label={copy.title}>
+    <Card id="dao-proposal-votes" tabIndex={-1} className="min-w-0 scroll-mt-24 space-y-5" aria-label={copy.title}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-balance text-xl font-bold">
           {copy.title}<span className="rounded-full bg-surface-secondary px-2.5 py-0.5 text-sm tabular-nums text-text-secondary">{rows.length}</span>
