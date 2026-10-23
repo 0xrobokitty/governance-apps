@@ -4,6 +4,13 @@ import type {
 } from "@/lib/clients/dao";
 
 export const daoCopy = {
+  titleCorrection: {
+    label: "Title clarified by DAO ops",
+    original: "Original title",
+    unavailable: "Original title unavailable",
+    source: "View public title corrections",
+    unchanged: "The published proposal text is unchanged.",
+  },
   publicationErrors: {
     disabled: "Publication is disabled. Keep your draft and try again later.",
     unavailable: "Publication is temporarily unavailable. Keep your reviewed content and try again later.",

@@ -20,6 +20,7 @@ import {
   type DaoBoardGroupCounts,
 } from "../route-state";
 import { daoCopy } from "../messages";
+import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import styles from "./ProposalBoard.module.css";
 import {
   ProposalHeadingFacts,
@@ -159,7 +160,7 @@ function ProposalBoardRow({
   const parsed = proposal.content.value
     ? parseDaoProposalContent(proposal.content.value)
     : null;
-  const title = parsed?.title ?? daoCopy.detail.eyebrow(proposalId);
+  const title = getDaoDisplayTitle(proposal.ref, proposal.content.digest, parsed?.title) ?? daoCopy.detail.eyebrow(proposalId);
 
   return (
     <article
