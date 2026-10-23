@@ -1,3 +1,5 @@
+import { GOVERNANCE_APP_PREPROD_HOSTS, GOVERNANCE_APP_PROD_HOSTS } from "./governance-hosts";
+
 type SecurityHeaderOptions = {
   nonce: string;
   isDevelopment: boolean;
@@ -5,7 +7,19 @@ type SecurityHeaderOptions = {
   allowUnsafeInlineScripts?: boolean;
   allowSafeFrameEmbedding?: boolean;
   additionalConnectSrc?: string[];
+  addressLabelsFrameSource?: string | null;
 };
+
+/** Only the paired YBC host can own shared browser labels for a DAO host. */
+export function resolveAddressLabelsFrameSource(hostname: string): string | null {
+  if (hostname === GOVERNANCE_APP_PROD_HOSTS.dao) {
+    return `https://${GOVERNANCE_APP_PROD_HOSTS.ybc}/api/address-labels`;
+  }
+  if (hostname === GOVERNANCE_APP_PREPROD_HOSTS.dao) {
+    return `https://${GOVERNANCE_APP_PREPROD_HOSTS.ybc}/api/address-labels`;
+  }
+  return null;
+}
 
 function joinDirectives(directives: string[]) {
   return directives.join("; ");
@@ -50,6 +64,9 @@ export function resolveAdditionalConnectSrc(
   if (env.NEXT_PUBLIC_YBC_DATA_URL) {
     candidates.push(env.NEXT_PUBLIC_YBC_DATA_URL);
   }
+  if (env.NEXT_PUBLIC_DAO_VOTING_POWER_URL) {
+    candidates.push(env.NEXT_PUBLIC_DAO_VOTING_POWER_URL);
+  }
 
   const parsed = candidates
     .map(parseUrlOrigin)
@@ -88,7 +105,12 @@ export function buildContentSecurityPolicy({
   allowUnsafeInlineScripts = false,
   allowSafeFrameEmbedding = false,
   additionalConnectSrc = [],
+  addressLabelsFrameSource = null,
 }: SecurityHeaderOptions): string {
+  const allowedAddressLabelsFrameSource = [
+    resolveAddressLabelsFrameSource(GOVERNANCE_APP_PROD_HOSTS.dao),
+    resolveAddressLabelsFrameSource(GOVERNANCE_APP_PREPROD_HOSTS.dao),
+  ].includes(addressLabelsFrameSource) ? addressLabelsFrameSource : null;
   const scriptSrcDirectives = [
     "'self'",
     // Next.js webpack dev runtime relies on eval for source maps/HMR.
@@ -125,7 +147,7 @@ export function buildContentSecurityPolicy({
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     connectSrc,
-    "frame-src 'self' https://verify.walletconnect.com https://*.walletconnect.com",
+    `frame-src 'self' https://verify.walletconnect.com https://*.walletconnect.com${allowedAddressLabelsFrameSource ? ` ${allowedAddressLabelsFrameSource}` : ""}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",

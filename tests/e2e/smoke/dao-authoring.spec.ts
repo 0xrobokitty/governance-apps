@@ -3,23 +3,43 @@ import {
   DAO_CREATED_PROPOSALS_STORAGE_KEY,
   DAO_EXECUTOR_VALID_SCRIPT_VECTORS,
 } from "@/lib/clients/dao";
-import { resetBridge, waitForTestBridge } from "../utils";
+import { prepareTestBridge, resetBridge, waitForTestBridge } from "../utils";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/dao/propose");
-  await waitForTestBridge(page);
-  await resetBridge(page);
-  await page.evaluate(async () => {
-    await window.__TEST__?.setDaoProposerState?.("eligible");
-    await window.__TEST__?.setDaoAuthoringState?.("valid-signal");
-  });
+  await prepareTestBridge(page, () => page.evaluate(async () => {
+    const bridge = window.__TEST__;
+    if (!bridge?.setDaoProposerState || !bridge.setDaoAuthoringState) {
+      throw new Error("DAO authoring test controls are unavailable.");
+    }
+    await bridge.reset();
+    await bridge.setDaoProposerState("eligible");
+    await bridge.setDaoAuthoringState("valid-signal");
+  }));
 });
+
+for (const body of ["Approve research funding.", "## Summary\n\nApprove research funding."]) {
+  test(`reviews a separate title and short body: ${body.startsWith("##") ? "Summary heading" : "plain paragraph"}`, async ({ page }) => {
+    await openAuthoring(page);
+    await fillImmutableDraft(page, 1001, "Summary");
+    await page.getByLabel("Proposal body").fill(body);
+    await page.getByRole("button", { name: "Review proposal" }).click();
+    await expect(page.getByLabel("Proposal title")).toBeFocused();
+    await expect(page.getByText("Describe the proposed decision in the title. Put Summary in the body instead.")).toBeVisible();
+    await page.getByLabel("Proposal title").fill("Research funding");
+    await page.getByRole("button", { name: "Review proposal" }).click();
+    await expect(page.getByRole("heading", { name: "Review the exact proposal" })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Research funding", exact: true })).toBeVisible();
+    await expect(page.getByText("Approve research funding.", { exact: true })).toBeVisible();
+  });
+}
 
 test("keeps Markdown line numbers aligned through wrapping, scrolling, and resizing", async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await openAuthoring(page);
-  const source = `# Line numbers\n\nSummary.\n\n## Specification\n\n${"A long wrapped proposal paragraph with a link and meaningful text. ".repeat(12)}\n\n${"unbroken".repeat(100)}\n\n${Array.from({ length: 30 }, (_, index) => `Source line ${index + 1}`).join("\n")}\n`;
-  const editor = page.getByRole("textbox", { name: "Proposal Markdown" });
+  await page.getByLabel("Proposal title").fill("Line numbers");
+  const source = `Summary.\n\n## Specification\n\n${"A long wrapped proposal paragraph with a link and meaningful text. ".repeat(12)}\n\n${"unbroken".repeat(100)}\n\n${Array.from({ length: 30 }, (_, index) => `Source line ${index + 1}`).join("\n")}\n`;
+  const editor = page.getByRole("textbox", { name: "Proposal body" });
   await editor.fill(source);
   await page.evaluate(() => document.fonts.ready);
   const gutter = page.getByTestId("dao-markdown-line-numbers");
@@ -53,10 +73,11 @@ test("keeps Markdown line numbers aligned through wrapping, scrolling, and resiz
 
 test("opens same-document section links with the keyboard in Markdown preview", async ({ page }) => {
   await openAuthoring(page);
-  await page.getByRole("textbox", { name: "Proposal Markdown" }).fill(
-    `# Proposal links\n\nSummary.\n\n[Read references](#references-1)\n\n## References\n\n${"Supporting text. ".repeat(80)}\n\n## References\n\nThe second references section.`
+  await page.getByLabel("Proposal title").fill("Proposal links");
+  await page.getByRole("textbox", { name: "Proposal body" }).fill(
+    `Summary.\n\n[Read references](#references-1)\n\n## References\n\n${"Supporting text. ".repeat(80)}\n\n## References\n\nThe second references section.`
   );
-  await expect(page.getByText("Document structure is valid")).toBeVisible();
+  await expect(page.getByText("Body structure is valid")).toBeVisible();
   await page.getByRole("tab", { name: "Preview", exact: true }).click();
   const link = page.getByRole("link", { name: "Read references" });
   await link.focus();
@@ -227,7 +248,11 @@ test("keeps the exact review locked and announces asynchronous progress", async 
   await expect(forumLink).toHaveAttribute("target", "_blank");
   await expectMinimumHitArea(forumLink);
 
-  await page.clock.install();
+  const clockStart = new Date("2024-08-01T00:00:00.000Z");
+  await page.clock.install({ time: clockStart });
+  // Installation alone still advances with wall time. Pause before publication
+  // so each progress state survives until the assertions explicitly advance it.
+  await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
   await page
     .getByRole("checkbox", { name: /I reviewed the exact immutable content/i })
     .check();
@@ -380,9 +405,9 @@ test("preserves the draft and does not start the wallet step after publication f
   ).toHaveCount(0);
   await page.getByRole("button", { name: "Edit proposal" }).click();
   await expect(
-    page.getByRole("textbox", { name: "Proposal Markdown" })
+    page.getByRole("textbox", { name: "Proposal body" })
   ).toHaveValue(
-    "# Exact proposal title\n\nExact summary\n\n## Specification\n\nExact specification\n"
+    "Exact summary\n\n## Specification\n\nExact specification\n"
   );
   await expect(
     page.getByRole("textbox", { name: "Forum discussion" })
@@ -577,10 +602,11 @@ async function fillImmutableDraft(
       .locator("#dao-forum-status")
       .getByText("Forum topic accepted", { exact: true })
   ).toBeVisible();
+  await page.getByLabel("Proposal title").fill(title);
   await page
-    .getByRole("textbox", { name: "Proposal Markdown" })
+    .getByRole("textbox", { name: "Proposal body" })
     .fill(
-      `# ${title}\n\nExact summary\n\n## Specification\n\nExact specification\n`
+      `Exact summary\n\n## Specification\n\nExact specification\n`
     );
 }
 

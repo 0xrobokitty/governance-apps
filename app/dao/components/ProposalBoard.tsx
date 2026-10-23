@@ -12,7 +12,10 @@ import type {
   DaoDisplayGroup,
   DaoProposal,
 } from "@/lib/clients/dao";
-import { getDaoDiscussionUrl, parseDaoProposalContent } from "@/lib/clients/dao";
+import { getDaoDiscussionUrl, parseDaoProposalContent, serializeDaoProposalRef } from "@/lib/clients/dao";
+import { isDaoVoteReviewOpen, type DaoWalletParticipation, type DaoParticipationMap } from "@/lib/clients/dao/participation";
+import { DaoWalletAction } from "./DaoWalletAction";
+import { cn } from "@/lib/cn";
 import {
   createDaoProposalHref,
   DAO_BOARD_GROUPS,
@@ -20,6 +23,8 @@ import {
   type DaoBoardGroupCounts,
 } from "../route-state";
 import { daoCopy } from "../messages";
+import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
+import { ProposalTitleCorrection } from "./ProposalTitleCorrection";
 import styles from "./ProposalBoard.module.css";
 import {
   ProposalHeadingFacts,
@@ -34,6 +39,7 @@ export function ProposalBoard({
   proposals,
   selectedGroup,
   snapshotNotice = null,
+  participation = {},
 }: {
   hostname?: string;
   now: number;
@@ -41,6 +47,7 @@ export function ProposalBoard({
   proposals: DaoProposal[];
   selectedGroup?: DaoDisplayGroup;
   snapshotNotice?: ReactNode;
+  participation?: DaoParticipationMap;
 }) {
   const counts = useMemo<DaoBoardGroupCounts>(
     () =>
@@ -118,7 +125,7 @@ export function ProposalBoard({
           )}
         </p>
         {filteredProposals.length > 0 ? (
-          <Card className="min-w-0 divide-y divide-border overflow-hidden p-0">
+          <Card className="min-w-0 divide-y divide-border p-0">
             {filteredProposals.map((proposal) => (
               <ProposalBoardRow
                 key={`${proposal.ref.votingAddress}:${proposal.ref.proposalId.toString()}`}
@@ -126,6 +133,7 @@ export function ProposalBoard({
                 proposal={proposal}
                 origin={filter}
                 hostname={hostname}
+                participation={participation[serializeDaoProposalRef(proposal.ref)]}
               />
             ))}
             {snapshotNotice ? <div className="px-4 py-2 md:px-5">{snapshotNotice}</div> : null}
@@ -149,43 +157,53 @@ function ProposalBoardRow({
   now,
   origin,
   proposal,
+  participation,
 }: {
   hostname?: string;
   now: number;
   origin: DaoDisplayGroup;
   proposal: DaoProposal;
+  participation?: DaoWalletParticipation;
 }) {
   const proposalId = proposal.ref.proposalId.toString();
   const parsed = proposal.content.value
     ? parseDaoProposalContent(proposal.content.value)
     : null;
-  const title = parsed?.title ?? daoCopy.detail.eyebrow(proposalId);
+  const title = getDaoDisplayTitle(proposal.ref, proposal.content.digest, parsed?.title) ?? daoCopy.detail.eyebrow(proposalId);
+  const proposalHref = createDaoProposalHref(proposalId, origin, hostname, proposal.ref);
 
   return (
     <article
       aria-labelledby={`dao-proposal-${proposalId}-title`}
-      className="relative min-w-0 cursor-pointer p-4 transition-[background-color] duration-150 ease-out hover:bg-surface-secondary/40 motion-reduce:transition-none md:p-5"
+      className="relative min-w-0 cursor-pointer p-4 transition-[background-color] duration-150 ease-out first:rounded-t-box last:rounded-b-box hover:bg-surface-secondary/40 motion-reduce:transition-none md:p-5"
     >
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)] lg:items-center">
+      <div className={cn("grid min-w-0 gap-5 lg:items-center", participation
+        ? "lg:grid-cols-[minmax(0,1fr)_8rem_minmax(14rem,18rem)]"
+        : "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)]")}>
         <div className="min-w-0 space-y-3">
-          <ProposalHeadingFacts proposal={proposal} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ProposalHeadingFacts proposal={proposal} />
+          </div>
 
           <div className="min-w-0 space-y-1.5">
             <p className="break-words font-number text-xs font-bold tabular-nums text-text-secondary [overflow-wrap:anywhere]">
               {daoCopy.detail.eyebrow(proposalId)}
             </p>
-            <h3
-              id={`dao-proposal-${proposalId}-title`}
-              className="text-balance text-lg font-bold md:text-xl"
-            >
-              <Link
-                href={createDaoProposalHref(proposalId, origin, hostname, proposal.ref)}
-                aria-label={daoCopy.board.proposalLink(proposalId, title)}
-                className="inline-flex min-h-10 max-w-full items-center rounded py-1 text-left transition-[color] duration-150 ease-out hover:text-yearn-blue focus:outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:rounded-box focus-visible:after:ring-2 focus-visible:after:ring-text-primary focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-app after:absolute after:inset-0 after:rounded-box after:content-[''] motion-reduce:transition-none dark:hover:text-blue-300"
+            <div className="flex min-w-0 items-start">
+              <h3
+                id={`dao-proposal-${proposalId}-title`}
+                className="min-w-0 text-balance text-lg font-bold md:text-xl"
               >
-                <span className="break-words [overflow-wrap:anywhere]">{title}</span>
-              </Link>
-            </h3>
+                <Link
+                  href={proposalHref}
+                  aria-label={daoCopy.board.proposalLink(proposalId, title)}
+                  className="inline-flex min-h-10 max-w-full items-center rounded py-1 text-left transition-[color] duration-150 ease-out hover:text-yearn-blue focus:outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:rounded-box focus-visible:after:ring-2 focus-visible:after:ring-text-primary focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-app after:absolute after:inset-0 after:rounded-box after:content-[''] motion-reduce:transition-none dark:hover:text-blue-300"
+                >
+                  <span className="break-words [overflow-wrap:anywhere]">{title}</span>
+                </Link>
+              </h3>
+              <ProposalTitleCorrection proposal={proposal} originalTitle={parsed?.title} />
+            </div>
           </div>
 
           <div className="flex min-w-0 flex-col gap-2 text-xs text-text-secondary sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
@@ -204,7 +222,8 @@ function ProposalBoardRow({
           <ProposalWarnings proposal={proposal} />
         </div>
 
-        <div className="min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+        <DaoWalletAction participation={participation} votingOpen={isDaoVoteReviewOpen(proposal, now)} href={`${proposalHref}#dao-proposal-actions`} />
+        <div data-testid="dao-proposal-results" className={cn("min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0", participation && "lg:col-start-3")}>
           <ProposalTiming now={now} proposal={proposal} />
           <ProposalVoteSummary compact proposal={proposal} />
           {proposal.type === "signal" &&

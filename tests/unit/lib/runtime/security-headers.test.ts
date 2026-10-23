@@ -6,9 +6,24 @@ import {
   PERMISSIONS_POLICY_HEADER,
   resolveAdditionalConnectSrc,
   SAFE_APP_FRAME_ANCESTORS,
+  resolveAddressLabelsFrameSource,
 } from "@/lib/runtime/security-headers";
 
 describe("security header policy", () => {
+  it("permits only the paired YBC storage document as an additional frame", () => {
+    expect(resolveAddressLabelsFrameSource("dao.yearn.fi")).toBe("https://ybc.yearn.fi/api/address-labels");
+    expect(resolveAddressLabelsFrameSource("dao-beta.dao-ops.com")).toBe("https://ybc-beta.dao-ops.com/api/address-labels");
+    for (const host of ["evil.yearn.fi", "dao.yearn.fi.evil.test", "app.dao-ops.com", "localhost"]) {
+      expect(resolveAddressLabelsFrameSource(host)).toBeNull();
+    }
+    const base = { nonce: "abc", isDevelopment: false, isProduction: true };
+    const csp = buildContentSecurityPolicy({ ...base, addressLabelsFrameSource: resolveAddressLabelsFrameSource("dao.yearn.fi") });
+    expect(csp).toContain("https://ybc.yearn.fi/api/address-labels");
+    expect(csp).not.toContain("ybc-beta.dao-ops.com");
+    expect(csp).toContain("frame-ancestors 'none'");
+    expect(buildContentSecurityPolicy({ ...base, addressLabelsFrameSource: "https://evil.test" })).not.toContain("evil.test");
+    expect(buildContentSecurityPolicy(base)).not.toContain("ybc.yearn.fi");
+  });
   it("uses nonce-based script policy without unsafe-inline scripts", () => {
     const csp = buildContentSecurityPolicy({
       nonce: "abc123",
@@ -103,6 +118,7 @@ describe("security header policy", () => {
       NEXT_PUBLIC_TEAMS_DATA_URL: "https://teams-data.example/prod/teams.json",
       NEXT_PUBLIC_YETH_GLOBAL_DATA_URL: "https://cdn.example/yeth.json",
       NEXT_PUBLIC_YBC_DATA_URL: "https://ybc-data.example/prod/ybc.json",
+      NEXT_PUBLIC_DAO_VOTING_POWER_URL: "https://governance-data.example/voting-power.json",
     });
 
     expect(origins).toEqual([
@@ -111,6 +127,7 @@ describe("security header policy", () => {
       "https://cdn.example",
       "https://teams-data.example",
       "https://ybc-data.example",
+      "https://governance-data.example",
     ]);
   });
 });

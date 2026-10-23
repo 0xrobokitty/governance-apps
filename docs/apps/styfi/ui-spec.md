@@ -1,8 +1,8 @@
-# stYFI UI Spec v3.2
+# stYFI UI Spec v3.3
 
 **Status:** Final
 **Applies to:** `styfi.yearn.fi` (and `/styfi` route)
-**Last updated:** 2026-07-14
+**Last updated:** 2026-10-23
 
 ---
 
@@ -34,18 +34,21 @@ It specifically addresses:
 - `StyfiPageClient` derives `selectedAsset` and `isNewUser`.
 - `StyfiPageClient` also reads `VeyfiAccountState` and derives normalized `externalPositions` (veYFI + staked LLYFI totals in YFI units).
 - `AccountSummary` receives balances + external positions and applies the Active/Hybrid/Newbie matrix.
-- `StyfiCockpit` receives `selectedAsset`, `onSelectAsset`, and `isNewUser`.
+- `StyfiCockpit` receives `selectedAsset` and `onSelectAsset`.
+- `useStyfiApr` supplies the reward rates and portfolio contributions. Page components only format these values.
 
 ---
 
 ## 3. Page Structure
 
 1. **Global Header** (standard Yearn header) with a stYFI-only **Voting & Proposals** link to the DAO app on desktop and mobile.
-2. **Protocol Stats Bar** (Total Supply, Staked, APR). Show **"Epoch 1 APR"** when current epoch == 0 from the canonical clock. **Staked** should use `styfi.staked` (excludes cooldown balances; `styfi.unstaking` is the cooldown amount).
+2. **Protocol Stats Bar** (Total Supply, Staked, stYFIx APR). The APR includes the delegated pool's recorded Vote Boost rewards. **Staked** uses `styfi.staked` and excludes cooldown balances.
 3. **Shared DAO Voting Notice** below the header when a decision vote is open.
 4. **AccountSummary** (Hero for new users, positions list for returning users)
 5. **Cockpit** (StakeManageCard + Rewards)
 6. **Contracts Footer** (`<details>` disclosure with Etherscan links for YFI, stYFI, stYFIx, Reward Claimer, and reward token)
+
+Personal voting power appears on the DAO front page, beside the proposal board.
 
 ---
 
@@ -60,7 +63,7 @@ It specifically addresses:
 #### A. Active (`stYFI/stYFIx > 0`)
 1. Section: **Staked YFI**
 2. Interactive local rows (`<PositionRow />`) for `stYFI` / `stYFIx`.
-3. Optional section: **Other Governance Positions** when external positions exist.
+3. Optional section: **Other Governance Positions** when external positions or YBC membership exist.
 4. Read-only external rows (`<ExternalPositionRow />`) link to `/veyfi` in a new tab.
 
 #### B. Hybrid (`stYFI/stYFIx = 0` and external > 0)
@@ -90,18 +93,36 @@ It specifically addresses:
 - **Right column:** Boost display (`{multiplier}x Boost`) + link-out icon.
 - External rows are visually distinct from interactive stYFI/x rows to indicate route-away behavior.
 
+### 4.5 YBC Membership Row
+
+- YBC appears in the governance positions section alongside external token positions.
+- The identity uses the app registry's blue Yearn glyph, **Yearn Builders Collective**, and **YBC**.
+- One right-aligned YFI value is labeled **Estimated backing**. There is no separate percentage metric.
+- Hover, keyboard focus, or tap opens the calculation: reward share × total collective backing ≈ estimated backing.
+- The tooltip explains that this allocation supports rewards. It is not an additional deposit or a withdrawable balance.
+- Existing unstaking and withdrawable amounts remain in their original token rows.
+- A zero-stake member keeps the row. Disabled reward information appears in the tooltip when applicable.
+
 ---
 
 ## 5. ModeComparison (Shared)
 
-- **Layout:** Grid (2 columns desktop, stacked mobile).
+- **Layout:** Equal-height cards in two desktop columns, stacked on mobile. Headers, descriptions, and APR footers use matching rows.
 - **stYFI card:**
-  - Badge: "Variable APY"
-  - Description: "Standard staking. You retain voting rights. Governance participation required for max yield."
+  - Badge: "Vote-dependent APR"
+  - Description: "Keep your vote. Your participation determines your Vote Boost."
+  - Estimated APR range: current base rate through the full configured Vote Boost rate.
 - **stYFIx card:**
-  - Badge: "Maximized APY" + "Recommended" (brand blue)
-  - Description: "Auto-delegated vault. Voting power is assigned to YBC to maximize rewards automatically."
+  - Badges: "Delegated" + "Recommended" on one line (brand blue)
+  - Description: "Delegate your vote to YBC to earn maximum APR."
+  - Estimated APR at full YBC participation, adjusted for the delegated pool's backing and active supply.
+  - The estimated APR value uses Yearn blue.
 - **Interaction:** Cards function as buttons to call `onSelectAsset`.
+
+The onboarding cards and compare modal place the APR label above its value in both modes.
+Both card footers align even when the stYFI range includes decimal places.
+The full-participation estimates are not next-epoch forecasts or guaranteed returns.
+Unavailable valuation produces an unavailable value. The cards omit repeated multiplier captions and freshness notices.
 
 ---
 
@@ -114,8 +135,10 @@ Always visible and owns all write interactions.
 - **Compare modes:** Text link opens a modal with `<ModeComparison />`.
 
 ### 6.2 Context Banner
-- **stYFI:** "You are managing standard stYFI. You must vote manually."
-- **stYFIx:** "You are managing stYFIx. Voting is delegated for passive yield."
+- The selected mode's **Estimated APR** appears beside its value at the top of the banner.
+- The estimate uses the same range or rate as the comparison cards. It stays visible in both tabs.
+- **stYFI:** "Manage stYFI and vote to boost your rewards."
+- **stYFIx:** "Manage stYFIx with voting delegated to YBC."
 
 ### 6.3 Tabs
 - **Variant:** Line tabs (text + underline) to differentiate action from scope.
@@ -123,22 +146,36 @@ Always visible and owns all write interactions.
 - **Unstake:** Refactored flow (below).
 
 ### 6.4 Rewards Card (Yield & Rewards)
-- **Title:** "Yield & Rewards".
-- **Layout:** Two stacked sections for clarity on small screens.
-  - **Top (Context):**
-    - **Current APR** (or **Next Epoch APR** when `epoch == 0`) with tooltip aligned to the label.
-    - When `epoch == 0`, use `styfi.projected.aprBps` for the displayed value.
-    - **Reward Token** label with tooltip: "Rewards are paid in {symbol}, which earns its own yield automatically."
-    - Show reward token symbol (`yvUSDC-1`) as a subtle external link to the Yearn vault, plus an APY badge (success variant) when available.
-    - Optional sublabel: "Auto-compounding vault".
-  - **Bottom (Payout Zone):**
-    - **Available to claim** label.
-    - Large claimable amount (USD) with a smaller token value beneath (include symbol).
-    - Primary CTA: **Claim Rewards**.
-- **States:**
-  - **Disconnected:** Centered empty state with icon + "Connect wallet to view rewards."
-  - **Loading:** Two-tier skeleton (context section + payout section).
-  - **Blacklisted:** Error banner above stats; CTA disabled.
+
+The card shows one rate: **Current APR** for an active portfolio, or **stYFIx APR** when no position is active.
+The total includes base rewards, delegated rewards, external positions, Vote Boost, and YBC income.
+
+Hover, keyboard focus, or a tap on the APR opens its calculation tooltip.
+Each income source appears once, followed by the total. All contributions use the same active-capital denominator.
+The tooltip explains historical reward attribution and the completed reward epoch when applicable.
+It labels the percentage contribution as **Vote Boost rewards**.
+It retains external income that still streams after a position closes.
+
+Eligible personal positions show a compact **Applied Vote Boost: 2.5×** line below the APR.
+This multiplier uses the completed reward epoch's participation and effective component scales.
+Its tooltip shows the applied calculation and identifies the reward period.
+A separate section shows current six-epoch participation, which affects rewards from the next epoch.
+This multiplier applies to stYFI reward weight, not to the total portfolio APR.
+
+Tooltip labels use dotted text underlines. Escape dismisses a focused tooltip.
+
+The reward-token symbol links to its Yearn vault. Its APY badge stays separate from the staking APR.
+The payout section retains the claimable USD value, token amount, and **Claim Rewards** button.
+
+| State | Display |
+| --- | --- |
+| Disconnected | Current stYFIx APR and a wallet connection prompt |
+| Loading | Skeleton for account data and a dash for pending rates |
+| Unavailable APR | Explicit unavailable values; existing rewards remain claimable |
+| Stale YFI price | Precise available price timestamp inside the APR tooltip; no repeated notice or asterisk |
+| Blacklisted | Existing restriction banner and disabled claim action |
+
+See [Vote Boost APR derivation](vote-boost-apr.md) for contract sources and calculation rules.
 
 ---
 
@@ -157,7 +194,7 @@ Always visible and owns all write interactions.
 
 ## 8. Copy & Tone
 
-- **APY Badges:** "Variable APY" vs "Maximized APY".
+- **Mode Badges:** "Vote-dependent APR" vs "Delegated".
 - **Status Labels:** Active, Unstaking, Withdrawable.
 - **Avoid green** for withdrawable values; use brand accents.
 
@@ -215,6 +252,7 @@ The shared app footer groups staking, governance, and contributor destinations.
 Its heading is “Yearn DAO”. A single “veYFI & Liquid Lockers” link opens `/veyfi` to manage both types of position.
 Its links preserve the current host environment and respect app release flags.
 It also links to the public governance-apps GitHub repository.
+Half a viewport of bottom padding lets users scroll the last footer links to the middle of the window.
 
 In production, the footer and notice require `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true`.
 The header correction does not depend on that discovery flag.

@@ -53,16 +53,23 @@ export const daoProposeCopy = {
     step: "2",
     title: "Immutable proposal content",
     description:
-      "Write one Markdown document. Its first H1 is the title, the next paragraph is the summary, and body content follows.",
-    markdownLabel: "Proposal Markdown",
+      "Give the proposal a clear title, then write its body. Both are fixed when you publish.",
+    titleLabel: "Proposal title",
+    titlePlaceholder: "For example, Fund protocol research",
+    titleHelp: "Describe the decision in up to 140 characters. No Markdown heading is needed.",
+    titleRequired: "Enter a descriptive proposal title.",
+    titleDescriptive: "Describe the proposed decision in the title. Put Summary in the body instead.",
+    titleSingleLine: "Keep the proposal title on one line.",
+    markdownLabel: "Proposal body",
     write: "Write",
     preview: "Preview",
     byteCount: (count: number, limit: number) =>
       `${count.toLocaleString("en-US")} / ${limit.toLocaleString("en-US")} UTF-8 bytes`,
     grammar:
-      "Start with one H1 and a summary paragraph. Use H2–H4 for body headings. Link to a section with [References](#references). Line numbers match validation messages.",
+      "Start with a summary paragraph of up to 500 characters, with or without ## Summary. More sections are optional. Keep the title in its field. Error line numbers refer to the body.",
     validation: "Markdown validation",
-    valid: "Document structure is valid",
+    valid: "Body structure is valid",
+    previewInvalid: "Fix the body errors listed below to see the final preview.",
   },
   type: {
     step: "3",

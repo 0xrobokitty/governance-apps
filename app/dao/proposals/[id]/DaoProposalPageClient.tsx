@@ -23,6 +23,7 @@ import { daoCopy } from "../../messages";
 import { MockControls } from "../../components/MockControls";
 import { DaoSnapshotNotice } from "../../components/DaoSnapshotNotice";
 import { ProposalDetail } from "./ProposalDetail";
+import { ConnectedProposalVoters } from "../../components/ProposalVoters";
 import { DaoProposalActionPanel } from "./DaoProposalActionPanel";
 import {
   createDaoBoardGroupHref,
@@ -68,6 +69,8 @@ export function DaoProposalPageClient({
   return (
     <>
       <DaoProposalView
+        isMock={Boolean(runtime)}
+        voterPanel={envelope ? <ConnectedProposalVoters proposal={envelope.proposal} isMock={Boolean(runtime)} hostname={hostname} /> : null}
         snapshotNotice={!runtime ? <DaoSnapshotNotice snapshot={envelope?.feed} error={proposalQuery.error} onRetry={() => { void proposalQuery.refetch(); }} /> : null}
         actionPanel={
           envelope ? (
@@ -93,8 +96,10 @@ export function DaoProposalPageClient({
 }
 
 export function DaoProposalView({
+  isMock,
   snapshotNotice = null,
   actionPanel = null,
+  voterPanel,
   envelope,
   hostname,
   now,
@@ -103,8 +108,10 @@ export function DaoProposalView({
   requestedOrigin = null,
   state,
 }: {
+  isMock?: boolean;
   snapshotNotice?: ReactNode;
   actionPanel?: ReactNode;
+  voterPanel?: ReactNode;
   envelope: DaoProposalReadEnvelope | null;
   hostname?: string;
   now?: number;
@@ -184,6 +191,8 @@ export function DaoProposalView({
 
       {state === "ready" && envelope ? (
         <ProposalDetail
+          isMock={isMock}
+          voterPanel={voterPanel}
           snapshotNotice={snapshotNotice}
           actionPanel={actionPanel}
           envelope={envelope}

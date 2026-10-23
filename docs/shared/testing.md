@@ -163,6 +163,11 @@ request failures, page errors, and console errors. Chromium maps
 `dao-beta.dao-ops.com` to loopback only when `E2E_BASE_URL` is local; remote and
 preproduction runs never receive that resolver rule.
 
+The beta-host navigation smoke uses an HTTPS browser origin with local HTTP
+transport. Playwright routes those requests to the isolated server and preserves
+the host headers. This keeps production CSP, including `upgrade-insecure-requests`,
+active without sending requests to the public beta host.
+
 Local hostname mapping does not test Cloudflare Access. Before beta UAT, verify
 all six exact governance beta hosts with an unauthenticated incognito request,
 an approved GitHub organization/team member, an unrelated GitHub account, and a
@@ -310,3 +315,4 @@ The repeatable launch runbook is
 
 - `E2E_WEB_SERVER_COMMAND` can override the Playwright web server command if you want to test `next start` instead of `next dev`.
 - Typecheck uses `types/next-shim.d.ts` to satisfy Next’s internal type imports under `.next/types`.
+- Keep the shim's `Prefetch` and `EnsureStatic` unions aligned with the pinned Next.js declarations. Production builds generate imports for both types.

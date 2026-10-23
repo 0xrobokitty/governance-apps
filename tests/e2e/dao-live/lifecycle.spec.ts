@@ -71,7 +71,8 @@ test("publishes exact bytes, creates ID zero, recovers feed lag, votes and execu
   await page.getByRole("textbox", { name: "Forum discussion", exact: true }).fill("https://gov.yearn.fi/t/local-fork-uat/1234");
   await page.getByRole("button", { name: "Validate topic", exact: true }).click();
   await expect(page.getByText("Forum topic accepted", { exact: true }).last()).toBeVisible();
-  await page.getByLabel("Proposal Markdown").fill("# Local execution UAT\n\nVerify the deployed governance contracts on a disposable fork.\n\n## Execution\n\nSet the local marker to 42.\n");
+  await page.getByLabel("Proposal title").fill("Local execution UAT");
+  await page.getByLabel("Proposal body").fill("Verify the deployed governance contracts on a disposable fork.\n\n## Execution\n\nSet the local marker to 42.\n");
   await page.getByRole("radio", { name: /Executable/ }).check();
   await page.getByLabel("Full Executor script").fill(state.script);
   await page.getByRole("button", { name: "Review proposal", exact: true }).click();

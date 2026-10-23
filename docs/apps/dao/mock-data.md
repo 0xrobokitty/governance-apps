@@ -14,6 +14,8 @@ All new examples are synthetic. They are not node recordings, producer output or
 
 ## Mutable actions and creation
 
+The board's [wallet voting summary](voting-power.md) uses this runtime's account and base voting weight. The **YBC member** debug control adds a deterministic pooled-influence estimate. Wrong-network and disconnected states hide the summary.
+
 Runtime controls cover roles, wallet/network, current time, vote totals, stored thresholds/flags, script/content integrity and fresh execution-preflight failure. Historical simulation states were removed. Script controls are missing, decoded/framed, partial/unknown, malformed and hash mismatch. Raw unknown calls never carry fictional proof labels.
 
 Execution preflight results bind the chain, Voting destination, actual caller and exact Voting.execute calldata, plus the independent live block number/hash/timestamp and relevant preparation inputs; an Executor frame result alone cannot satisfy the interface. Missing or stale block identity, a replacement hash at the same height, or changed configuration invalidates preflight. Advancing the mock live observation does not automatically rerun simulation. Prepared mock actions recheck capabilities at submission and reject changed account/proposal/configuration/script/observation context. Confirmed actions stay separate from canonical events until indexing. Failure creates no successful receipt or event.

@@ -1,5 +1,8 @@
 "use client";
 
+import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
+import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
+
 import {
   useEffect,
   useId,
@@ -27,7 +30,6 @@ import {
   type DaoVoteDirection,
 } from "@/lib/clients/dao";
 import { cn } from "@/lib/cn";
-import { E2E_MOCK_ADDRESS } from "@/lib/constants";
 import { formatTokenAmount } from "@/lib/format";
 import {
   useDaoAccountProposalState,
@@ -43,10 +45,9 @@ type DialogAction = DaoActionType | null;
 
 export function DaoProposalActionPanel({ proposal }: { proposal: DaoProposal }) {
   const { address } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const runtime = useDaoMockRuntime();
-  const effectiveAddress = isE2E && runtime
-    ? (runtime?.account.address ?? E2E_MOCK_ADDRESS)
+  const effectiveAddress = runtime
+    ? runtime.account.connected ? runtime.account.address : null
     : (address ?? null);
   const accountQuery = useDaoAccountProposalState(
     proposal.ref,
@@ -630,7 +631,7 @@ function VoteConfirmation({
   const content = proposal.content.value;
   const parsedContent = content ? parseDaoProposalContent(content) : null;
   const title =
-    parsedContent?.title ?? `Proposal #${proposal.ref.proposalId.toString()}`;
+    getDaoDisplayTitle(proposal.ref, proposal.content.digest, parsedContent?.title) ?? `Proposal #${proposal.ref.proposalId.toString()}`;
   const decayed = account.decayBps < 10_000;
   return (
     <div className="space-y-5">
@@ -657,7 +658,12 @@ function VoteConfirmation({
           label={daoCopy.actions.voteDirection}
           value={direction === "yea" ? daoCopy.actions.yea : daoCopy.actions.nay}
         />
-        <ActionFact label={daoCopy.actions.proposal} value={title} />
+        <ActionFact label={daoCopy.actions.proposal} value={
+          <span className="flex min-w-0 items-start">
+            <span className="min-w-0">{title}</span>
+            <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
+          </span>
+        } />
         {decayed ? (
           <ActionFact
             label={daoCopy.actions.originalWeight}
@@ -953,7 +959,7 @@ function AccessibleDialog({
   );
 }
 
-function ActionFact({ label, value }: { label: string; value: string }) {
+function ActionFact({ label, value }: { label: string; value: ReactNode }) {
   return (
     <div className="min-w-0 space-y-1">
       <dt className="text-pretty text-xs font-bold text-text-secondary">

@@ -367,7 +367,8 @@ for (const [range, fixtures] of [
       if (fixture.fixture === "hash-mismatch") {
         expect(evidence?.proposal.scriptHashVerified).toBe(false);
         await expect(
-          page.getByText("Event script does not match the stored script hash")
+          page.getByRole("tabpanel", { name: "Proposal", exact: true })
+            .getByText("Event script does not match the stored script hash")
         ).toBeVisible();
       }
     }
@@ -476,7 +477,8 @@ test("keeps DAO status, purpose, and feedback text at AA contrast in both themes
       `${theme} decision-purpose badge`
     );
     await measure(
-      page.getByText("Event script matches the stored script hash"),
+      page.getByRole("tabpanel", { name: "Proposal", exact: true })
+        .getByText("Event script matches the stored script hash"),
       `${theme} script integrity`
     );
 
@@ -494,7 +496,8 @@ test("keeps DAO status, purpose, and feedback text at AA contrast in both themes
       await window.__TEST__?.setDaoFixture?.("hash-mismatch");
     });
     await measure(
-      page.getByText("Event script does not match the stored script hash"),
+      page.getByRole("tabpanel", { name: "Proposal", exact: true })
+        .getByText("Event script does not match the stored script hash"),
       `${theme} hash-mismatch error`
     );
 
@@ -502,8 +505,11 @@ test("keeps DAO status, purpose, and feedback text at AA contrast in both themes
     await page.evaluate(async () => {
       await window.__TEST__?.setDaoFixture?.("script-malformed");
     });
+    await page.getByRole("tab", { name: "Details", exact: true }).click();
+    const script = page.locator("#dao-proposal-script");
+    await script.locator(":scope > details > summary").click();
     await measure(
-      page.getByText(/The first Executor header is incomplete\./).first(),
+      script.getByText(/The first Executor header is incomplete\./).first(),
       `${theme} script framing error`
     );
 

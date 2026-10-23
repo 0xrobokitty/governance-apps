@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/Card";
 import { Button, getButtonClassName } from "@/components/ui/Button";
 import { UtcTime } from "@/components/ui/UtcTime";
 import { useDaoFeed, useDaoMockRuntime } from "@/lib/hooks/useDao";
+import { useDaoParticipation } from "@/lib/hooks/useDaoParticipation";
+import type { DaoParticipationMap } from "@/lib/clients/dao/participation";
 import { useHostname } from "@/lib/hooks/useHostname";
 import {
   DaoErrorPanel,
@@ -20,6 +22,7 @@ import { daoCopy } from "./messages";
 import { DaoSnapshotNotice } from "./components/DaoSnapshotNotice";
 import { MockControls } from "./components/MockControls";
 import { ProposalBoard } from "./components/ProposalBoard";
+import { DaoVotingPower } from "./components/DaoVotingPower";
 import type { DaoProposal } from "@/lib/clients/dao";
 import type { DaoDisplayGroup } from "@/lib/clients/dao";
 import {
@@ -58,15 +61,16 @@ export function DaoPageClient({
 }) {
   const browserHostname = useHostname();
   const hostname = browserHostname ?? initialHostname;
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const runtime = useDaoMockRuntime();
-  const hasConnectedAccount =
-    process.env.NEXT_PUBLIC_E2E === "true" && runtime
-      ? runtime.account.connected
-      : isConnected;
+  const hasConnectedAccount = runtime ? runtime.account.connected : isConnected;
   const feedQuery = useDaoFeed();
   const proposalCount = feedQuery.data?.proposals.length ?? 0;
   const proposals = feedQuery.data?.proposals ?? EMPTY_PROPOSALS;
+  const viewerAddress = hasConnectedAccount
+    ? runtime ? runtime.account.address : address ?? null
+    : null;
+  const participation = useDaoParticipation(proposals, viewerAddress, runtime);
   const groupCounts = useMemo<DaoBoardGroupCounts>(
     () => ({
       upcoming: proposals.filter(
@@ -113,6 +117,7 @@ export function DaoPageClient({
   return (
     <>
       <DaoBoardView
+        votingPower={<DaoVotingPower />}
         snapshotNotice={!runtime ? <DaoSnapshotNotice snapshot={feedQuery.data} error={feedQuery.error} onRetry={() => { void feedQuery.refetch(); }} /> : null}
         isConnected={hasConnectedAccount}
         isStale={!!runtime && isStale}
@@ -124,6 +129,7 @@ export function DaoPageClient({
         }}
         now={runtime?.now ?? feedQuery.data?.canonicalBlock.timestamp ?? 0}
         proposals={proposals}
+        participation={participation}
         hostname={hostname}
         selectedGroup={selectedGroup}
         onSelectGroup={selectGroup}
@@ -136,6 +142,7 @@ export function DaoPageClient({
 
 export function DaoBoardView({
   snapshotNotice = null,
+  votingPower = null,
   isConnected,
   isStale = false,
   lastGoodSnapshotTimestamp = null,
@@ -146,8 +153,10 @@ export function DaoBoardView({
   selectedGroup,
   onSelectGroup,
   state,
+  participation = {},
 }: {
   snapshotNotice?: ReactNode;
+  votingPower?: ReactNode;
   isConnected: boolean;
   isStale?: boolean;
   lastGoodSnapshotTimestamp?: number | null;
@@ -158,6 +167,7 @@ export function DaoBoardView({
   selectedGroup?: DaoDisplayGroup;
   onSelectGroup?: (group: DaoDisplayGroup) => void;
   state: DaoBoardState;
+  participation?: DaoParticipationMap;
 }) {
   return (
     <DaoRouteFrame>
@@ -165,6 +175,7 @@ export function DaoBoardView({
         hostname={hostname}
         proposalCount={proposals.length}
         showCount={state === "ready"}
+        votingPower={isConnected ? votingPower : null}
       />
 
       {!isConnected ? <DaoWalletNotice /> : null}
@@ -220,6 +231,7 @@ export function DaoBoardView({
           selectedGroup={selectedGroup}
           onSelectGroup={onSelectGroup}
           snapshotNotice={snapshotNotice}
+          participation={participation}
         />
       ) : null}
     </DaoRouteFrame>
@@ -230,14 +242,16 @@ function DaoBoardHeader({
   hostname,
   proposalCount,
   showCount,
+  votingPower,
 }: {
   hostname?: string;
   proposalCount: number;
   showCount: boolean;
+  votingPower: ReactNode;
 }) {
   return (
-    <header className="flex min-w-0 flex-col gap-5 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0 space-y-2">
+    <header className="flex min-w-0 flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0 flex-1 space-y-2">
         <h1 className="text-balance text-3xl font-bold md:text-4xl">
           {daoCopy.board.title}
         </h1>
@@ -250,7 +264,7 @@ function DaoBoardHeader({
           </p>
         ) : null}
       </div>
-      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 lg:max-w-[65%] lg:justify-end">
         <a
           href={daoCopy.navigation.forumHref}
           target="_blank"
@@ -259,17 +273,18 @@ function DaoBoardHeader({
           className={getButtonClassName({
             variant: "ghost",
             size: "sm",
-            className: `${daoRouteControlClassName} w-full gap-1.5 sm:w-auto`,
+            className: `${daoRouteControlClassName} h-auto min-h-11 flex-1 gap-1.5 py-2 text-center sm:flex-none`,
           })}
         >
           <span>{daoCopy.navigation.forum}</span>
           <IconLinkOut className="size-3.5" aria-hidden />
         </a>
+        {votingPower}
         <Link
           href={createDaoProposeHref(hostname)}
           className={getButtonClassName({
             size: "sm",
-            className: `${daoRouteControlClassName} w-full sm:w-auto`,
+            className: `${daoRouteControlClassName} h-auto min-h-11 flex-1 py-2 text-center sm:flex-none`,
           })}
         >
           {daoCopy.navigation.createProposal}

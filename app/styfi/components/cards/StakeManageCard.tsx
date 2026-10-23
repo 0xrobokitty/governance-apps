@@ -12,6 +12,8 @@ import { StakeTab } from "./stake/StakeTab";
 import { UnstakeTab } from "./stake/UnstakeTab";
 import { styfiCopy as copy } from "../../messages";
 import { StreamingBadge, ReadyBadge } from "@/components/domain/Badges";
+import { useStyfiApr } from "@/lib/hooks/useStyfiApr";
+import { StakingAprEstimate } from "../StakingAprEstimate";
 
 type Props = {
   selectedAsset: StyfiAsset;
@@ -22,6 +24,7 @@ export function StakeManageCard({ selectedAsset, onSelectAsset }: Props) {
   const [activeTab, setActiveTab] = useState<"stake" | "unstake">("stake");
   const [isCompareOpen, setIsCompareOpen] = useState(false);
   const { data } = useStyfiAccount();
+  const { data: apr, isLoading: isAprLoading } = useStyfiApr();
 
   const cooldown =
     selectedAsset === "stYFI" ? data?.styfiCooldown : data?.styfiX.cooldown;
@@ -75,14 +78,15 @@ export function StakeManageCard({ selectedAsset, onSelectAsset }: Props) {
           onClick={() => setIsCompareOpen(true)}
           className="inline-flex min-h-10 items-center rounded-md px-2 text-xs font-semibold text-neutral-500 underline decoration-neutral-300 underline-offset-4 transition-[color] duration-150 ease-out hover:text-neutral-900 focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 focus-visible:ring-offset-app"
         >
-          Compare modes
+          {copy.modeSelector.compareLabel}
         </button>
       </div>
 
-      <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">
-        {selectedAsset === "stYFI"
-          ? "You are managing standard stYFI. You must vote manually."
-          : "You are managing stYFIx. Voting is delegated for passive yield."}
+      <div className="space-y-1 rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-3">
+        <StakingAprEstimate asset={selectedAsset} snapshot={apr} isLoading={isAprLoading} compact />
+        <p className="text-xs leading-relaxed text-neutral-600">
+          {selectedAsset === "stYFI" ? copy.stakeManage.description.styfi : copy.stakeManage.description.x}
+        </p>
       </div>
 
       <div>
@@ -109,7 +113,7 @@ export function StakeManageCard({ selectedAsset, onSelectAsset }: Props) {
       <Modal
         isOpen={isCompareOpen}
         onClose={() => setIsCompareOpen(false)}
-        title="Compare modes"
+        title={copy.modeSelector.compareLabel}
         className="max-w-2xl"
       >
         <ModeComparison

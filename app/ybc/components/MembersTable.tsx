@@ -104,8 +104,8 @@ export function MembersTable({
                 type="button"
                 size="sm"
                 variant="ghost"
-                onClick={() => {
-                  const result = onClearAliases();
+                onClick={async () => {
+                  const result = await onClearAliases();
                   setAliasControlError(
                     result === "saved" ? null : copy.members.alias.storageError
                   );

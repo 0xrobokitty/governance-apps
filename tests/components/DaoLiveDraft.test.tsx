@@ -10,14 +10,15 @@ describe("live draft eligibility refresh", () => {
     const props = { live: true, proposer, now: fixture.now, onRetry: vi.fn() };
     const { rerender } = render(<DaoProposeView {...props} state="ready" />);
     fireEvent.click(screen.getByRole("button", { name: "Start proposal" }));
-    const markdown = "# Retained draft\n\nKeep my draft.\n\n## Scope\n\nKeep the full body.\n";
-    fireEvent.change(screen.getByLabelText("Proposal Markdown"), { target: { value: markdown } });
+    const markdown = "Keep my draft.\n\n## Scope\n\nKeep the full body.\n";
+    fireEvent.change(screen.getByLabelText("Proposal title"), { target: { value: "Retained draft" } });
+    fireEvent.change(screen.getByLabelText("Proposal body"), { target: { value: markdown } });
     fireEvent.change(screen.getByRole("textbox", { name: "Forum discussion" }), { target: { value: "https://gov.yearn.fi/t/topic/1001" } });
     fireEvent.click(screen.getByRole("radio", { name: /Executable/ }));
     const script = DAO_EXECUTOR_VALID_SCRIPT_VECTORS.oneCall.script;
     fireEvent.change(screen.getByLabelText("Full Executor script"), { target: { value: script } });
     rerender(<DaoProposeView {...props} proposer={null} state="error" />);
-    expect(screen.getByLabelText("Proposal Markdown")).toHaveValue(markdown);
+    expect(screen.getByLabelText("Proposal body")).toHaveValue(markdown);
     expect(screen.getByRole("textbox", { name: "Forum discussion" })).toHaveValue("https://gov.yearn.fi/t/topic/1001");
     expect(screen.getByLabelText("Full Executor script")).toHaveValue(script);
     rerender(<DaoProposeView {...props} state="ready" />);

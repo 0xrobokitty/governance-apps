@@ -1,0 +1,703 @@
+{
+  "version": 1,
+  "chainId": 1,
+  "block": {
+    "number": "26256202",
+    "hash": "0xdef95ed2ccf34e99df2f5edbd8cbaa48a810333ed41781df6714f778aebcfe18",
+    "timestamp": 1792769051
+  },
+  "deployment": {
+    "voting": "0x543e8871562a8c53e8b6a26835aeecb3a5a13070",
+    "measure": "0x67237108547ac7e2dabfb81edd1b4cbcfffc8d0c",
+    "aggregator": "0x6973cf85d479b9253e13e71f377e8cd2c2dfecd7",
+    "delegated": "0x9c42461aa8422926e3aef7b1c6e3743597149d79",
+    "ve": "0x2548bf65916fdabb5a5673fc4225011ff29ee884",
+    "ybc": "0xd6afd78c05f0d425f2b46359746dd44991dcb315"
+  },
+  "coverage": {
+    "fromBlock": "24320000",
+    "throughBlock": "26256202",
+    "complete": true,
+    "tokens": [
+      "0x42b25284e8ae427d79da78b65dffc232aaecc016",
+      "0xa16f6fc7380300525c812ea2733ad62dda58143b",
+      "0x52aa16860e0d42b6a7b6ecc15688472eb20135c9",
+      "0x3d4ced97adb0ae3a53da95a47ffc749aad26bc8f"
+    ],
+    "candidateCount": 120
+  },
+  "accounts": [
+    {
+      "address": "0x000000000004444c5dc75cb358380d2e3de08a90",
+      "stakedPower": "30635087311072",
+      "migratedVePower": "0",
+      "directPower": "30635087311072"
+    },
+    {
+      "address": "0x02878e0b2847a10c414573da76980184f7d92770",
+      "stakedPower": "12026151766124000000",
+      "migratedVePower": "0",
+      "directPower": "12026151766124000000"
+    },
+    {
+      "address": "0x029f1c62662cbbfe79ce55b285fee4e2db081a06",
+      "stakedPower": "0",
+      "migratedVePower": "2140891073792876159",
+      "directPower": "2140891073792876159"
+    },
+    {
+      "address": "0x02bc0a30878a7f3f5d74081f77a5ad34e651c6f0",
+      "stakedPower": "0",
+      "migratedVePower": "2948460035713449738",
+      "directPower": "2948460035713449738"
+    },
+    {
+      "address": "0x02e479f4fa2309b8d10bb1f6c0257c0707ce3641",
+      "stakedPower": "0",
+      "migratedVePower": "1358219315360427801",
+      "directPower": "1358219315360427801"
+    },
+    {
+      "address": "0x03f177bd98f6bb3afbabbc9ea24eac24135e7ecb",
+      "stakedPower": "0",
+      "migratedVePower": "1021064742575600592",
+      "directPower": "1021064742575600592"
+    },
+    {
+      "address": "0x0b381328b014f0f753e529e5af37a4e1dd7af87b",
+      "stakedPower": "21543620034002000000",
+      "migratedVePower": "0",
+      "directPower": "21543620034002000000"
+    },
+    {
+      "address": "0x0e7af95de26bf10e6b9f00d846c22757aa582b9c",
+      "stakedPower": "59865365673866564",
+      "migratedVePower": "0",
+      "directPower": "59865365673866564"
+    },
+    {
+      "address": "0x0eadb62d5caf12794866c33ea934e5cc59c2e9cd",
+      "stakedPower": "365558103401125990",
+      "migratedVePower": "1095859766765606976",
+      "directPower": "1461417870166732966"
+    },
+    {
+      "address": "0x11c9ac11ce9913e26faa7a9ee5b07c92b0c8c372",
+      "stakedPower": "0",
+      "migratedVePower": "1220433998131136326",
+      "directPower": "1220433998131136326"
+    },
+    {
+      "address": "0x124eeaa9eeac1ef7101dfa240e154cd22630374f",
+      "stakedPower": "0",
+      "migratedVePower": "209294911000000000000",
+      "directPower": "209294911000000000000"
+    },
+    {
+      "address": "0x138df85038d8e72a391da7c686f95d9fe2e0c9f9",
+      "stakedPower": "955090997750000000",
+      "migratedVePower": "0",
+      "directPower": "955090997750000000"
+    },
+    {
+      "address": "0x139776871ee95f55d20b10d9ba5a0385451066cd",
+      "stakedPower": "0",
+      "migratedVePower": "2299102338652756967",
+      "directPower": "2299102338652756967"
+    },
+    {
+      "address": "0x13cbd624af484c4c695ff0e1d0b7e125d45f2c76",
+      "stakedPower": "551298308604766553",
+      "migratedVePower": "0",
+      "directPower": "551298308604766553"
+    },
+    {
+      "address": "0x15d7d53f578bafe720761e83bcc42a23de79f4d9",
+      "stakedPower": "0",
+      "migratedVePower": "3703520023826774405",
+      "directPower": "3703520023826774405"
+    },
+    {
+      "address": "0x16388463d60ffe0661cf7f1f31a7d658ac790ff7",
+      "stakedPower": "10802728602594766426",
+      "migratedVePower": "11408406888154661661",
+      "directPower": "22211135490749428087"
+    },
+    {
+      "address": "0x17fd68f4f3035a1b51e6e662238784001f76a8f9",
+      "stakedPower": "0",
+      "migratedVePower": "1269525651530000000",
+      "directPower": "1269525651530000000"
+    },
+    {
+      "address": "0x1b72bac3772050fdcaf468cce7e20deb3cb02d89",
+      "stakedPower": "18554151365866633912",
+      "migratedVePower": "0",
+      "directPower": "18554151365866633912"
+    },
+    {
+      "address": "0x1d70e9414b639286665df4794ff5c7ea538b4eac",
+      "stakedPower": "31064793252156000000",
+      "migratedVePower": "0",
+      "directPower": "31064793252156000000"
+    },
+    {
+      "address": "0x20493c81da20e64593c77a3297c7c8ed8cd8f879",
+      "stakedPower": "0",
+      "migratedVePower": "1000000000000000000",
+      "directPower": "1000000000000000000"
+    },
+    {
+      "address": "0x20eadfcaf91bd98674ff8fc341d148e1731576a4",
+      "stakedPower": "0",
+      "migratedVePower": "70000000000000000000",
+      "directPower": "70000000000000000000"
+    },
+    {
+      "address": "0x238f24101876377e9178d125d0747de7fad9c3b2",
+      "stakedPower": "3757894820000000000",
+      "migratedVePower": "0",
+      "directPower": "3757894820000000000"
+    },
+    {
+      "address": "0x2482dc04ac628a4b2700c071bfee557fd86c91ea",
+      "stakedPower": "2715443467635374333",
+      "migratedVePower": "0",
+      "directPower": "2715443467635374333"
+    },
+    {
+      "address": "0x26762af77774dab2118e32784c9a612a8d15864a",
+      "stakedPower": "0",
+      "migratedVePower": "52913271220000000000",
+      "directPower": "52913271220000000000"
+    },
+    {
+      "address": "0x2a88487328e89fe6c3b71706069715f301f4beb4",
+      "stakedPower": "1774959673886114574",
+      "migratedVePower": "0",
+      "directPower": "1774959673886114574"
+    },
+    {
+      "address": "0x2c01b4ad51a67e2d8f02208f54df9ac4c0b778b6",
+      "stakedPower": "0",
+      "migratedVePower": "12245819324502500935",
+      "directPower": "12245819324502500935"
+    },
+    {
+      "address": "0x2c4b08d9e363989fca119dba2b5925fc8d27fd5a",
+      "stakedPower": "14323072509910000000",
+      "migratedVePower": "0",
+      "directPower": "14323072509910000000"
+    },
+    {
+      "address": "0x305d1239e09103efed3f8a0e5e3770345ced81d6",
+      "stakedPower": "0",
+      "migratedVePower": "2044740651269636386",
+      "directPower": "2044740651269636386"
+    },
+    {
+      "address": "0x314c0695273ba259bb60074f2c92c67ac7ae6d40",
+      "stakedPower": "0",
+      "migratedVePower": "10017908214162842548",
+      "directPower": "10017908214162842548"
+    },
+    {
+      "address": "0x31516ca621cada3dfaec38ed85c831e46ece93e8",
+      "stakedPower": "11229592875839000000",
+      "migratedVePower": "2614169595795902198",
+      "directPower": "13843762471634902198"
+    },
+    {
+      "address": "0x321516d8fe2083eeeba69a1babb8fd7969493b1b",
+      "stakedPower": "1981587435085049445",
+      "migratedVePower": "0",
+      "directPower": "1981587435085049445"
+    },
+    {
+      "address": "0x34434e7d8dcf92110ff73719a96a6dcb1b639676",
+      "stakedPower": "223198156344000000",
+      "migratedVePower": "0",
+      "directPower": "223198156344000000"
+    },
+    {
+      "address": "0x346f1d297c98c28574742b067b67a80cda2dc0d9",
+      "stakedPower": "8897722885177000000",
+      "migratedVePower": "0",
+      "directPower": "8897722885177000000"
+    },
+    {
+      "address": "0x3be1fa9668470f5956ea87f2fc0149cb30999df2",
+      "stakedPower": "17407155744810000000",
+      "migratedVePower": "0",
+      "directPower": "17407155744810000000"
+    },
+    {
+      "address": "0x43b9f935c798522aaacb2bfea2f407ce5a291e9d",
+      "stakedPower": "0",
+      "migratedVePower": "1095035132586424192",
+      "directPower": "1095035132586424192"
+    },
+    {
+      "address": "0x4444aaaacdba5580282365e25b16309bd770ce4a",
+      "stakedPower": "8556372852017000000",
+      "migratedVePower": "11056749373605197551",
+      "directPower": "19613122225622197551"
+    },
+    {
+      "address": "0x44b4e1feb04891da9bbdf9e02b359c72da3e4118",
+      "stakedPower": "0",
+      "migratedVePower": "1009253096946028547",
+      "directPower": "1009253096946028547"
+    },
+    {
+      "address": "0x4966c5a2efccff0caaefc842ac626d98435a7337",
+      "stakedPower": "3868672794654697117",
+      "migratedVePower": "0",
+      "directPower": "3868672794654697117"
+    },
+    {
+      "address": "0x4aecd37a8a314959fd48c39243361fee307dc424",
+      "stakedPower": "0",
+      "migratedVePower": "1028630820000000000",
+      "directPower": "1028630820000000000"
+    },
+    {
+      "address": "0x4b7576abc3870ff017752649dad1221fc424cecf",
+      "stakedPower": "6594978016443831036",
+      "migratedVePower": "0",
+      "directPower": "6594978016443831036"
+    },
+    {
+      "address": "0x4bc9e55fa4e18f2364c4428ba8eab1997f99ba85",
+      "stakedPower": "26150666856921000000",
+      "migratedVePower": "0",
+      "directPower": "26150666856921000000"
+    },
+    {
+      "address": "0x4c9861dc2f2c71db30c94bca990392b501bdef82",
+      "stakedPower": "0",
+      "migratedVePower": "101932757390000000000",
+      "directPower": "101932757390000000000"
+    },
+    {
+      "address": "0x4d540d0a975351dbfe82b3af77ac9e52eecb54f3",
+      "stakedPower": "0",
+      "migratedVePower": "4365465201684930608",
+      "directPower": "4365465201684930608"
+    },
+    {
+      "address": "0x5668ead1edb8e2a4d724c8fb9cb5ffeabeb422dc",
+      "stakedPower": "7892106143958610634",
+      "migratedVePower": "1048661249801656056",
+      "directPower": "8940767393760266690"
+    },
+    {
+      "address": "0x5a90d3e6cfcc55d4d63ba4f729922413d9364c67",
+      "stakedPower": "0",
+      "migratedVePower": "1094621385350618157",
+      "directPower": "1094621385350618157"
+    },
+    {
+      "address": "0x5bf16e551c21f28162850c472da53766a0d27caf",
+      "stakedPower": "0",
+      "migratedVePower": "2000810000000000000",
+      "directPower": "2000810000000000000"
+    },
+    {
+      "address": "0x5d97f3a8bb293f9561892091779ed6af0df209c1",
+      "stakedPower": "0",
+      "migratedVePower": "1734494947257154871",
+      "directPower": "1734494947257154871"
+    },
+    {
+      "address": "0x5da07af8913a4eaf09e5f569c20138b658906c17",
+      "stakedPower": "41789730000000000000",
+      "migratedVePower": "0",
+      "directPower": "41789730000000000000"
+    },
+    {
+      "address": "0x6cd1b82490eb7aa18bec4305c6c2e691194c6898",
+      "stakedPower": "0",
+      "migratedVePower": "1082309117672390180",
+      "directPower": "1082309117672390180"
+    },
+    {
+      "address": "0x6f9bb7e454f5b3eb2310343f0e99269dc2bb8a1d",
+      "stakedPower": "0",
+      "migratedVePower": "6000612601499549759",
+      "directPower": "6000612601499549759"
+    },
+    {
+      "address": "0x74630370197b4c4795bfeef6645ee14f8cf8997d",
+      "stakedPower": "0",
+      "migratedVePower": "2331849332979904065",
+      "directPower": "2331849332979904065"
+    },
+    {
+      "address": "0x789330a9f15bbc61b524714528c1ce72237dc731",
+      "stakedPower": "0",
+      "migratedVePower": "9016667452926383221",
+      "directPower": "9016667452926383221"
+    },
+    {
+      "address": "0x794ad3af58b56522b80aa7e9bc04f042c55d5b2f",
+      "stakedPower": "0",
+      "migratedVePower": "2694008806030128379",
+      "directPower": "2694008806030128379"
+    },
+    {
+      "address": "0x7b0507e0b2feb81b3fd618ac13e85c3f1980738a",
+      "stakedPower": "207888717882000000",
+      "migratedVePower": "2041124607302704622",
+      "directPower": "2249013325184704622"
+    },
+    {
+      "address": "0x7bdfe11c4981dd4c33e1aa62457b8773253791b3",
+      "stakedPower": "5748795223189657175",
+      "migratedVePower": "0",
+      "directPower": "5748795223189657175"
+    },
+    {
+      "address": "0x7e1e1c5ac70038a9718431c92a618f01f8dada18",
+      "stakedPower": "55645243885482691",
+      "migratedVePower": "0",
+      "directPower": "55645243885482691"
+    },
+    {
+      "address": "0x7f91b4a29bfdcdb09e6250e218bbd010ed44cfa1",
+      "stakedPower": "1516320847810536601",
+      "migratedVePower": "0",
+      "directPower": "1516320847810536601"
+    },
+    {
+      "address": "0x80c9ac867b2d36b7e8d74646e074c460a008c0cb",
+      "stakedPower": "29408417998477000000",
+      "migratedVePower": "0",
+      "directPower": "29408417998477000000"
+    },
+    {
+      "address": "0x84c51f3634e80c1552bddaeabedf24608d5aa091",
+      "stakedPower": "302743301827000000",
+      "migratedVePower": "0",
+      "directPower": "302743301827000000"
+    },
+    {
+      "address": "0x88a3354e5e7a34a7901e1b64557992e85aa1b5eb",
+      "stakedPower": "50404447685460523195",
+      "migratedVePower": "0",
+      "directPower": "50404447685460523195"
+    },
+    {
+      "address": "0x88aaf4a728e14748cea5e9a3ca1306ac567ba472",
+      "stakedPower": "340859044807793077",
+      "migratedVePower": "0",
+      "directPower": "340859044807793077"
+    },
+    {
+      "address": "0x8a149d1f2355d1027a7dcfce672c5c54706b5861",
+      "stakedPower": "1000000000000000000",
+      "migratedVePower": "0",
+      "directPower": "1000000000000000000"
+    },
+    {
+      "address": "0x92f612d46cf0bc9a511b4c586eed80e5aca56a25",
+      "stakedPower": "20866903221714000000",
+      "migratedVePower": "0",
+      "directPower": "20866903221714000000"
+    },
+    {
+      "address": "0x9405b100f82cebca3a78f7ba785162b865ed68d0",
+      "stakedPower": "558519728200324788",
+      "migratedVePower": "0",
+      "directPower": "558519728200324788"
+    },
+    {
+      "address": "0x95420c8f22c95e94f0c443d4c075b819644014b0",
+      "stakedPower": "0",
+      "migratedVePower": "1000083945593575654",
+      "directPower": "1000083945593575654"
+    },
+    {
+      "address": "0x98077a08bec399f2aa82fe3b8e16817f8f9c6326",
+      "stakedPower": "0",
+      "migratedVePower": "1006168819202062607",
+      "directPower": "1006168819202062607"
+    },
+    {
+      "address": "0x9cc96683eee232f52c0968b4f4bc1a0f312c0306",
+      "stakedPower": "287931143211339000000",
+      "migratedVePower": "0",
+      "directPower": "287931143211339000000"
+    },
+    {
+      "address": "0x9e406b2c2021966f3983e899643609c45e3bbffe",
+      "stakedPower": "18433260420160838153",
+      "migratedVePower": "0",
+      "directPower": "18433260420160838153"
+    },
+    {
+      "address": "0x9e752f70c4083f15162996c5e6e2129d994a1a67",
+      "stakedPower": "58188019411538000000",
+      "migratedVePower": "0",
+      "directPower": "58188019411538000000"
+    },
+    {
+      "address": "0xa7b6f3d18db39f65c8056d0892af76c07d15fc5a",
+      "stakedPower": "313932974683616765",
+      "migratedVePower": "7228405793705744022",
+      "directPower": "7542338768389360787"
+    },
+    {
+      "address": "0xa7c724db7c53af7bc0580932b2da4c605b0d24b4",
+      "stakedPower": "5356775959700000000",
+      "migratedVePower": "0",
+      "directPower": "5356775959700000000"
+    },
+    {
+      "address": "0xa8862a64d289c74a25f3c404da7780396c7c25b8",
+      "stakedPower": "0",
+      "migratedVePower": "11913679326657966401",
+      "directPower": "11913679326657966401"
+    },
+    {
+      "address": "0xaaaa00079535300ddba84a89eb92434250f83ea7",
+      "stakedPower": "13500000000000000000",
+      "migratedVePower": "0",
+      "directPower": "13500000000000000000"
+    },
+    {
+      "address": "0xab699b1bb3fe0eb9884213ab91d86f06fb33499d",
+      "stakedPower": "695892906694947380",
+      "migratedVePower": "0",
+      "directPower": "695892906694947380"
+    },
+    {
+      "address": "0xac47c0471609db7abc218199eb772ce6e00c5d55",
+      "stakedPower": "87870632648460000000",
+      "migratedVePower": "0",
+      "directPower": "87870632648460000000"
+    },
+    {
+      "address": "0xac9e6fa8ad5214f365e99ee96227598ea1e4b20c",
+      "stakedPower": "0",
+      "migratedVePower": "9878963671701962452",
+      "directPower": "9878963671701962452"
+    },
+    {
+      "address": "0xaca7231fc34348140bdf022262b94f9e2aa85303",
+      "stakedPower": "0",
+      "migratedVePower": "1112353988269547112",
+      "directPower": "1112353988269547112"
+    },
+    {
+      "address": "0xb0e83c2d71a991017e0116d58c5765abc57384af",
+      "stakedPower": "23555511758923392445",
+      "migratedVePower": "0",
+      "directPower": "23555511758923392445"
+    },
+    {
+      "address": "0xb1a044bb54ecb8fc4d83138795c6ee396dc3133c",
+      "stakedPower": "9079324087461000000",
+      "migratedVePower": "0",
+      "directPower": "9079324087461000000"
+    },
+    {
+      "address": "0xb43f3fc1ccd8027e8d5918ef64c1c75a5f186cbd",
+      "stakedPower": "476233555387166278",
+      "migratedVePower": "0",
+      "directPower": "476233555387166278"
+    },
+    {
+      "address": "0xb4e8ef1dfb273a72baa69639ac3ae8b584892e3e",
+      "stakedPower": "100888114810412994",
+      "migratedVePower": "0",
+      "directPower": "100888114810412994"
+    },
+    {
+      "address": "0xbaa33cbbfaa44fbcd27028affae1ad52e0e189ac",
+      "stakedPower": "0",
+      "migratedVePower": "8847340790000000000",
+      "directPower": "8847340790000000000"
+    },
+    {
+      "address": "0xbd5ca40c66226f53378ae06bc71784cad6016087",
+      "stakedPower": "0",
+      "migratedVePower": "8012796479191618656",
+      "directPower": "8012796479191618656"
+    },
+    {
+      "address": "0xbd7b3bc2c4581fd173362c830ae45fb9506b3da5",
+      "stakedPower": "0",
+      "migratedVePower": "6504637473004600467",
+      "directPower": "6504637473004600467"
+    },
+    {
+      "address": "0xc198fcb71e5a2cf29f7bcafaa462f3b0238fa691",
+      "stakedPower": "5356775959749704042",
+      "migratedVePower": "0",
+      "directPower": "5356775959749704042"
+    },
+    {
+      "address": "0xcb926f497763ea5cf993912a442431e6a91d5a64",
+      "stakedPower": "0",
+      "migratedVePower": "5000000000000000000",
+      "directPower": "5000000000000000000"
+    },
+    {
+      "address": "0xd27d90b337717fd91c4d409f712b890d4ee2fdd6",
+      "stakedPower": "1004298266134841994",
+      "migratedVePower": "0",
+      "directPower": "1004298266134841994"
+    },
+    {
+      "address": "0xd2bc4e7ecfa4ec39069623854cd114dcd8771b84",
+      "stakedPower": "6258409412699535206",
+      "migratedVePower": "0",
+      "directPower": "6258409412699535206"
+    },
+    {
+      "address": "0xd4f9fe0039da59e6ddb21bbb6e84e0c9e83d73ed",
+      "stakedPower": "1515302232000000",
+      "migratedVePower": "0",
+      "directPower": "1515302232000000"
+    },
+    {
+      "address": "0xd6afd78c05f0d425f2b46359746dd44991dcb315",
+      "stakedPower": "213818835516958000000",
+      "migratedVePower": "0",
+      "directPower": "213818835516958000000"
+    },
+    {
+      "address": "0xd9d3dd56936f90ea4c7677f554dfefd45ef6df0f",
+      "stakedPower": "0",
+      "migratedVePower": "1426384200000000000",
+      "directPower": "1426384200000000000"
+    },
+    {
+      "address": "0xdd2a7af04425bef8b77890423b3591c475e21a21",
+      "stakedPower": "451143818521665347",
+      "migratedVePower": "0",
+      "directPower": "451143818521665347"
+    },
+    {
+      "address": "0xdf0259238271427c469abc18a2cb3047d5c12466",
+      "stakedPower": "1038929378478509105",
+      "migratedVePower": "0",
+      "directPower": "1038929378478509105"
+    },
+    {
+      "address": "0xe07d9c9cf00f9d6a4fd595a31cbb7bc0953a41a0",
+      "stakedPower": "12692019702349000000",
+      "migratedVePower": "0",
+      "directPower": "12692019702349000000"
+    },
+    {
+      "address": "0xe22a66b2822926af61f608834765220c29b7b9a5",
+      "stakedPower": "61481300941252000000",
+      "migratedVePower": "0",
+      "directPower": "61481300941252000000"
+    },
+    {
+      "address": "0xe4f8288e2e7eaee5ac51dc8a8270715156544246",
+      "stakedPower": "188667310414302400",
+      "migratedVePower": "1009727490000000000",
+      "directPower": "1198394800414302400"
+    },
+    {
+      "address": "0xe5e2baf96198c56380ddd5e992d7d1ada0e989c0",
+      "stakedPower": "8831384251444000000",
+      "migratedVePower": "6967918521471864856",
+      "directPower": "15799302772915864856"
+    },
+    {
+      "address": "0xed9bac467144747e2c988c96f798770231d237eb",
+      "stakedPower": "0",
+      "migratedVePower": "11976087031655982179",
+      "directPower": "11976087031655982179"
+    },
+    {
+      "address": "0xeeeeeeeeee274c3cce13f77c85d8ebd9f7fd4479",
+      "stakedPower": "0",
+      "migratedVePower": "10998166054495193330",
+      "directPower": "10998166054495193330"
+    },
+    {
+      "address": "0xef52d4c1458b458bbfe73e3cab1031957bbe833b",
+      "stakedPower": "0",
+      "migratedVePower": "1000000000000000000",
+      "directPower": "1000000000000000000"
+    },
+    {
+      "address": "0xf0ea0b3aaf06ce5b09d484990d5d45a00fe9f0b4",
+      "stakedPower": "5712245346654800246",
+      "migratedVePower": "0",
+      "directPower": "5712245346654800246"
+    },
+    {
+      "address": "0xf36265d3bc945ff236eadcf58820ad1d6e59d497",
+      "stakedPower": "0",
+      "migratedVePower": "5536682271237292634",
+      "directPower": "5536682271237292634"
+    },
+    {
+      "address": "0xf8c8d9332f441e6d4f3e2731829717265c3e8ed1",
+      "stakedPower": "3893262726196000000",
+      "migratedVePower": "0",
+      "directPower": "3893262726196000000"
+    },
+    {
+      "address": "0xf930ebbd05ef8b25b1797b9b2109ddc9b0d43063",
+      "stakedPower": "4876545891202138680",
+      "migratedVePower": "0",
+      "directPower": "4876545891202138680"
+    },
+    {
+      "address": "0xfa4ebcb83902bb1106b85bb3d4916dfd72e06721",
+      "stakedPower": "101148749429270423646",
+      "migratedVePower": "263569393111750413866",
+      "directPower": "364718142541020837512"
+    },
+    {
+      "address": "0xfac2f11ba2577d5122dc1ec5301d35b16688251e",
+      "stakedPower": "15119239050585792664",
+      "migratedVePower": "0",
+      "directPower": "15119239050585792664"
+    },
+    {
+      "address": "0xfb168732ff1518599a07456cc675f2efdb84f023",
+      "stakedPower": "171417434479963",
+      "migratedVePower": "0",
+      "directPower": "171417434479963"
+    },
+    {
+      "address": "0xfc4b2a62a06cb2e1c6a743e9ae327bb16977e4c1",
+      "stakedPower": "5985001417356462",
+      "migratedVePower": "0",
+      "directPower": "5985001417356462"
+    },
+    {
+      "address": "0xfc5d96042cdfe586433c2af27cb8bb87fcf68b4d",
+      "stakedPower": "10000000000000000",
+      "migratedVePower": "0",
+      "directPower": "10000000000000000"
+    },
+    {
+      "address": "0xfe51263bd0d075dc5441e89ecd1f6d63ff41e02e",
+      "stakedPower": "0",
+      "migratedVePower": "2614851021862355466",
+      "directPower": "2614851021862355466"
+    },
+    {
+      "address": "0xff2ca9ccceda2f4eb79f9e4faca533575329d386",
+      "stakedPower": "1474429291402968095",
+      "migratedVePower": "0",
+      "directPower": "1474429291402968095"
+    }
+  ],
+  "totals": {
+    "stakedPower": "1312362506740752357048",
+    "migratedVePower": "903732994345677422602",
+    "delegatedPower": "431027945257047456616",
+    "totalPower": "2647123446343477236266"
+  }
+}

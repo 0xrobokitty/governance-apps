@@ -88,6 +88,8 @@ test("renders the DAO proposal board shell", async ({ page }) => {
   await forumLink.focus();
   await expect(forumLink).toBeFocused();
   await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: /Your voting power/ })).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(createProposalLink).toBeFocused();
 
   await expectMinimumHitArea(createProposalLink);
@@ -371,7 +373,24 @@ test("uses clean client-side paths on the guarded DAO beta host", async ({
   }
   const betaUrl = new URL(configuredBaseUrl);
   betaUrl.hostname = "dao-beta.dao-ops.com";
+  betaUrl.protocol = "https:";
   betaUrl.pathname = "/";
+
+  // Keep the HTTPS browser origin and production CSP intact while all app
+  // traffic terminates at the isolated local HTTP server.
+  await page.route(`${betaUrl.origin}/**`, async (route) => {
+    const target = new URL(route.request().url());
+    const response = await route.fetch({
+      url: new URL(target.pathname + target.search, configuredBaseUrl).href,
+      headers: {
+        ...route.request().headers(),
+        host: betaUrl.host,
+        "x-forwarded-host": betaUrl.host,
+        "x-forwarded-proto": "http",
+      },
+    });
+    await route.fulfill({ response });
+  });
 
   const response = await page.goto(betaUrl.toString());
   expect(response?.headers()["x-robots-tag"]).toBe("noindex, nofollow");
@@ -443,6 +462,7 @@ test("uses clean client-side paths on the guarded DAO beta host", async ({
     "href",
     "/"
   );
+  await page.unrouteAll({ behavior: "wait" });
 });
 
 test("exposes the shared DAO debug section without route-local controls", async ({

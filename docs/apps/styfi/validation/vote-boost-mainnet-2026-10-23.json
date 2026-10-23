@@ -1,0 +1,100 @@
+{
+  "purpose": "Read-only mainnet verification of current APR streams for one public YBC roster member; no wallet connection, transactions, or signatures.",
+  "contractSource": {
+    "path": "/Users/hydra/Developer/yearn/styfi",
+    "commit": "001dda500be30e16d0837f8e7e05a75c8fe9710f"
+  },
+  "applicationSource": {
+    "baseCommit": "2fcc08e",
+    "reader": "lib/clients/styfi/apr-onchain.ts",
+    "derivation": "lib/clients/styfi/apr.ts"
+  },
+  "reproduction": {
+    "entryPoint": "fetchStyfiAprSnapshot(mainnetPublicClient, globalData, memberAddress)",
+    "globalFeedUrl": "https://data.dao-ops.com/prod/stats.json",
+    "ybcFeedUrl": "https://data.dao-ops.com/prod/ybc.json",
+    "testCommand": "npx vitest run tests/unit/lib/clients/styfi.apr.test.ts tests/unit/lib/clients/styfi.apr-onchain.test.ts"
+  },
+  "observedAt": "2026-10-23T11:02:35.000Z",
+  "bindings": {
+    "stakingMiddleware": "0x24b267AA3946209ca19231d0f17110577be00A86",
+    "delegatedRewardSource": "0x8A7A0Deb9F86d8D1aF2398C9efd063E26F66cA29",
+    "ybcRewardSource": "0xA82454009E01Ae697012a73cB232d85e61B05e50",
+    "ybcRewardsKilled": false,
+    "rewardTokenDecimals": 6,
+    "rewardAsset": "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48",
+    "rewardAssetDecimals": 6,
+    "rewardAssetsPerShare": "1122269",
+    "stakingComponentScale": {
+      "next": "0x1111111111111111111111111111111111111111",
+      "epoch": "18",
+      "numerator": "4",
+      "denominator": "1"
+    },
+    "voteBoostComponentScale": {
+      "next": "0x7eFc3953Bed2fc20b9f825eBffaB1cC8B072a000",
+      "epoch": "18",
+      "numerator": "6",
+      "denominator": "1"
+    }
+  },
+  "roundedPercent": {
+    "publicBaseApr": 8.0827,
+    "publicMaxEstimateApr": 20.2148,
+    "delegatedActualApr": 20.2348,
+    "memberStyfiPositionApr": null,
+    "memberPortfolioApr": 33.1746,
+    "portfolioContributions": {
+      "base": 5.6484,
+      "delegated": 0,
+      "voteBoost": 15.1887,
+      "ybc": 7.6781,
+      "external": 4.6593
+    }
+  },
+  "snapshot": {
+    "status": "available",
+    "blockNumber": "26254898",
+    "timestamp": 1792753355,
+    "currentEpoch": 18,
+    "rewardEpoch": 17,
+    "baseAprBps": 808.266346,
+    "maxAprBps": 2021.483738,
+    "styfixAprBps": 2023.478401,
+    "delegatedParticipation": {
+      "votes": "6",
+      "proposals": "6"
+    },
+    "valuation": {
+      "yfiPriceCts": "218333",
+      "timestamp": 1792738259,
+      "stale": true
+    },
+    "account": {
+      "address": "0x9cc96683eee232f52c0968b4f4bc1a0f312c0306",
+      "styfiActive": "202187918907757591872",
+      "styfixActive": "0",
+      "externalActive": "87134006267052904958",
+      "totalActive": "289321925174810496830",
+      "isYbcMember": true,
+      "yourStyfiAprBps": null,
+      "portfolioAprBps": 3317.464236,
+      "baseAprBps": 564.843835,
+      "delegatedAprBps": 0,
+      "voteBoostAprBps": 1518.872008,
+      "ybcAprBps": 767.814255,
+      "externalAprBps": 465.934137,
+      "annualRewards": "186728243298",
+      "participation": {
+        "votes": "6",
+        "proposals": "6"
+      }
+    }
+  },
+  "notes": [
+    "APR is annualized current income at unchanged balances and prices, not a guaranteed return.",
+    "Member contribution percentages share the same total-active-capital denominator and sum to portfolio APR before rounding.",
+    "Current participation counts affect a later stream; rewardEpoch identifies the completed epoch funding this stream.",
+    "Price stale status is retained from production metadata. Do not treat stale-valuation percentages as a current price quote."
+  ]
+}

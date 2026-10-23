@@ -262,11 +262,12 @@ export function parseDaoProposalContent(
   }
 
   const ast = parseMarkdownAst(content.markdown);
-
   const workErrors = validateMarkdownWorkBounds(ast);
   if (workErrors.length > 0) {
     return invalidParsedContent(content, byteLength, workErrors);
   }
+  const summaryIndex = getDaoSummaryNodeIndex(ast);
+  const summaryHeading = summaryIndex === 2 ? ast.children[1] : null;
 
   const manifestErrors = validateManifest(content.assets);
   const documentErrors: DaoProposalContentError[] = [];
@@ -327,7 +328,7 @@ export function parseDaoProposalContent(
         );
         return;
       }
-      if (!isStandaloneAttachmentContext(visit, ast)) {
+      if (!isStandaloneAttachmentContext(visit, ast, summaryIndex + 1)) {
         documentErrors.push(
           errorAt(
             "UNSAFE_IMAGE",
@@ -394,13 +395,13 @@ export function parseDaoProposalContent(
     );
   }
 
-  const summaryNode = ast.children[1];
+  const summaryNode = ast.children[summaryIndex];
   let summary: string | null = null;
   if (summaryNode?.type !== "paragraph") {
     documentErrors.push(
       errorAt(
         "MISSING_SUMMARY",
-        "The title must be followed by one prose summary paragraph.",
+        "Start the proposal body with a summary paragraph, optionally under a ## Summary heading.",
         summaryNode ?? titleNode ?? ast
       )
     );
@@ -428,8 +429,8 @@ export function parseDaoProposalContent(
     }
   }
 
-  const body = ast.children.slice(2);
-  if (!body.some((node) => isMeaningfulBodyNode(node, validAttachmentOffsets))) {
+  const body = ast.children.slice(summaryIndex + 1);
+  if (body.length > 0 && !body.some((node) => isMeaningfulBodyNode(node, validAttachmentOffsets))) {
     documentErrors.push(
       errorAt(
         "EMPTY_BODY",
@@ -450,10 +451,10 @@ export function parseDaoProposalContent(
     );
   }
   for (const heading of headings) {
-    if (heading.node === titleNode) continue;
+    if (heading.node === titleNode || heading.node === summaryHeading) continue;
     if (
       heading.rootChildIndex === null ||
-      heading.rootChildIndex < 2 ||
+      heading.rootChildIndex < summaryIndex + 1 ||
       (heading.node.depth ?? 0) < 2 ||
       (heading.node.depth ?? 0) > 4
     ) {
@@ -477,6 +478,12 @@ export function parseDaoProposalContent(
     attachments,
     errors: [...dedupeErrors(documentErrors), ...manifestErrors],
   };
+}
+
+/** An optional level-two Summary heading belongs to the introductory summary. */
+export function getDaoSummaryNodeIndex(ast: DaoMarkdownRoot): number {
+  const heading = ast.children[1];
+  return heading?.type === "heading" && heading.depth === 2 && /^summary$/iu.test(inlineText(heading).trim()) ? 2 : 1;
 }
 
 export function resolveDaoProposalAttachment(
@@ -977,13 +984,14 @@ function isMeaningfulBodyNode(node: DaoMarkdownNode, validAttachmentOffsets: Set
 
 function isStandaloneAttachmentContext(
   visit: MarkdownVisit,
-  ast: DaoMarkdownRoot
+  ast: DaoMarkdownRoot,
+  bodyStartIndex: number
 ): boolean {
   const { node, parent, rootChildIndex } = visit;
   return (
     parent?.type === "paragraph" &&
     rootChildIndex !== null &&
-    rootChildIndex >= 2 &&
+    rootChildIndex >= bodyStartIndex &&
     ast.children[rootChildIndex] === parent &&
     parent.children?.length === 1 &&
     parent.children[0] === node

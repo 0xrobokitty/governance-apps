@@ -1,0 +1,87 @@
+{
+  "purpose": "Read-only verification of the integrated DAO voting-power reader for the same public YBC member used in the stYFI APR evidence.",
+  "reproduction": {
+    "command": "node /private/tmp/verify-dao-voting-member.mjs",
+    "entryPoint": "readIndexedVotingPower({publicClient, account, snapshot, ybcFeed})",
+    "reader": "lib/clients/styfi/voting-power.ts",
+    "indexBuilder": "scripts/build-dao-voting-power.mjs",
+    "localSnapshot": "public/dao-voting-power.json",
+    "rosterUrl": "https://data.dao-ops.com/prod/ybc.json"
+  },
+  "block": {
+    "number": "26255712",
+    "hash": "0x74484429a4d0a84421814f993693b7ab5558dabb40ff81e9c29a083f6b2260ee",
+    "timestamp": 1792763171
+  },
+  "freshness": {
+    "latestBlock": "26255729",
+    "latestTimestamp": 1792763375,
+    "ageSeconds": 204,
+    "maximumAgeSeconds": 300,
+    "canonicalHashVerified": true
+  },
+  "coverage": {
+    "fromBlock": "24320000",
+    "throughBlock": "26255712",
+    "complete": true,
+    "tokens": [
+      "0x42b25284E8ae427D79da78b65DFFC232aAECc016",
+      "0xA16F6FC7380300525C812ea2733Ad62DDA58143B",
+      "0x52Aa16860E0D42B6a7b6ecC15688472eb20135c9",
+      "0x3d4Ced97ADb0ae3A53DA95a47fFc749aAd26BC8f"
+    ],
+    "candidateCount": 120
+  },
+  "deployment": {
+    "voting": "0x543e8871562a8C53E8B6a26835aeEcB3a5A13070",
+    "measure": "0x67237108547aC7e2dABFB81EDd1b4CBCFFfc8D0c",
+    "aggregator": "0x6973CF85d479b9253E13E71F377E8CD2c2dfECd7",
+    "delegated": "0x9C42461AA8422926e3AEF7B1C6e3743597149d79",
+    "ve": "0x2548BF65916fdABB5A5673fC4225011FF29ee884",
+    "ybc": "0xd6AFd78C05f0d425F2b46359746dD44991dCB315"
+  },
+  "rounded": {
+    "systemTotalYfi": "2647.123446",
+    "memberStakedYfi": "287.931143",
+    "memberMigratedVeYfi": "0.000000",
+    "directYfi": "287.931143",
+    "delegatedViaYbcYfi": "226.291170",
+    "collectiveViaYbcYfi": "112.255632",
+    "combinedEstimateYfi": "626.477946",
+    "directPercentOfSystem": 10.87,
+    "estimatedPercentOfSystem": 23.66,
+    "percentOfYbcMemberWeight": 52.5
+  },
+  "result": {
+    "address": "0x9cc96683eee232f52c0968b4f4bc1a0f312c0306",
+    "blockNumber": "26255712",
+    "blockHash": "0x74484429a4d0a84421814f993693b7ab5558dabb40ff81e9c29a083f6b2260ee",
+    "timestamp": 1792763171,
+    "stakedPower": "287931143211339000000",
+    "migratedVePower": "0",
+    "directPower": "287931143211339000000",
+    "delegatedBalance": "0",
+    "isYbcMember": true,
+    "memberWeight": "287931143211339000000",
+    "ybcInfluence": {
+      "delegatedPower": "226291170344887629722",
+      "collectivePower": "112255632293303923160",
+      "totalPower": "626477945849530552882",
+      "memberShareBps": "5250"
+    },
+    "systemPower": {
+      "totalPower": "2647123446343477236266",
+      "stakedPower": "1312362506740752357048",
+      "migratedVePower": "903732994345677422602",
+      "delegatedPower": "431027945257047456616",
+      "directShareBps": "1087",
+      "estimatedShareBps": "2366"
+    }
+  },
+  "notes": [
+    "The reader parsed complete source coverage, checked freshness and epoch, and compared the wallet's indexed weight with pinned live contract reads.",
+    "YBC roster addresses are only candidates: current membership, member count, and all matured weights were read at the indexed block.",
+    "The direct share is exact for the snapshot. The combined share assumes all eligible YBC members vote; actual proposal influence depends on participation.",
+    "The system total counts the collective once and replaces delegated pool underlying weight with its delegated snapshot once. No signatures or transactions were used."
+  ]
+}

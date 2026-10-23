@@ -11,6 +11,7 @@ import {
 } from "@/lib/clients/dao";
 import { cn } from "@/lib/cn";
 import { daoCopy } from "../messages";
+import { ProposalVoteResults } from "./ProposalVoteResults";
 
 const STATUS_VARIANTS: Record<
   DaoDisplayStatus,
@@ -122,10 +123,13 @@ export function ProposalTiming({
 export function ProposalVoteSummary({
   compact = false,
   proposal,
+  hostname,
 }: {
   compact?: boolean;
   proposal: DaoProposal;
+  hostname?: string;
 }) {
+  if (!compact) return <ProposalVoteResults proposal={proposal} hostname={hostname} />;
   const vote = deriveDaoVoteDisplay(proposal);
 
   return (
@@ -151,13 +155,6 @@ export function ProposalVoteSummary({
       <p className="text-pretty font-number text-xs tabular-nums text-text-secondary">
         {daoCopy.detail.voteCaption(vote.thresholdPercent)}
       </p>
-      {!compact ? (
-        <dl className="grid grid-cols-3 gap-2 pt-2">
-          <VoteFact label={daoCopy.detail.yeaWeight} value={vote.yeaWeight} />
-          <VoteFact label={daoCopy.detail.nayWeight} value={vote.nayWeight} />
-          <VoteFact label={daoCopy.detail.totalWeight} value={vote.totalWeight} />
-        </dl>
-      ) : null}
     </div>
   );
 }
@@ -232,19 +229,6 @@ function ProposalTimingText({
         daoCopy.detail.transactionUnavailable
       )}
     </>
-  );
-}
-
-function VoteFact({ label, value }: { label: string; value: string }) {
-  return (
-    <div className="min-w-0 space-y-1">
-      <dt className="text-pretty text-[11px] font-bold text-text-secondary">
-        {label}
-      </dt>
-      <dd className="break-words font-number text-xs tabular-nums [overflow-wrap:anywhere]">
-        {value}
-      </dd>
-    </div>
   );
 }
 

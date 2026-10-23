@@ -144,12 +144,18 @@ Use the existing GitHub `production` environment. Preserve its approval controls
 | `NEXT_PUBLIC_RPC_URLS` | Existing approved public-client mainnet RPC URLs, comma-separated |
 | `NEXT_PUBLIC_WC_PROJECT_ID` | Existing approved WalletConnect project ID |
 | `NEXT_PUBLIC_GLOBAL_DATA_URL` | Existing approved shared application feed |
+| `NEXT_PUBLIC_DAO_VOTING_POWER_URL` | Published companion feed, normally `https://data.dao-ops.com/prod/voting-power.json` |
 | Teams, YBC, and yETH flags and feed URLs | Preserve their current production values |
 | `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` | Existing private deployment secrets |
 
 The workflow reads DAO values from GitHub variables. An absent DAO flag defaults to `false`.
 The operator must set it to `true` for this approved launch.
 Copy the reviewed JSON as one complete array. Do not substitute the synthetic deployment example or remove the proposal hook.
+
+The voting-power release requires the companion producer before the app update.
+Follow the [coordinated release procedure](voting-power-release-2026-10-23.md).
+Production validation rejects a missing feed URL, a relative URL, HTTP, or URL credentials when DAO is enabled.
+The browser reads the validated feed through `/api/dao-voting-power` on the app's own origin.
 
 The workflow fixes `NODE_ENV` and `NEXT_PUBLIC_RUNTIME_MODE` to `production` in validation, build, and deployment.
 It fixes mocks, E2E, debugging, DAO review controls, and simulation fallback to `false` in all three steps.

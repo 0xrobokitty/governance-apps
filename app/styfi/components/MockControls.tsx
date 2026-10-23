@@ -2,7 +2,7 @@
 
 import { useCallback } from "react";
 import { useQueryClient } from "@tanstack/react-query";
-import { useAccount } from "wagmi";
+import { useIdentity } from "@/state/identity";
 import { Button } from "@/components/ui/Button";
 import { styfiKeys } from "@/lib/hooks/useStyfi";
 import { veyfiKeys } from "@/lib/hooks/useVeyfi";
@@ -11,10 +11,12 @@ import { toast } from "@/components/ui/Toast";
 import { DebugControls } from "@/components/DebugControls";
 import { LlyfiTokenId } from "@/lib/clients/veyfi";
 import { getLlyfiDisplaySymbol } from "@/lib/clients/veyfi/display";
+import { setStyfiMockScenario, type StyfiMockScenario } from "@/lib/clients/styfi/scenarios";
+import { styfiCopy as copy } from "../messages";
 
 export function MockControls() {
   const queryClient = useQueryClient();
-  const { address } = useAccount();
+  const { address } = useIdentity();
   const { styfi, veyfi } = useProtocol();
 
   const handleInjectBalance = useCallback(
@@ -120,6 +122,20 @@ export function MockControls() {
 
   return (
     <DebugControls>
+      <div className="grid grid-cols-2 gap-2 mb-2" aria-label={copy.debug.aprScenariosLabel}>
+        {(["full", "partial", "missed", "ybc"] as const).map((scenario: StyfiMockScenario) => (
+          <Button key={scenario} size="sm" variant="secondary" onClick={async () => {
+            setStyfiMockScenario(scenario);
+            if (address && styfi.debugSetBalance) {
+              const account = await styfi.getAccountState(address);
+              if (account.styfiActive === 0n) styfi.debugSetBalance(address, "stYFI", 25n * 10n ** 18n);
+            }
+            await queryClient.invalidateQueries({ refetchType: "all" });
+          }}>
+            {copy.debug.aprScenarios[scenario]}
+          </Button>
+        ))}
+      </div>
       <div className="grid grid-cols-2 gap-2 mb-2">
         <Button
           size="sm"

@@ -4,6 +4,7 @@ Scope: `stYFI` and `stYFIx` experiences under `/styfi`.
 
 - User stories: [`user-stories.md`](user-stories.md)
 - UI specification: [`ui-spec.md`](ui-spec.md)
+- Vote Boost and YBC reward calculations: [`vote-boost-apr.md`](vote-boost-apr.md)
 
 Shared architecture and standards are documented in [`../../shared/README.md`](../../shared/README.md).
 

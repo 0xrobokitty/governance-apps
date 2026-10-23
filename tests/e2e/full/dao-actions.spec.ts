@@ -52,9 +52,12 @@ test("keeps the action panel reachable, responsive, and keyboard safe", async ({
 
     const actionHeading = page.getByRole("heading", { name: "Your action" });
     const results = page.getByLabel("Vote results", { exact: true });
-    const rules = results.locator("summary");
+    const rulesDisclosure = results.locator("details").filter({
+      has: page.getByText("Proposal rules", { exact: true }),
+    });
+    const rules = rulesDisclosure.locator("summary");
     await expect(results).toBeVisible();
-    await expect(results.locator("details")).not.toHaveAttribute("open", "");
+    await expect(rulesDisclosure).not.toHaveAttribute("open", "");
     const resultsBox = await results.boundingBox();
     const contentHeading = page.getByRole("heading", {
       name: "Proposal content",
@@ -413,8 +416,11 @@ for (const scenario of lifecycleScenarios) {
       page.getByText(scenario.indexedStatus, { exact: true }).first()
     ).toBeVisible();
     if (scenario.reason) {
+      await page.getByRole("tab", { name: "Details", exact: true }).click();
+      const lifecycle = page.locator("#dao-proposal-lifecycle");
+      await lifecycle.locator(":scope > details > summary").click();
       await expect(
-        page.getByText(scenario.reason, { exact: true }).first()
+        lifecycle.getByText(scenario.reason, { exact: true }).first()
       ).toBeVisible();
     }
   });

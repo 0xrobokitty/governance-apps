@@ -8,24 +8,23 @@ import type { Address } from "viem";
 const {
   mockUseStyfiAccount,
   mockUseStyfiClaimRewards,
-  mockUseStyfiApy,
+  mockUseStyfiApr,
   mockUseRewardTokenInfo,
 } = vi.hoisted(() => ({
   mockUseStyfiAccount: vi.fn(),
   mockUseStyfiClaimRewards: vi.fn(),
-  mockUseStyfiApy: vi.fn(),
+  mockUseStyfiApr: vi.fn(),
   mockUseRewardTokenInfo: vi.fn(),
 }));
 
 vi.mock("@/lib/hooks/useStyfi", () => ({
   useStyfiAccount: () => mockUseStyfiAccount(),
   useStyfiClaimRewards: () => mockUseStyfiClaimRewards(),
-  useStyfiApy: () => mockUseStyfiApy(),
   useRewardTokenInfo: () => mockUseRewardTokenInfo(),
 }));
 
-vi.mock("@/state/protocol", () => ({
-  useProtocol: () => ({ globalData: null }),
+vi.mock("@/lib/hooks/useStyfiApr", () => ({
+  useStyfiApr: () => mockUseStyfiApr(),
 }));
 
 vi.mock("@/lib/hooks/useEpochClock", () => ({
@@ -83,7 +82,7 @@ describe("RewardsCard reward token link", () => {
       write: vi.fn(),
       state: { status: "idle" },
     });
-    mockUseStyfiApy.mockReturnValue({ data: 0 });
+    mockUseStyfiApr.mockReturnValue({ data: null, isLoading: false, isError: true });
     mockUseRewardTokenInfo.mockReturnValue({
       apy: "6.24%",
       convertBalanceToUsd: vi.fn(() => null),
@@ -100,5 +99,17 @@ describe("RewardsCard reward token link", () => {
     expect(link).toHaveTextContent("yvUSDC-1");
     expect(link).toHaveAttribute("href", REWARD_TOKEN_CONFIG.vaultUrl);
     expect(link).toHaveAttribute("target", "_blank");
+  });
+
+  it("keeps claims available when APR data is unavailable", () => {
+    mockUseStyfiAccount.mockReturnValue({
+      data: { ...accountState, claimableGenericRewards: 1_000_000n },
+      isLoading: false,
+    });
+    render(<RewardsCard />);
+
+    expect(screen.getByRole("button", { name: "Claim Rewards" })).toBeEnabled();
+    expect(screen.getByTestId("styfi-total-apr")).toHaveTextContent("Unavailable");
+    expect(screen.getByRole("status")).toHaveTextContent("Current APR data is unavailable");
   });
 });

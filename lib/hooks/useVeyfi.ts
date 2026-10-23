@@ -54,6 +54,10 @@ async function refreshVeyfiStatsFromChain(
   veyfi: VeyfiClient,
   queryClient: QueryClient
 ) {
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
+    queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+  ]);
   if (veyfi.getGlobalStatsFromChain) {
     try {
       const stats = await veyfi.getGlobalStatsFromChain();

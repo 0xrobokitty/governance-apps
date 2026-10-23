@@ -1,7 +1,7 @@
 # `user-stories-styfi.md`
 
 **User Stories — stYFI & stYFIx**
-**Version:** 1.3
+**Version:** 1.4
 **Scope:** Part I of the Governance Apps (stYFI + stYFIx)
 
 ---
@@ -130,6 +130,31 @@ We assume a technically literate DeFi user familiar with:
 - If blacklisted:
 
   - Action disabled with explanation
+
+---
+
+## Story ST-04A — Understand Vote Boost and YBC Income
+
+**As a** governance participant
+**I want** one total reward rate with an accessible calculation
+**So that** I can understand the rewards from my positions and votes
+
+### Acceptance Criteria
+
+- The headline shows the actual stYFIx APR, including its recorded Vote Boost rewards.
+- The reward card labels the total portfolio rate **Current APR**. Without an active position, it shows the actual stYFIx APR.
+- Hover, keyboard focus, or a tap reveals the contribution breakdown in a tooltip.
+- Mixed or earlier external holdings use an account-wide Vote Boost contribution with an explanation in that tooltip.
+- A YBC member sees YBC income included once in the total portfolio APR.
+- The YBC governance row shows one estimated backing value. Its tooltip explains the reward-share calculation without implying personal ownership or withdrawal rights.
+- Current reward rates use the completed reward epoch. The APR tooltip identifies the epoch in which those rewards stream.
+- A compact **Applied Vote Boost** multiplier uses the participation and component scales that fund the current stream.
+- Its tooltip separates that applied multiplier from current participation, which affects rewards from the next epoch.
+- The tooltip labels the percentage contribution **Vote Boost rewards** and explains that the multiplier does not apply to the total portfolio APR.
+- Missing reward or price data shows an unavailable state, not a zero APR.
+- A separate full-participation estimate assumes a vote on every counted proposal. It does not guarantee future YBC participation.
+- The selected mode's estimate stays beside the management controls in both the Stake and Unstake tabs.
+- Reward-token APY remains separate from staking APR.
 
 ---
 
@@ -337,7 +362,7 @@ These stories explicitly **not** part of this domain:
 - Redemption caps
 - In-app governance voting (shared DAO proposal discovery and linking are in scope)
 - Voting power decay visuals
-- YBC-specific behaviour
+- YBC membership management and elections
 - Historical metrics / analytics
 - Transfer UI
 

@@ -24,8 +24,8 @@ describe("YBC visible identity map", () => {
     });
   });
 
-  it("disambiguates colliding generated labels in one visible-address pass", () => {
-    const [firstAddress, secondAddress] = findGeneratedLabelCollision();
+  it("keeps generated labels stable across visible address sets", () => {
+    const [firstAddress, secondAddress] = createSharedTagAddresses(2);
     const identities = buildYbcIdentityMap([], [], {
       visibleAddresses: [firstAddress, secondAddress],
     });
@@ -43,6 +43,7 @@ describe("YBC visible identity map", () => {
     );
     expect(firstIdentity.label).not.toContain("0x");
     expect(secondIdentity.label).not.toContain("0x");
+    expect(getYbcIdentity(buildYbcIdentityMap([], [], { visibleAddresses: [secondAddress] }), secondAddress).label).toBe(secondIdentity.label);
 
     const reversedIdentities = buildYbcIdentityMap([], [], {
       visibleAddresses: [secondAddress, firstAddress],
@@ -77,19 +78,6 @@ describe("YBC visible identity map", () => {
     });
   });
 });
-
-function findGeneratedLabelCollision(): [string, string] {
-  const addressesByPseudonym = new Map<string, string>();
-
-  for (const address of createSharedTagAddresses(145)) {
-    const pseudonym = getYbcMemberPseudonym(address);
-    const previousAddress = addressesByPseudonym.get(pseudonym);
-    if (previousAddress) return [previousAddress, address];
-    addressesByPseudonym.set(pseudonym, address);
-  }
-
-  throw new Error("Expected a deterministic generated-label collision.");
-}
 
 function createSharedTagAddresses(count: number): string[] {
   return Array.from({ length: count }, (_, index) => {

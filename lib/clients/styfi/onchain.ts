@@ -37,6 +37,10 @@ const BLACKLIST_PROBES: ReadonlyArray<{
   functionName: string;
 }> = [
   {
+    abi: parseAbi(["function blacklist(address user) view returns (bool)"]),
+    functionName: "blacklist",
+  },
+  {
     abi: parseAbi([
       "function isBlacklisted(address user) view returns (bool)",
     ]),
