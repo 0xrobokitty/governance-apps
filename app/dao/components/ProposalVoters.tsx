@@ -12,8 +12,9 @@ import type { DaoProposal } from "@/lib/clients/dao/types";
 import { buildAddressIdentityMap, getAddressIdentity } from "@/lib/identity/identity";
 import type { VerifiedEnsIdentities } from "@/lib/identity/ens";
 import { useAddressAliases } from "@/lib/hooks/useAddressAliases";
-import { useEnsIdentities } from "@/lib/hooks/useEnsIdentities";
+import { useEnsIdentityLookup } from "@/lib/hooks/useEnsIdentities";
 import { useProtocol } from "@/state/protocol";
+import { mainnet } from "viem/chains";
 import { cn } from "@/lib/cn";
 import { daoCopy } from "../messages";
 
@@ -25,10 +26,23 @@ const controlClassName = "min-h-10 min-w-0 rounded-box border border-border bg-s
 export function ConnectedProposalVoters({ proposal, isMock }: { proposal: DaoProposal; isMock: boolean }) {
   const { mainnetPublicClient } = useProtocol();
   const [addresses, setAddresses] = useState<string[]>([]);
-  const verifiedEns = useEnsIdentities(mainnetPublicClient, addresses, !isMock);
-  const [ensSnapshot, setEnsSnapshot] = useState({ latest: verifiedEns, resolved: verifiedEns });
-  if (ensSnapshot.latest !== verifiedEns) {
-    setEnsSnapshot({ latest: verifiedEns, resolved: { ...ensSnapshot.resolved, ...verifiedEns } });
+  const { identities: verifiedEns, settled } = useEnsIdentityLookup(mainnetPublicClient, addresses, !isMock);
+  const batchKey = addresses.map((address) => address.toLowerCase()).sort().join(",");
+  const enabled = !isMock && mainnetPublicClient?.chain?.id === mainnet.id;
+  const [ensSnapshot, setEnsSnapshot] = useState({
+    latest: verifiedEns, batchKey, enabled, settled, owner: mainnetPublicClient,
+    resolved: enabled ? verifiedEns : EMPTY_ENS,
+  });
+  if (ensSnapshot.latest !== verifiedEns || ensSnapshot.batchKey !== batchKey ||
+      ensSnapshot.enabled !== enabled || ensSnapshot.owner !== mainnetPublicClient || ensSnapshot.settled !== settled) {
+    const resolved = enabled && ensSnapshot.enabled && ensSnapshot.owner === mainnetPublicClient
+      ? { ...ensSnapshot.resolved } : {};
+    // Preserve search results while loading; a settled empty result removes the previous batch's names.
+    if (settled) {
+      for (const address of addresses) delete resolved[address.toLowerCase()];
+      if (enabled) Object.assign(resolved, verifiedEns);
+    }
+    setEnsSnapshot({ latest: verifiedEns, batchKey, enabled, settled, owner: mainnetPublicClient, resolved });
   }
   return <ProposalVoters proposal={proposal} verifiedEns={ensSnapshot.resolved} onVisibleAddressesChange={setAddresses} />;
 }
