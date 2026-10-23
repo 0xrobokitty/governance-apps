@@ -12,7 +12,9 @@ import type {
   DaoDisplayGroup,
   DaoProposal,
 } from "@/lib/clients/dao";
-import { getDaoDiscussionUrl, parseDaoProposalContent } from "@/lib/clients/dao";
+import { getDaoDiscussionUrl, parseDaoProposalContent, serializeDaoProposalRef } from "@/lib/clients/dao";
+import type { DaoParticipation, DaoParticipationMap } from "@/lib/clients/dao/participation";
+import { DaoParticipationBadge } from "./DaoParticipationBadge";
 import {
   createDaoProposalHref,
   DAO_BOARD_GROUPS,
@@ -35,6 +37,7 @@ export function ProposalBoard({
   proposals,
   selectedGroup,
   snapshotNotice = null,
+  participation = {},
 }: {
   hostname?: string;
   now: number;
@@ -42,6 +45,7 @@ export function ProposalBoard({
   proposals: DaoProposal[];
   selectedGroup?: DaoDisplayGroup;
   snapshotNotice?: ReactNode;
+  participation?: DaoParticipationMap;
 }) {
   const counts = useMemo<DaoBoardGroupCounts>(
     () =>
@@ -127,6 +131,7 @@ export function ProposalBoard({
                 proposal={proposal}
                 origin={filter}
                 hostname={hostname}
+                participation={participation[serializeDaoProposalRef(proposal.ref)]}
               />
             ))}
             {snapshotNotice ? <div className="px-4 py-2 md:px-5">{snapshotNotice}</div> : null}
@@ -150,11 +155,13 @@ function ProposalBoardRow({
   now,
   origin,
   proposal,
+  participation,
 }: {
   hostname?: string;
   now: number;
   origin: DaoDisplayGroup;
   proposal: DaoProposal;
+  participation?: DaoParticipation;
 }) {
   const proposalId = proposal.ref.proposalId.toString();
   const parsed = proposal.content.value
@@ -169,7 +176,10 @@ function ProposalBoardRow({
     >
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)] lg:items-center">
         <div className="min-w-0 space-y-3">
-          <ProposalHeadingFacts proposal={proposal} />
+          <div className="flex flex-wrap items-center gap-2">
+            <ProposalHeadingFacts proposal={proposal} />
+            <DaoParticipationBadge status={participation} />
+          </div>
 
           <div className="min-w-0 space-y-1.5">
             <p className="break-words font-number text-xs font-bold tabular-nums text-text-secondary [overflow-wrap:anywhere]">

@@ -8,6 +8,8 @@ import { Card } from "@/components/ui/Card";
 import { Button, getButtonClassName } from "@/components/ui/Button";
 import { UtcTime } from "@/components/ui/UtcTime";
 import { useDaoFeed, useDaoMockRuntime } from "@/lib/hooks/useDao";
+import { useDaoParticipation } from "@/lib/hooks/useDaoParticipation";
+import type { DaoParticipationMap } from "@/lib/clients/dao/participation";
 import { useHostname } from "@/lib/hooks/useHostname";
 import {
   DaoErrorPanel,
@@ -58,7 +60,7 @@ export function DaoPageClient({
 }) {
   const browserHostname = useHostname();
   const hostname = browserHostname ?? initialHostname;
-  const { isConnected } = useAccount();
+  const { isConnected, address } = useAccount();
   const runtime = useDaoMockRuntime();
   const hasConnectedAccount =
     process.env.NEXT_PUBLIC_E2E === "true" && runtime
@@ -67,6 +69,10 @@ export function DaoPageClient({
   const feedQuery = useDaoFeed();
   const proposalCount = feedQuery.data?.proposals.length ?? 0;
   const proposals = feedQuery.data?.proposals ?? EMPTY_PROPOSALS;
+  const viewerAddress = hasConnectedAccount
+    ? process.env.NEXT_PUBLIC_E2E === "true" && runtime ? runtime.account.address : address ?? null
+    : null;
+  const participation = useDaoParticipation(proposals, viewerAddress, runtime);
   const groupCounts = useMemo<DaoBoardGroupCounts>(
     () => ({
       upcoming: proposals.filter(
@@ -124,6 +130,7 @@ export function DaoPageClient({
         }}
         now={runtime?.now ?? feedQuery.data?.canonicalBlock.timestamp ?? 0}
         proposals={proposals}
+        participation={participation}
         hostname={hostname}
         selectedGroup={selectedGroup}
         onSelectGroup={selectGroup}
@@ -146,6 +153,7 @@ export function DaoBoardView({
   selectedGroup,
   onSelectGroup,
   state,
+  participation = {},
 }: {
   snapshotNotice?: ReactNode;
   isConnected: boolean;
@@ -158,6 +166,7 @@ export function DaoBoardView({
   selectedGroup?: DaoDisplayGroup;
   onSelectGroup?: (group: DaoDisplayGroup) => void;
   state: DaoBoardState;
+  participation?: DaoParticipationMap;
 }) {
   return (
     <DaoRouteFrame>
@@ -220,6 +229,7 @@ export function DaoBoardView({
           selectedGroup={selectedGroup}
           onSelectGroup={onSelectGroup}
           snapshotNotice={snapshotNotice}
+          participation={participation}
         />
       ) : null}
     </DaoRouteFrame>

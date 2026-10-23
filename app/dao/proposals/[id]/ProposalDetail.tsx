@@ -38,6 +38,7 @@ import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
 import { getDaoSummaryNodeIndex } from "@/lib/clients/dao/content";
 import { ProposalVoters } from "../../components/ProposalVoters";
+import { DaoYbcVoteCard } from "../../components/DaoYbcVoteCard";
 import {
   createDaoBoardGroupHref,
   createDaoRootHref,
@@ -169,6 +170,7 @@ export function ProposalDetail({
             <ProposalRules proposal={proposal} />
           </Card>
           {actionPanel}
+          <DaoYbcVoteCard proposal={proposal} hostname={hostname} />
         </aside>
 
         <div className="order-last min-w-0 space-y-5 lg:order-first">
