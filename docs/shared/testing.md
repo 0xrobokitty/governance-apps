@@ -315,4 +315,4 @@ The repeatable launch runbook is
 
 - `E2E_WEB_SERVER_COMMAND` can override the Playwright web server command if you want to test `next start` instead of `next dev`.
 - Typecheck uses `types/next-shim.d.ts` to satisfy Next’s internal type imports under `.next/types`.
-- Next 16.4 page types also import `Prefetch` and `EnsureStatic`. The shim preserves their literal unions from the installed framework declarations.
+- Keep the shim's `Prefetch` and `EnsureStatic` unions aligned with the pinned Next.js declarations. Production builds generate imports for both types.

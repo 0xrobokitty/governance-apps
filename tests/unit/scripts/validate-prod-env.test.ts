@@ -148,6 +148,8 @@ describe("validate-prod-env", () => {
       NEXT_PUBLIC_ENABLE_TEAMS: "true",
       NEXT_PUBLIC_ENABLE_YETH: "true",
       NEXT_PUBLIC_ENABLE_YBC: "true",
+      NEXT_PUBLIC_ENABLE_DAO: "true",
+      NEXT_PUBLIC_DAO_VOTING_POWER_URL: "https://example.invalid/voting-power.json",
       NEXT_PUBLIC_WC_PROJECT_ID: "placeholder",
       NEXT_PUBLIC_GLOBAL_DATA_URL: "https://example.invalid/global-data.json",
       NEXT_PUBLIC_TEAMS_DATA_URL: "https://example.invalid/teams.json",
@@ -159,5 +161,18 @@ describe("validate-prod-env", () => {
 
     expect(result.status).toBe(0);
     expect(result.stdout).toContain("Production environment validation passed.");
+  });
+
+  it.each(["", "/dao-voting-power.json", "http://localhost:3109/voting-power.json", "https://user:password@example.invalid/feed.json", "not-a-url"])("rejects a missing or non-production DAO voting-power URL: %s", (url) => {
+    const result = runWithEnv({
+      NODE_ENV: "production", NEXT_PUBLIC_RUNTIME_MODE: "production",
+      NEXT_PUBLIC_USE_MOCKS: "false", NEXT_PUBLIC_E2E: "false",
+      NEXT_PUBLIC_ENABLE_DAO: "true", NEXT_PUBLIC_DAO_VOTING_POWER_URL: url,
+      NEXT_PUBLIC_WC_PROJECT_ID: "placeholder",
+      NEXT_PUBLIC_GLOBAL_DATA_URL: "https://example.invalid/stats.json",
+      NEXT_PUBLIC_RPC_URLS: "https://rpc.example.invalid",
+    });
+    expect(result.status).toBe(1);
+    expect(result.stderr).toContain("NEXT_PUBLIC_DAO_VOTING_POWER_URL");
   });
 });

@@ -29,6 +29,7 @@ import { teamsKeys } from "@/lib/hooks/useTeams";
 import { ybcKeys } from "@/lib/hooks/useYbc";
 import { daoKeys } from "@/lib/hooks/daoKeys";
 import { resetMockStyfiStore } from "@/lib/clients/styfi/mock";
+import { setStyfiMockScenario, type StyfiMockScenario } from "@/lib/clients/styfi/scenarios";
 import {
   resetMockVeyfiStore,
   setMockRedemptionCapsExhausted,
@@ -229,6 +230,7 @@ export interface TestBridge
   ) => Promise<void>;
   setYethPreset: (address: Address, preset: YethDebugPreset) => Promise<void>;
   seedExternalPortfolio: (address: Address) => Promise<void>;
+  setStyfiAprScenario: (scenario: StyfiMockScenario) => Promise<void>;
 }
 
 type TestBridgeDeps = {
@@ -531,6 +533,10 @@ export function createTestBridge({
     setScenario,
     setYethPreset,
     seedExternalPortfolio,
+    setStyfiAprScenario: async (scenario: StyfiMockScenario) => {
+      setStyfiMockScenario(scenario);
+      await queryClient.invalidateQueries({ refetchType: "all" });
+    },
     resetTeams: wrapBridgeMutation(teams?.resetTeams, invalidateTeams),
     setTeamsViewerRole: wrapBridgeMutation(
       teams?.setTeamsViewerRole,

@@ -54,3 +54,9 @@ repomix*.xml
 .open-next
 .wrangler
 .dev.vars
+
+# Local DAO voting-power index and generated snapshot
+public/dao-voting-power.json
+public/dao-voting-power.json.tmp
+outputs/dao-voting-power-index.json
+outputs/dao-voting-power-index.json.tmp

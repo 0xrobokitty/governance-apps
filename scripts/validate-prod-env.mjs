@@ -78,6 +78,21 @@ if (isEnabled(process.env.NEXT_PUBLIC_ENABLE_YBC)) {
   requiredVars.push("NEXT_PUBLIC_YBC_DATA_URL");
 }
 
+if (isEnabled(process.env.NEXT_PUBLIC_ENABLE_DAO)) {
+  requiredVars.push("NEXT_PUBLIC_DAO_VOTING_POWER_URL");
+  const votingPowerUrl = process.env.NEXT_PUBLIC_DAO_VOTING_POWER_URL?.trim();
+  if (votingPowerUrl) {
+    try {
+      const url = new URL(votingPowerUrl);
+      if (url.protocol !== "https:" || url.username || url.password) {
+        throw new Error("Expected a public HTTPS URL.");
+      }
+    } catch {
+      errors.push("NEXT_PUBLIC_DAO_VOTING_POWER_URL must be an absolute HTTPS URL without credentials in production.");
+    }
+  }
+}
+
 if (isEnabled(process.env.NEXT_PUBLIC_ENABLE_TEAMS)) {
   requiredVars.push("NEXT_PUBLIC_TEAMS_DATA_URL");
 }

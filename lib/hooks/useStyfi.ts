@@ -225,6 +225,10 @@ export function useStyfiStake() {
 
     await execute(prepare, {
       invalidate: async () => {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
+          queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+        ]);
         await queryClient.invalidateQueries({
           queryKey: styfiKeys.account(address),
         });
@@ -251,6 +255,10 @@ export function useStyfiStartCooldown() {
 
     await execute(prepare, {
       invalidate: async () => {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
+          queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+        ]);
         await queryClient.invalidateQueries({
           queryKey: styfiKeys.account(address),
         });
@@ -277,6 +285,10 @@ export function useStyfiWithdraw() {
 
     await execute(prepare, {
       invalidate: async () => {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
+          queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+        ]);
         await queryClient.invalidateQueries({
           queryKey: styfiKeys.account(address),
         });
@@ -303,6 +315,10 @@ export function useStyfiClaimRewards() {
 
     await execute(prepare, {
       invalidate: async () => {
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
+          queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+        ]);
         await queryClient.invalidateQueries({
           queryKey: styfiKeys.account(address),
         });

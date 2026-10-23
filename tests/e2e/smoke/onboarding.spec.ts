@@ -12,8 +12,8 @@ test("connects and defaults to stYFIx", async ({ page }) => {
 
   await expect(page.getByText("Wallet not connected")).toHaveCount(0);
 
-  const styfixCard = page
-    .getByRole("button", { name: /stYFIx/i })
-    .first();
+  const styfixCard = page.getByRole("button", {
+    name: /^stYFIx Delegated Recommended/,
+  });
   await expect(styfixCard).toHaveAttribute("aria-pressed", "true");
 });

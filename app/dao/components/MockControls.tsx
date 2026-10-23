@@ -1,6 +1,6 @@
 "use client";
 
-import type { ReactNode } from "react";
+import { type ReactNode, useSyncExternalStore } from "react";
 import Link from "next/link";
 import {
   DebugControls,
@@ -35,6 +35,7 @@ import {
 } from "@/lib/runtime/governance-hosts";
 import { daoCopy } from "../messages";
 import { createDaoProposalHref } from "../route-state";
+import { getStyfiMockScenario, setStyfiMockScenario, subscribeStyfiMockScenario } from "@/lib/clients/styfi/scenarios";
 
 const DATE_TIME_FORMATTER = new Intl.DateTimeFormat("en-US", {
   month: "short",
@@ -128,6 +129,7 @@ const ROLES: readonly [DaoMockRole, string][] = [
 ];
 
 export function MockControls() {
+  const votingScenario = useSyncExternalStore(subscribeStyfiMockScenario, getStyfiMockScenario, getStyfiMockScenario);
   const hostname = useHostname();
   const runtime = useDaoMockRuntime();
   const actions = useDaoDebugActions();
@@ -286,6 +288,14 @@ export function MockControls() {
           values={ACCOUNT_STATES}
           onSelect={actions.setAccountState}
         />
+        <label className="flex min-h-10 items-center gap-2">
+          <input
+            type="checkbox"
+            checked={votingScenario === "ybc"}
+            onChange={(event) => setStyfiMockScenario(event.target.checked ? "ybc" : "partial")}
+          />
+          {daoCopy.votingPower.mockMember}
+        </label>
         <StateGroup
           label={daoCopy.debug.execution}
           values={EXECUTION_STATES}

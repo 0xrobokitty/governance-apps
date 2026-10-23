@@ -17,6 +17,17 @@ import { DaoProposalView } from "@/app/dao/proposals/[id]/DaoProposalPageClient"
 import { DaoProposeView } from "@/app/dao/propose/DaoProposePageClient";
 
 describe("DAO proposal board shell", () => {
+  it("places the wallet voting summary beside the connected proposal header actions", () => {
+    const props = { now: DAO_MOCK_FEED.canonicalBlock.timestamp, onRetry: vi.fn(), proposals: [], state: "empty" as const, votingPower: <div>Wallet voting summary</div> };
+    const { rerender } = render(<DaoBoardView {...props} isConnected />);
+    expect(screen.getByText("Wallet voting summary")).toBeVisible();
+    const header = screen.getByRole("heading", { name: "Proposals", level: 1 }).closest("header")!;
+    expect(within(header).getByText("Wallet voting summary")).toBeVisible();
+    expect(within(header).getByRole("link", { name: "Create proposal" })).toBeVisible();
+    rerender(<DaoBoardView {...props} isConnected={false} />);
+    expect(screen.queryByText("Wallet voting summary")).not.toBeInTheDocument();
+  });
+
   it("renders production-shaped loading and disconnected states", () => {
     render(
       <DaoBoardView

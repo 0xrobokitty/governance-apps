@@ -8,6 +8,7 @@ The [closeout evidence](delivery/evidence/closeout-20260924/README.md) covers su
 | Purpose | Current entry point |
 | --- | --- |
 | Architecture, transaction checks, and recovery | [Live services](live-services.md) |
+| Combined DAO interface, Vote Boost, voting power, and local previews | [Combined release review](delivery/combined-release-20261023.md) |
 | Voter details, shared names, participation, and authoring changes | [Voting clarity delivery](delivery/voting-clarity-20261023.md) |
 | Proposal, Votes, and Details tabs with section links | [Proposal navigation](proposal-navigation.md) |
 | Compact wallet controls, YBC endpoints, and percentage tooltips | [Voting clarity refinement](delivery/voting-clarity-refinement-20261023.md) |

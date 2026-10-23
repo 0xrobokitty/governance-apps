@@ -110,7 +110,7 @@ export function ProposalDetail({
         ]}
       />
 
-      <Card data-testid="dao-proposal-header" className="min-w-0 space-y-4 overflow-hidden">
+      <Card data-testid="dao-proposal-header" className="min-w-0 space-y-4">
         <div className="min-w-0 space-y-2">
           <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
             <p className="inline-flex min-h-6 shrink-0 items-center font-number text-xs font-bold tabular-nums text-text-secondary">
@@ -118,10 +118,12 @@ export function ProposalDetail({
             </p>
             <ProposalHeadingFacts proposal={proposal} />
           </div>
-          <h1 className="text-balance text-2xl font-bold md:text-3xl">
-            {title}
-          </h1>
-          <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
+          <div className="flex min-w-0 items-start">
+            <h1 className="min-w-0 text-balance text-2xl font-bold md:text-3xl">
+              {title}
+            </h1>
+            <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
+          </div>
           {summary ? (
             <p className="max-w-4xl text-pretty text-sm leading-6 text-text-secondary">
               {summary}
