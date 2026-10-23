@@ -47,6 +47,10 @@ Used strictly for **financial data**, **addresses**, **hashes**, and **percentag
 
 Colors are defined as CSS variables in `app/globals.css` and exposed via Tailwind v4 theme tokens.
 
+The shared theme hook restores the saved preference before it updates document
+classes or writes to storage. This preserves the chosen theme during full page
+reloads and React Strict Mode remounts.
+
 ### 3.1. Neutrals ("Good ol' Grey")
 
 Used for backgrounds, borders, and text.

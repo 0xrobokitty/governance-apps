@@ -16,19 +16,19 @@ const useIsomorphicLayoutEffect =
 
 export function useTheme() {
   const [theme, setTheme] = useState<Theme>("light");
+  const [hasRestoredPreference, setHasRestoredPreference] = useState(false);
 
   useIsomorphicLayoutEffect(() => {
     if (typeof window === "undefined") return;
     const stored = localStorage.getItem(STORAGE_KEY);
-    if (stored === "light" || stored === "soft-dark") {
-      setTheme(stored);
-      return;
-    }
-    setTheme(getSystemTheme());
+    setTheme(
+      stored === "light" || stored === "soft-dark" ? stored : getSystemTheme(),
+    );
+    setHasRestoredPreference(true);
   }, []);
 
   useEffect(() => {
-    if (typeof document === "undefined") return;
+    if (!hasRestoredPreference || typeof document === "undefined") return;
     const root = document.documentElement;
     root.setAttribute("data-theme", theme);
     if (theme === "soft-dark") {
@@ -37,7 +37,7 @@ export function useTheme() {
       root.classList.remove("dark");
     }
     localStorage.setItem(STORAGE_KEY, theme);
-  }, [theme]);
+  }, [theme, hasRestoredPreference]);
 
   const toggleTheme = () => {
     setTheme((prev) => (prev === "light" ? "soft-dark" : "light"));

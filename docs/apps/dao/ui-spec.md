@@ -17,6 +17,9 @@ uses `/` on the application's branded beta host and the exact application path
 on shared hosts. Desktop keeps a 40-pixel target; mobile uses 44 pixels and
 closes the modal menu after activation. Both expose a visible focus ring.
 
+The shared header restores the chosen light or dark theme after a page reload,
+including direct navigation between the proposal board and proposal details.
+
 ## 2. Information architecture
 
 ```text
