@@ -54,6 +54,7 @@ The previews use separate standalone build directories so rebuilding one does no
 | --- | --- |
 | TypeScript | Passed. |
 | ESLint | Passed. |
+| Generated DAO artifacts | Passed after regenerating the mock feed example to match the current voter fixtures. |
 | Unit and component suite | 225 files, 2,446 tests passed. |
 | Browser smoke suite | 71 passed; one expected production-disabled-route case skipped because this preview enables DAO. |
 | Full browser suite | 70 passed. |
@@ -78,6 +79,13 @@ This is an external release dependency, not an unresolved source merge.
 Validation logs are retained locally under `/private/tmp/governance-combined-*.log`.
 Browser captures are retained in the APR worktree under `outputs/combined-review-2026-10-23/`.
 These local artifacts are not part of the release commit.
+
+### CI artifact follow-up
+
+PR verification found that the checked-in mock feed still contained the old voter addresses.
+The fixture source had already separated historical voters from demo wallets.
+Regenerating the example updates 32 actor values without changing application code or live data.
+The generated-artifact check must run alongside the other validation commands before future integration handoffs.
 
 ## Release dependency
 
