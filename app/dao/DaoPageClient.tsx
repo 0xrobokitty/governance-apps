@@ -255,8 +255,6 @@ function DaoBoardHeader({
         ) : null}
       </div>
       <div className="flex min-w-0 flex-wrap items-center gap-2 lg:max-w-[65%] lg:justify-end">
-        {votingPower}
-        <div className="flex min-w-0 flex-1 flex-wrap items-stretch gap-2 sm:flex-none">
         <a
           href={daoCopy.navigation.forumHref}
           target="_blank"
@@ -271,6 +269,7 @@ function DaoBoardHeader({
           <span>{daoCopy.navigation.forum}</span>
           <IconLinkOut className="size-3.5" aria-hidden />
         </a>
+        {votingPower}
         <Link
           href={createDaoProposeHref(hostname)}
           className={getButtonClassName({
@@ -280,7 +279,6 @@ function DaoBoardHeader({
         >
           {daoCopy.navigation.createProposal}
         </Link>
-        </div>
       </div>
     </header>
   );

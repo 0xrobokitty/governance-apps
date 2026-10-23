@@ -48,7 +48,7 @@ test("keeps voting power compact in the proposal header and opens its YBC breakd
   await page.getByRole("button", { name: "🛠️ Debug", exact: true }).click();
   await page.getByRole("checkbox", { name: "YBC member", exact: true }).check();
   await page.getByRole("button", { name: "Close debug controls", exact: true }).click();
-  await expect(trigger).toContainText("YBC estimate");
+  await expect(trigger).not.toContainText("YBC estimate");
   await expect(trigger).toContainText("10%");
   await trigger.focus();
   await trigger.press("Enter");

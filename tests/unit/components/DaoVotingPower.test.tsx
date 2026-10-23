@@ -27,7 +27,7 @@ describe("DAO voting power control", () => {
   it("shows a compact estimated share with associated math and opens the full YBC breakdown", async () => {
     render(<DaoVotingPower />);
     expect(trigger()).toHaveTextContent("10.28% of total");
-    expect(trigger()).toHaveTextContent("YBC estimate");
+    expect(trigger()).not.toHaveTextContent("YBC estimate");
     expect(trigger()).toHaveAttribute("aria-haspopup", "dialog");
     expect(trigger()).toHaveAttribute("aria-expanded", "false");
     expect(trigger()).toHaveAccessibleDescription(/320 YFI ÷ 3,110 YFI ≈ 10.28%/);

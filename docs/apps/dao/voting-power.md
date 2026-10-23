@@ -1,6 +1,6 @@
 # Wallet and total DAO voting power
 
-The DAO front page shows a compact **Your voting power** control beside the proposal header actions. Its main value is the wallet's share of total DAO voting power. YBC estimates carry a visible qualifier. The control wraps onto a small row on narrow screens, so **Proposals** remains first.
+The DAO front page orders its header actions as **Discussion forum**, **Your voting power**, then **Create proposal**. The voting control shows the wallet's share of total DAO voting power. YBC assumptions appear in the tooltip and breakdown. The control wraps onto a small row on narrow screens, so **Proposals** remains first.
 
 Hover or keyboard focus shows the calculation: personal voting power divided by total DAO voting power. A click or tap opens the full breakdown in a modal. The modal includes the calculation, personal components, system components, snapshot time, and participation assumptions. It traps keyboard focus and returns focus to the control when it closes.
 

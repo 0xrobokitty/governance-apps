@@ -50,7 +50,7 @@ function VotingPowerSummary({ data, isLoading = false, isSystemLoading = false }
 
   return (
     <div className="min-w-0 w-full sm:w-auto" data-testid="dao-voting-power">
-      <Tooltip side="bottom" align="start" className="w-full" content={
+      <Tooltip side="bottom" align="end" className="w-full" content={
         <span className="block space-y-1.5 text-pretty">
           <span className="block font-number tabular-nums">{explanation}</span>
           {estimate && <span className="block">{copy.estimate}</span>}
@@ -72,7 +72,6 @@ function VotingPowerSummary({ data, isLoading = false, isSystemLoading = false }
           <span className="min-w-0 space-y-0.5">
             <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-text-secondary">
               <span>{copy.yours}</span>{" "}
-              {estimate && <span className="font-medium">{copy.ybcEstimate}</span>}
               {data?.isYbcMember && !estimate && <span>{copy.directOnly}</span>}
             </span>
             <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
