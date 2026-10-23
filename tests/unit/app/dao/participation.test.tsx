@@ -19,12 +19,18 @@ describe("DAO participation presentation", () => {
     expect(screen.getByRole("link", { name: /Review proposal and wallet eligibility/ })).toHaveAttribute("href", "/dao/proposals/2#dao-proposal-actions");
     view.rerender(<DaoWalletAction participation={{ status: "not-voted", choice: null }} votingOpen={false} href="/dao/proposals/2" />);
     expect(screen.queryByRole("link")).toBeNull();
-    expect(screen.getByText("No vote recorded")).toBeInTheDocument();
+    expect(screen.queryByTestId("dao-wallet-action")).toBeNull();
   });
 
   it.each([ ["nay", "Voted Nay"], ["split", "Voted split"], ["unknown", "Vote registered"] ] as const)("reports a registered %s choice honestly", (choice, label) => {
     render(<DaoWalletAction participation={{ status: "voted", choice }} votingOpen href="/dao/proposals/2" />);
     expect(screen.getByRole("button", { name: new RegExp(label) })).toBeDisabled();
+    expect(screen.queryByRole("link")).toBeNull();
+  });
+
+  it("keeps unavailable participation distinct from an unvoted wallet", () => {
+    render(<DaoWalletAction participation={{ status: "unknown", choice: null }} votingOpen href="/dao/proposals/2" />);
+    expect(screen.getByRole("button", { name: /Vote unavailable/ })).toBeDisabled();
     expect(screen.queryByRole("link")).toBeNull();
   });
 
