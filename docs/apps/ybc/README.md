@@ -73,6 +73,9 @@ visible. Clicking the resolved name opens the local editor; its secondary pencil
 appears on fine-pointer hover or keyboard focus. Local names never leave the browser
 or affect protocol actions.
 
+DAO and YBC share this identity code and the same saved names. See
+[Shared address names](shared-address-names.md) for storage scope and rollout.
+
 Dates use the shared UTC formatter. Rewards continue to hand off to the shared stYFI
 claim route. See [`ui-spec.md`](ui-spec.md) for product behavior and
 [`onchain-integration-plan/ybc-feed-schema-v1.md`](onchain-integration-plan/ybc-feed-schema-v1.md)

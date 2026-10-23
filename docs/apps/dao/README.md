@@ -8,6 +8,7 @@ The [closeout evidence](delivery/evidence/closeout-20260924/README.md) covers su
 | Purpose | Current entry point |
 | --- | --- |
 | Architecture, transaction checks, and recovery | [Live services](live-services.md) |
+| Voter details, shared names, participation, and authoring changes | [Voting clarity delivery](delivery/voting-clarity-20261023.md) |
 | Public corrections to proposal display titles | [Title corrections](title-overrides.md) |
 | Telegram lifecycle, deadline, and operator alerts | [DAO alerts and rollout](telegram-alerts.md) |
 | Built local walkthrough and real producer snapshots | [Local validation](local-validation.md) |
