@@ -1,0 +1,39 @@
+# Votes and address names
+
+Proposal pages show the latest recorded vote for each address. Each row includes
+the choice, UTC timestamp, transaction, effective YFI voting weight, and share of
+recorded voting weight. Split votes show both percentages. Search matches names
+and full addresses; sorting supports recent votes, older votes, and voting power.
+
+The client orders events by block, transaction index, and log index. A later vote
+replaces the earlier vote from that address. This prevents collective updates
+from counting the same weight twice. Missing vote fields remain unavailable.
+The snapshot notice also applies to this table; it is not a live wallet read.
+
+DAO and YBC use the same address identity modules and editor. A saved name takes
+priority over verified mainnet ENS. ENS requires matching reverse and forward
+resolution. Otherwise, an address gets a deterministic nickname with a stable
+suffix. The nickname does not change when another app displays a different set
+of addresses. The Ethereum address remains visible and canonical.
+
+Names remain in the browser. The existing `yearn.ybc.member-aliases.v1` storage
+key is retained. Path-based apps share local storage directly. The production DAO
+host uses an isolated iframe on the production YBC host; the beta hosts use a
+separate pair. This preserves names already saved in YBC. Devices, browsers,
+environments, and unrelated shared hosts do not synchronize names.
+
+The `/api/address-labels` adapter accepts only the paired DAO parent window and
+origin. It supports bounded read, set, reset, and clear operations on the one
+alias storage key. It does not accept URLs or storage keys from messages. The
+parent checks the exact YBC origin, iframe window, response schema, and request
+ID. A restrictive nonce policy permits no network requests from the adapter.
+The standard Safe frame ancestors remain permitted, but message access still
+requires the paired DAO parent. Browser storage restrictions can prevent access;
+failed saves keep the editor open and show an error.
+
+Validation covers replacement votes, malformed latest records, migration,
+same-tab sharing, storage denial, unsafe names, exact origins, frame sources,
+bounded messages, and cross-origin persistence in a browser.
+
+Integration: include the matching middleware and parent frame-source policy
+changes before release. No transaction contracts or proposal content change.
