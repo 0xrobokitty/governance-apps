@@ -637,6 +637,7 @@ Review phone 390×844, tablet 768×1024, desktop 1280×900 and short desktop 128
 The shared footer links to other released governance apps and the public source repository.
 It preserves the current host environment.
 DAO routes include the footer but exclude the shared voting notice.
+The footer has half a viewport of bottom padding, so its last links can scroll to the middle of the window.
 
 Other app routes can show a notice for current DAO decision votes.
 The notice uses the validated DAO feed and its trusted deployment configuration.

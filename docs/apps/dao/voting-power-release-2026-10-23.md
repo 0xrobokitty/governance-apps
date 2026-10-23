@@ -26,6 +26,8 @@ Use the actual approved producer prefix if it differs from this table.
 The app workflow passes this variable through validation, build, and deployment.
 When DAO is enabled, production validation requires an absolute HTTPS URL without credentials.
 Preserve the existing proposal URL, publication configuration, RPC URLs, and other application feeds.
+Set `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true` for the shared footer and voting notice, including local production previews.
+Each footer destination still requires its existing app release flag.
 
 Set `VOTING_POWER_ENABLED=true` on each approved producer environment.
 Give `VOTING_POWER_STATE_DIR` a durable path exclusive to that environment.

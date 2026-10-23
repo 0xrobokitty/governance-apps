@@ -252,6 +252,7 @@ The shared app footer groups staking, governance, and contributor destinations.
 Its heading is “Yearn DAO”. A single “veYFI & Liquid Lockers” link opens `/veyfi` to manage both types of position.
 Its links preserve the current host environment and respect app release flags.
 It also links to the public governance-apps GitHub repository.
+Half a viewport of bottom padding lets users scroll the last footer links to the middle of the window.
 
 In production, the footer and notice require `NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY=true`.
 The header correction does not depend on that discovery flag.

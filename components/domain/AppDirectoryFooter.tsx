@@ -22,7 +22,7 @@ const linkClass = "rounded-md focus:outline-none focus-visible:ring-2 focus-visi
 export function AppDirectoryFooter({ title, description, navigationLabel, currentApp, sourceLabel, sourceHref, sourceNote, groups }: AppDirectoryFooterProps) {
   return (
     <footer className="border-t border-border" data-testid="governance-app-footer">
-      <div className="container mx-auto px-4 pb-6 pt-10 md:px-6 md:pt-12">
+      <div className="container mx-auto px-4 pb-[50svh] pt-10 md:px-6 md:pt-12">
         <div className="grid gap-9 lg:grid-cols-[minmax(0,0.85fr)_minmax(0,2fr)] lg:gap-16">
           <div className="max-w-xs">
             <h2 className="text-balance text-xl font-semibold">{title}</h2>
