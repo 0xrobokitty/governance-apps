@@ -9,8 +9,10 @@ import {
 } from "@/lib/clients/dao";
 import {
   createDaoAuthoringReview,
+  composeDaoProposalMarkdown,
   DAO_PROPOSAL_MARKDOWN_TEMPLATE,
   findFirstFullDaoCapacityEpoch,
+  splitDaoProposalMarkdown,
 } from "@/app/dao/propose/authoring";
 import {
   confirmMockDaoProposalReceipt,
@@ -29,6 +31,43 @@ afterEach(() => {
 });
 
 describe("DAO proposal authoring vectors", () => {
+  it.each(["Approve research funding.", "## Summary\n\nApprove research funding."])("accepts the short body %s with a separate title", async markdown => {
+    const result = createDaoAuthoringReview({ address: ADDRESS, createdAt: CREATED_AT, topic: await validTopic(1001),
+      draft: { title: "Research funding", markdown, proposalType: "signal", executableScript: "0x" } });
+    expect(result.state).toBe("valid");
+    if (result.state !== "valid") return;
+    expect(result.review.parsedContent.title).toBe("Research funding");
+    expect(result.review.parsedContent.summary).toBe("Approve research funding.");
+    expect(result.review.content.markdown).toBe(`# Research funding\n\n${markdown}`);
+  });
+
+  it.each(["", "Summary", " summary: ", "A title\n\n# Injected heading", "a".repeat(141), "Bad\u0000title"])("rejects an unclear or invalid title %j", async title => {
+    const result = createDaoAuthoringReview({ address: ADDRESS, createdAt: CREATED_AT, topic: await validTopic(1001),
+      draft: { title, markdown: "Approve research funding.", proposalType: "signal", executableScript: "0x" } });
+    expect(result).toMatchObject({ state: "invalid", errors: { title: expect.any(String) } });
+  });
+
+  it("treats title Markdown and HTML punctuation as literal text", async () => {
+    const title = "[Research](https://example.com) <script> &amp; **budget**";
+    const result = createDaoAuthoringReview({ address: ADDRESS, createdAt: CREATED_AT, topic: await validTopic(1001),
+      draft: { title, markdown: "Approve research funding.", proposalType: "signal", executableScript: "0x" } });
+    expect(result.state).toBe("valid");
+    if (result.state !== "valid") return;
+    expect(result.review.parsedContent.title).toBe(title);
+    expect(result.review.parsedContent.ast.children[0].children?.map(node => node.type)).toEqual(["text"]);
+  });
+
+  it.each([
+    "#   Original **decision**  \r\n\r\nSummary.\r\n\r\nBody.\r\n",
+    "Original decision\n=================\n\n## Summary\n\nSummary.\n",
+    "\n# Original decision\n\n\n\nSummary.\n",
+  ])("preserves an unchanged recovered Markdown document byte-for-byte", original => {
+    const draft = splitDaoProposalMarkdown(original);
+    expect(draft.title).toBe("Original decision");
+    expect(composeDaoProposalMarkdown(draft.title, draft.markdown, original)).toBe(original);
+    expect(composeDaoProposalMarkdown("Changed title", draft.markdown, original)).toBe(`# Changed title\n\n${draft.markdown}`);
+  });
+
   it("normalizes a supported forum topic using its stable category ID", async () => {
     const result = await validateMockDaoForumTopic(
       "https://gov.yearn.fi/t/OLD-SLUG/1001/?utm_source=test#reply",
@@ -68,8 +107,9 @@ describe("DAO proposal authoring vectors", () => {
       createdAt: CREATED_AT,
       topic: forum,
       draft: {
+        title: "  Exact   title  ",
         markdown:
-          "#   Exact   title  \n\nExact summary with a second line.\n\n## Specification\n\n1. Keep exact whitespace.\n2. Publish these bytes.\n",
+          "Exact summary with a second line.\n\n## Specification\n\n1. Keep exact whitespace.\n2. Publish these bytes.\n",
         proposalType: "signal",
         executableScript: DAO_EXECUTOR_VALID_SCRIPT_VECTORS.oneCall.script,
       },
@@ -101,6 +141,7 @@ describe("DAO proposal authoring vectors", () => {
       createdAt: CREATED_AT,
       topic: forum,
       draft: {
+        title: "Proposal decision",
         markdown: DAO_PROPOSAL_MARKDOWN_TEMPLATE,
         proposalType: "executable",
         executableScript: `0x${"00".repeat(31)}`,
@@ -128,7 +169,8 @@ describe("DAO proposal authoring vectors", () => {
       createdAt: CREATED_AT,
       topic: null,
       draft: {
-        markdown: "Summary without a title.",
+        title: "",
+        markdown: "## Specification only",
         proposalType: "executable",
         executableScript: "0x",
       },
@@ -139,6 +181,7 @@ describe("DAO proposal authoring vectors", () => {
     expect(result.errors).toEqual(
       expect.objectContaining({
         forum: expect.any(String),
+        title: expect.any(String),
         markdown: expect.any(String),
         script: "Executable proposals require at least one call.",
       })
@@ -148,7 +191,7 @@ describe("DAO proposal authoring vectors", () => {
       offset: 0,
     });
     expect(result.contentValidation.errors[0]).toMatchObject({
-      code: "MISSING_H1",
+      code: "TITLE_REQUIRED",
       offset: 0,
       line: 1,
       column: 1,
@@ -307,7 +350,8 @@ async function validReview(topicId: number) {
     createdAt: CREATED_AT,
     topic,
     draft: {
-      markdown: DAO_PROPOSAL_MARKDOWN_TEMPLATE,
+      title: "Proposal decision",
+        markdown: DAO_PROPOSAL_MARKDOWN_TEMPLATE,
       proposalType: "executable",
       executableScript: DAO_EXECUTOR_VALID_SCRIPT_VECTORS.oneCall.script,
     },

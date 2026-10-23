@@ -49,11 +49,11 @@ describe("DAO proposal authoring form", () => {
   it("retains genuine Markdown errors when the forum field changes", async () => {
     const user = userEvent.setup();
     renderAuthoring();
-    fireEvent.change(screen.getByRole("textbox", { name: "Proposal Markdown" }), { target: { value: "" } });
+    fireEvent.change(screen.getByRole("textbox", { name: "Proposal body" }), { target: { value: "" } });
     await user.click(screen.getByRole("button", { name: "Review proposal" }));
     fireEvent.change(screen.getByRole("textbox", { name: "Forum discussion" }), { target: { value: "https://gov.yearn.fi/t/topic/1001" } });
     expect(screen.getByText("Review the highlighted fields")).toBeVisible();
-    expect(screen.getByRole("textbox", { name: "Proposal Markdown" })).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByRole("textbox", { name: "Proposal body" })).toHaveAttribute("aria-invalid", "true");
   });
   it("keeps published bytes available when receipt recovery confirms a revert", async () => {
     const user = userEvent.setup();
@@ -98,7 +98,7 @@ describe("DAO proposal authoring form", () => {
       "true"
     );
     expect(
-      screen.getByRole("textbox", { name: "Proposal Markdown" })
+      screen.getByRole("textbox", { name: "Proposal body" })
     ).toHaveAttribute(
       "aria-describedby",
       "dao-markdown-byte-count dao-markdown-grammar dao-markdown-validation"
@@ -112,9 +112,10 @@ describe("DAO proposal authoring form", () => {
     await screen.findByText("Forum topic accepted", {
       selector: "#dao-forum-status p",
     });
-    const markdown = screen.getByRole("textbox", { name: "Proposal Markdown" });
+    const markdown = screen.getByRole("textbox", { name: "Proposal body" });
     await user.clear(markdown);
-    await user.type(markdown, "Summary without a title.");
+    await user.type(screen.getByRole("textbox", { name: "Proposal title" }), "Valid proposal title");
+    await user.type(markdown, "## Specification only");
     await user.click(screen.getByRole("button", { name: "Review proposal" }));
     await waitFor(() => expect(markdown).toHaveFocus());
     expect(markdown).toHaveProperty("selectionStart", 0);
@@ -145,9 +146,10 @@ describe("DAO proposal authoring form", () => {
     });
     await user.clear(script);
     await user.type(script, "not-hex");
-    const markdown = screen.getByRole("textbox", { name: "Proposal Markdown" });
+    const markdown = screen.getByRole("textbox", { name: "Proposal body" });
     await user.clear(markdown);
-    await user.type(markdown, "Summary without a title.");
+    await user.type(screen.getByRole("textbox", { name: "Proposal title" }), "Valid proposal title");
+    await user.type(markdown, "## Specification only");
     await user.click(screen.getByRole("tab", { name: "Preview" }));
     expect(screen.getByRole("tab", { name: "Preview" })).toHaveAttribute(
       "aria-selected",
@@ -163,12 +165,12 @@ describe("DAO proposal authoring form", () => {
       )
     );
     const mountedMarkdown = screen.getByRole("textbox", {
-      name: "Proposal Markdown",
+      name: "Proposal body",
     });
     await waitFor(() => expect(mountedMarkdown).toHaveFocus());
     expect(mountedMarkdown).toHaveProperty("selectionStart", 0);
     expect(mountedMarkdown).toHaveProperty("selectionEnd", 0);
-    expect(screen.getByText("MISSING_H1")).toBeVisible();
+    expect(screen.getByText("MISSING_SUMMARY")).toBeVisible();
     expect(screen.getByText("INVALID_HEX")).toBeVisible();
     expect(scrollIntoView).toHaveBeenCalledWith({ block: "center" });
   });
@@ -555,10 +557,11 @@ describe("DAO proposal authoring form", () => {
 
     await user.click(screen.getByRole("button", { name: "Edit proposal" }));
     expect(
-      screen.getByRole("textbox", { name: "Proposal Markdown" })
+      screen.getByRole("textbox", { name: "Proposal body" })
     ).toHaveValue(
-      "# Exact proposal title\n\nExact summary\n\n## Specification\n\nExact specification\n"
+      "Exact summary\n\n## Specification\n\nExact specification\n"
     );
+    expect(screen.getByRole("textbox", { name: "Proposal title" })).toHaveValue("Exact proposal title");
     expect(
       screen.getByRole("textbox", { name: "Forum discussion" })
     ).toHaveValue(
@@ -775,11 +778,12 @@ async function fillDraft(
   await screen.findByText("Forum topic accepted", {
     selector: "#dao-forum-status p",
   });
-  const markdown = screen.getByRole("textbox", { name: "Proposal Markdown" });
+  await user.type(screen.getByRole("textbox", { name: "Proposal title" }), title);
+  const markdown = screen.getByRole("textbox", { name: "Proposal body" });
   await user.clear(markdown);
   await user.type(
     markdown,
-    `# ${title}\n\nExact summary\n\n## Specification\n\nExact specification\n`
+    `Exact summary\n\n## Specification\n\nExact specification\n`
   );
 }
 

@@ -40,8 +40,11 @@ import { getEtherscanTransactionUrl } from "@/lib/explorer";
 import { formatTokenAmount } from "@/lib/format";
 import {
   createDaoAuthoringReview,
+  composeDaoProposalMarkdown,
   DAO_PROPOSAL_MARKDOWN_TEMPLATE,
   findFirstFullDaoCapacityEpoch,
+  splitDaoProposalMarkdown,
+  validateDaoAuthoringTitle,
   type DaoAuthoringErrors,
 } from "./authoring";
 import {
@@ -140,7 +143,9 @@ function DaoProposalAuthoringFormState({
   serviceLatencyMs = 140,
   transactionOutcome = "success",
 }: DaoProposalAuthoringFormProps) {
-  const [markdown, setMarkdown] = useState(recovery?.review.content.markdown ?? DAO_PROPOSAL_MARKDOWN_TEMPLATE);
+  const [originalMarkdown, setOriginalMarkdown] = useState(recovery?.review.content.markdown);
+  const [title, setTitle] = useState(() => recovery ? splitDaoProposalMarkdown(recovery.review.content.markdown).title : "");
+  const [markdown, setMarkdown] = useState(() => recovery ? splitDaoProposalMarkdown(recovery.review.content.markdown).markdown : DAO_PROPOSAL_MARKDOWN_TEMPLATE);
   const [editorMode, setEditorMode] = useState<"write" | "preview">("write");
   const [proposalType, setProposalType] = useState<DaoProposalType>(
     recovery?.review.content.proposalType ?? authoringPreset?.proposalType ?? "signal"
@@ -164,6 +169,7 @@ function DaoProposalAuthoringFormState({
   const forumRequest = useRef(0);
   const publicationLock = useRef(recovery?.state === "published");
   const forumInputRef = useRef<HTMLInputElement>(null);
+  const titleRef = useRef<HTMLInputElement>(null);
   const markdownRef = useRef<HTMLTextAreaElement>(null);
   const scriptRef = useRef<HTMLTextAreaElement>(null);
   const pendingErrorFocusRef = useRef<{
@@ -176,11 +182,15 @@ function DaoProposalAuthoringFormState({
   const exactScript = proposalType === "signal" ? "0x" : executableScript;
   const scriptCheck = checkDaoExecutorScript(exactScript, proposalType);
   const topic = forumState.state === "valid" ? forumState.topic : null;
+  const composedMarkdown = useMemo(() => composeDaoProposalMarkdown(title, markdown, originalMarkdown), [title, markdown, originalMarkdown]);
+  const titleError = validateDaoAuthoringTitle(title);
+  const bodyOffset = composedMarkdown.length - markdown.length;
+  const bodyLineOffset = composedMarkdown.slice(0, bodyOffset).split(/\r\n|\r|\n/u).length - 1;
   const parsedDraftContent = useMemo(
     () =>
       parseDaoProposalContent({
         schema: "yearn.dao.proposal.v1",
-        markdown,
+        markdown: composedMarkdown,
         discussionUrl:
           topic?.normalizedUrl ?? "https://gov.yearn.fi/t/pending/0",
         proposalType,
@@ -188,8 +198,9 @@ function DaoProposalAuthoringFormState({
         createdAt: new Date(now * 1_000).toISOString(),
         assets: [],
       }),
-    [address, markdown, now, proposalType, topic?.normalizedUrl]
+    [address, composedMarkdown, now, proposalType, topic?.normalizedUrl]
   );
+  const bodyErrors = parsedDraftContent.errors.filter((error) => !["MISSING_H1", "TITLE_REQUIRED", "TITLE_TOO_LONG"].includes(error.code));
   const draftAnnouncement =
     forumState.state === "validating"
       ? daoProposeCopy.discussion.validating
@@ -222,6 +233,7 @@ function DaoProposalAuthoringFormState({
     const frame = requestAnimationFrame(() => {
       const refs = {
         forum: forumInputRef,
+        title: titleRef,
         markdown: markdownRef,
         script: scriptRef,
       } as const;
@@ -279,7 +291,9 @@ function DaoProposalAuthoringFormState({
       address,
       createdAt: now,
       draft: {
+        title,
         markdown,
+        originalMarkdown,
         proposalType,
         executableScript,
       },
@@ -317,7 +331,10 @@ function DaoProposalAuthoringFormState({
       if (forum.state !== "valid") throw new Error("Forum validation failed");
       const restored = restoreDaoAuthoringReview(bytes, address, forum.topic, content.proposalType === "signal" ? "0x" : executableScript);
       setStorageWarning(services.retainReview?.(restored) === false);
-      setMarkdown(restored.content.markdown);
+      const restoredDraft = splitDaoProposalMarkdown(restored.content.markdown);
+      setOriginalMarkdown(restored.content.markdown);
+      setTitle(restoredDraft.title);
+      setMarkdown(restoredDraft.markdown);
       setProposalType(restored.content.proposalType);
       setExecutableScript(restored.scriptCheck.script);
       setForumInput(restored.topic.normalizedUrl);
@@ -343,7 +360,7 @@ function DaoProposalAuthoringFormState({
     if (!first) return;
     pendingErrorFocusRef.current = {
       field: first,
-      offset: first === "markdown" ? (contentError?.offset ?? null) : null,
+      offset: first === "markdown" && contentError?.offset !== null && contentError?.offset !== undefined ? Math.max(0, contentError.offset - bodyOffset) : null,
     };
     if (first === "markdown") setEditorMode("write");
   };
@@ -687,6 +704,24 @@ function DaoProposalAuthoringFormState({
           description={daoProposeCopy.content.description}
         >
           <div className="min-w-0 space-y-3">
+            <div className="space-y-2">
+              <label htmlFor="dao-proposal-title" className="text-sm font-bold">{daoProposeCopy.content.titleLabel}</label>
+              <input
+                ref={titleRef}
+                id="dao-proposal-title"
+                className={INPUT_CLASS_NAME}
+                value={title}
+                placeholder={daoProposeCopy.content.titlePlaceholder}
+                aria-invalid={Boolean(errors.title)}
+                aria-describedby="dao-title-help dao-title-error"
+                onChange={(event) => {
+                  setTitle(event.target.value);
+                  setErrors((current) => ({ ...current, title: undefined }));
+                }}
+              />
+              <p id="dao-title-help" className="text-pretty text-xs leading-5 text-text-secondary">{daoProposeCopy.content.titleHelp}</p>
+              <p id="dao-title-error" className="text-sm text-red-700 dark:text-red-300">{errors.title}</p>
+            </div>
             <div
               role="tablist"
               aria-label="Proposal document mode"
@@ -760,7 +795,7 @@ function DaoProposalAuthoringFormState({
                 tabIndex={0}
                 className="min-w-0 rounded-box border border-border bg-surface p-4 outline-none focus-visible:ring-2 focus-visible:ring-text-primary sm:p-5"
               >
-                {parsedDraftContent.errors.length === 0 ? (
+                {parsedDraftContent.errors.length === 0 && !titleError ? (
                   <DaoProposalMarkdown
                     context="preview"
                     hostname={hostname}
@@ -768,7 +803,7 @@ function DaoProposalAuthoringFormState({
                   />
                 ) : (
                   <p className="text-pretty text-sm leading-6 text-text-secondary">
-                    Fix the document errors listed below to see the final preview.
+                    {titleError ?? daoProposeCopy.content.previewInvalid}
                   </p>
                 )}
               </div>
@@ -781,23 +816,23 @@ function DaoProposalAuthoringFormState({
               id="dao-markdown-validation"
               className={cn(
                 "space-y-2 rounded-box p-3 text-sm",
-                parsedDraftContent.errors.length === 0
+                bodyErrors.length === 0
                   ? "bg-green-50 text-green-950 dark:bg-green-950/35 dark:text-green-100"
                   : "border border-red-300 bg-red-50 text-red-950 dark:border-red-900 dark:bg-red-950/40 dark:text-red-100"
               )}
             >
               <p className="font-bold">
-                {parsedDraftContent.errors.length === 0
+                {bodyErrors.length === 0
                   ? daoProposeCopy.content.valid
                   : daoProposeCopy.content.validation}
               </p>
-              {parsedDraftContent.errors.length > 0 ? (
+              {bodyErrors.length > 0 ? (
                 <ul className="space-y-1">
-                  {parsedDraftContent.errors.map((error) => (
+                  {bodyErrors.map((error) => (
                     <li key={`${error.code}:${error.offset ?? error.manifestIndex ?? "none"}`}>
                       <span className="font-number font-bold">{error.code}</span>
                       {error.line !== null && error.column !== null
-                        ? ` · line ${error.line}, column ${error.column}`
+                        ? ` · line ${Math.max(1, error.line - bodyLineOffset)}, column ${error.column}`
                         : ""}
                       {` · ${error.message}`}
                     </li>

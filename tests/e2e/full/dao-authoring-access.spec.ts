@@ -14,8 +14,9 @@ for (const viewport of [{ width: 1280, height: 720 }, { width: 820, height: 533 
     await expect(page.getByText("Validate this topic before review.")).toBeVisible();
     await page.getByRole("button", { name: "Validate topic" }).click();
     await expect(page.locator("#dao-forum-status")).toContainText("Forum topic accepted");
-    const markdown = page.getByRole("textbox", { name: "Proposal Markdown" });
-    await markdown.fill("# Accessible proposal\n\nReview every section.\n\n## Scope\n\nThe editor and final controls remain accessible.");
+    const markdown = page.getByRole("textbox", { name: "Proposal body" });
+    await page.getByLabel("Proposal title").fill("Accessible proposal");
+    await markdown.fill("Review every section.\n\n## Scope\n\nThe editor and final controls remain accessible.");
     await markdown.scrollIntoViewIfNeeded();
     await expect(markdown).toBeInViewport();
     await page.getByRole("tab", { name: "Preview", exact: true }).click();

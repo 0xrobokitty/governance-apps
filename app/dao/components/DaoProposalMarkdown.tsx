@@ -6,7 +6,7 @@ import { IconCopy } from "@/components/icons/IconCopy";
 import { IconLinkOut } from "@/components/icons/IconLinkOut";
 import { copyTextToClipboard } from "@/lib/clipboard";
 import { cn } from "@/lib/cn";
-import { getDaoMarkdownFragmentId } from "@/lib/clients/dao/content";
+import { getDaoMarkdownFragmentId, getDaoSummaryNodeIndex } from "@/lib/clients/dao/content";
 import type {
   DaoMarkdownNode,
   DaoParsedProposalContent,
@@ -32,9 +32,10 @@ export function DaoProposalMarkdown({
   omitTitle?: boolean;
   parsed: DaoParsedProposalContent;
 }) {
+  const summaryIndex = getDaoSummaryNodeIndex(parsed.ast);
   const nodes = parsed.ast.children.filter((_, index) => {
     if (index === 0 && omitTitle) return false;
-    if (index === 1 && omitSummary) return false;
+    if (index > 0 && index <= summaryIndex && omitSummary) return false;
     return true;
   });
 
