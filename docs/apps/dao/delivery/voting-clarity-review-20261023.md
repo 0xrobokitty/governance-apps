@@ -1,5 +1,8 @@
 # DAO voting clarity — UI review follow-up
 
+The [next refinement](voting-clarity-refinement-20261023.md) adds compact wallet controls, YBC endpoint highlights, and percentage tooltips.
+This record describes the preceding layout and its validation.
+
 This follow-up addresses the screenshots reviewed on 23 October 2026.
 The work continues on `agent/integration` in the existing integration worktree.
 

@@ -35,7 +35,7 @@ The calculation follows `Voting.vote`: Yea equals weight multiplied by yea basis
 Nay is the remaining weight. A replacement event replaces the earlier contribution; it is never added to it.
 The “Highlight YBC” checkbox marks YBC's Yea and Nay weight within the canonical total bar.
 Turning it off keeps the same totals, percentages, and Yea/Nay boundary.
-The results keep source information under “About YBC votes”.
+The results keep source information and segment percentages under “Vote breakdown details”.
 That disclosure includes the latest vote time and collective address.
 The Explore YBC link follows the existing shared-host and subdomain routing rules.
 See [Vote results](vote-results.md) for rounding, consistency checks, and browser coverage.

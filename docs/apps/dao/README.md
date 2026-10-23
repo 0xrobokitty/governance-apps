@@ -9,7 +9,8 @@ The [closeout evidence](delivery/evidence/closeout-20260924/README.md) covers su
 | --- | --- |
 | Architecture, transaction checks, and recovery | [Live services](live-services.md) |
 | Voter details, shared names, participation, and authoring changes | [Voting clarity delivery](delivery/voting-clarity-20261023.md) |
-| Wallet actions, aligned voter rows, and integrated YBC results | [Voting clarity UI follow-up](delivery/voting-clarity-review-20261023.md) |
+| Compact wallet controls, YBC endpoints, and percentage tooltips | [Voting clarity refinement](delivery/voting-clarity-refinement-20261023.md) |
+| Earlier wallet layout, aligned voter rows, and integrated YBC results | [Voting clarity UI follow-up](delivery/voting-clarity-review-20261023.md) |
 | Public corrections to proposal display titles | [Title corrections](title-overrides.md) |
 | Telegram lifecycle, deadline, and operator alerts | [DAO alerts and rollout](telegram-alerts.md) |
 | Built local walkthrough and real producer snapshots | [Local validation](local-validation.md) |
