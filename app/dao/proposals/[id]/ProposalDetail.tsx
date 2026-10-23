@@ -93,10 +93,12 @@ export function ProposalDetail({
             {daoCopy.detail.eyebrow(proposalId)}
           </p>
           <ProposalHeadingFacts proposal={proposal} />
-          <h1 className="text-balance text-2xl font-bold md:text-4xl">
-            {title}
-          </h1>
-          <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
+          <div className="flex min-w-0 items-start">
+            <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
+            <h1 className="min-w-0 text-balance text-2xl font-bold md:text-4xl">
+              {title}
+            </h1>
+          </div>
           {summary ? (
             <p className="max-w-3xl text-pretty text-base leading-7 text-text-secondary">
               {summary}

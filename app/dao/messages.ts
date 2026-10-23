@@ -42,10 +42,9 @@ export const daoCopy = {
     snapshot: "Snapshot",
   },
   titleCorrection: {
-    label: "Title clarified by DAO ops",
+    label: "Title edited",
     original: "Original title",
     unavailable: "Original title unavailable",
-    source: "View public title corrections",
     unchanged: "The published proposal text is unchanged.",
   },
   publicationErrors: {

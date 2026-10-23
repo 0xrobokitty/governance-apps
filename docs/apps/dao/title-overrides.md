@@ -4,8 +4,9 @@ DAO ops can correct display titles in `public/dao-title-overrides.json`.
 The deployed website serves that same file at `/dao-title-overrides.json`.
 Git history records each correction. Changes take effect after deployment.
 
-The correction changes the board title, detail heading, and share title.
-The detail page identifies the correction and shows the original title.
+The correction changes the board title, detail heading, vote confirmation, and share title.
+A small pencil identifies corrected titles on the board and detail page.
+Hover, keyboard focus, or tap shows the original title and confirms that the published text is unchanged.
 Published content, body text, content digest, and transaction data remain unchanged.
 
 ## Add a correction
@@ -43,6 +44,12 @@ If the configuration is invalid, the app uses the original titles.
 There is no website editor or remote write endpoint for corrections.
 An entry cannot replace Markdown, assets, discussion links, scripts, or other proposal fields.
 Remove an entry and deploy again to restore the original display title.
+
+## Indicator validation
+
+The October 23, 2026 check passed 2,284 unit tests, type checking, lint, and the production Worker build.
+The targeted DAO browser checks passed 18 tests with one expected rollout skip, after updating the header focus-order assertion.
+The live board and detail page showed **Original title: Summary** for **Budget Request: vaultsNG**.
 
 The first approved correction is [proposal #4](https://dao.yearn.fi/proposals/4), from “Summary” to “Budget Request: vaultsNG”.
 Its chain, Voting contract, and content digest were verified against the published proposal on 23 October 2026.

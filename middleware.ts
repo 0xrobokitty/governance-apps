@@ -95,6 +95,7 @@ export function middleware(request: NextRequest) {
     url.pathname.startsWith("/fonts") ||
     url.pathname.startsWith("/.well-known") ||
     url.pathname === "/manifest.json" ||
+    url.pathname === "/dao-title-overrides.json" ||
     PUBLIC_FILE.test(url.pathname);
 
   if (isHeadRequest && !isSkippablePath) {

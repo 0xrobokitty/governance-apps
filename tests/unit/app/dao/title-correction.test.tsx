@@ -19,17 +19,18 @@ vi.mock("@/public/dao-title-overrides.json", async () => {
 });
 
 describe("proposal title correction transparency", () => {
-  it("shows the original title and public configuration without changing content", async () => {
+  it("explains the original title on focus without changing content", async () => {
     const user = userEvent.setup();
     const proposal = createDaoMockFeed().proposals[0];
     const original = structuredClone(proposal.content);
     const parsed = parseDaoProposalContent(proposal.content.value!);
     expect(getDaoDisplayTitle(proposal.ref, proposal.content.digest, parsed.title)).toBe("DAO-ops corrected title");
     render(<ProposalTitleCorrection proposal={proposal} originalTitle={parsed.title} />);
-    await user.click(screen.getByText("Title clarified by DAO ops"));
+    await user.tab();
+    expect(screen.getByRole("button", { name: "Title edited" })).toHaveFocus();
+    expect(screen.getByRole("button", { name: "Title edited" })).toHaveAccessibleDescription(expect.stringContaining(`Original title: ${parsed.title}`));
     expect(screen.getByText(`Original title: ${parsed.title}`)).toBeVisible();
     expect(screen.getByText("The published proposal text is unchanged.")).toBeVisible();
-    expect(screen.getByRole("link", { name: "View public title corrections" })).toHaveAttribute("href", "/dao-title-overrides.json");
     expect(proposal.content).toEqual(original);
     expect(parseDaoProposalContent(proposal.content.value!).title).toBe(parsed.title);
   });
@@ -37,6 +38,6 @@ describe("proposal title correction transparency", () => {
   it("does not imply a correction for another proposal", () => {
     const proposal = createDaoMockFeed().proposals[1];
     render(<ProposalTitleCorrection proposal={proposal} originalTitle="Original title" />);
-    expect(screen.queryByText("Title clarified by DAO ops")).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Title edited" })).not.toBeInTheDocument();
   });
 });

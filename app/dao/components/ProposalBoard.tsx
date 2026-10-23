@@ -21,6 +21,7 @@ import {
 } from "../route-state";
 import { daoCopy } from "../messages";
 import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
+import { ProposalTitleCorrection } from "./ProposalTitleCorrection";
 import styles from "./ProposalBoard.module.css";
 import {
   ProposalHeadingFacts,
@@ -119,7 +120,7 @@ export function ProposalBoard({
           )}
         </p>
         {filteredProposals.length > 0 ? (
-          <Card className="min-w-0 divide-y divide-border overflow-hidden p-0">
+          <Card className="min-w-0 divide-y divide-border p-0">
             {filteredProposals.map((proposal) => (
               <ProposalBoardRow
                 key={`${proposal.ref.votingAddress}:${proposal.ref.proposalId.toString()}`}
@@ -165,7 +166,7 @@ function ProposalBoardRow({
   return (
     <article
       aria-labelledby={`dao-proposal-${proposalId}-title`}
-      className="relative min-w-0 cursor-pointer p-4 transition-[background-color] duration-150 ease-out hover:bg-surface-secondary/40 motion-reduce:transition-none md:p-5"
+      className="relative min-w-0 cursor-pointer p-4 transition-[background-color] duration-150 ease-out first:rounded-t-box last:rounded-b-box hover:bg-surface-secondary/40 motion-reduce:transition-none md:p-5"
     >
       <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)] lg:items-center">
         <div className="min-w-0 space-y-3">
@@ -175,18 +176,21 @@ function ProposalBoardRow({
             <p className="break-words font-number text-xs font-bold tabular-nums text-text-secondary [overflow-wrap:anywhere]">
               {daoCopy.detail.eyebrow(proposalId)}
             </p>
-            <h3
-              id={`dao-proposal-${proposalId}-title`}
-              className="text-balance text-lg font-bold md:text-xl"
-            >
-              <Link
-                href={createDaoProposalHref(proposalId, origin, hostname, proposal.ref)}
-                aria-label={daoCopy.board.proposalLink(proposalId, title)}
-                className="inline-flex min-h-10 max-w-full items-center rounded py-1 text-left transition-[color] duration-150 ease-out hover:text-yearn-blue focus:outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:rounded-box focus-visible:after:ring-2 focus-visible:after:ring-text-primary focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-app after:absolute after:inset-0 after:rounded-box after:content-[''] motion-reduce:transition-none dark:hover:text-blue-300"
+            <div className="flex min-w-0 items-start">
+              <ProposalTitleCorrection proposal={proposal} originalTitle={parsed?.title} />
+              <h3
+                id={`dao-proposal-${proposalId}-title`}
+                className="min-w-0 text-balance text-lg font-bold md:text-xl"
               >
-                <span className="break-words [overflow-wrap:anywhere]">{title}</span>
-              </Link>
-            </h3>
+                <Link
+                  href={createDaoProposalHref(proposalId, origin, hostname, proposal.ref)}
+                  aria-label={daoCopy.board.proposalLink(proposalId, title)}
+                  className="inline-flex min-h-10 max-w-full items-center rounded py-1 text-left transition-[color] duration-150 ease-out hover:text-yearn-blue focus:outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:rounded-box focus-visible:after:ring-2 focus-visible:after:ring-text-primary focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-app after:absolute after:inset-0 after:rounded-box after:content-[''] motion-reduce:transition-none dark:hover:text-blue-300"
+                >
+                  <span className="break-words [overflow-wrap:anywhere]">{title}</span>
+                </Link>
+              </h3>
+            </div>
           </div>
 
           <div className="flex min-w-0 flex-col gap-2 text-xs text-text-secondary sm:flex-row sm:flex-wrap sm:items-center sm:gap-x-4">
