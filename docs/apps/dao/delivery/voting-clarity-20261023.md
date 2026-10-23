@@ -1,5 +1,8 @@
 # DAO voting clarity — 23 October 2026
 
+The [UI review follow-up](voting-clarity-review-20261023.md) replaces participation badges with wallet actions and integrates YBC into Vote Results.
+This record describes the initial delivery; use the follow-up for the current layout and validation.
+
 ## Scope
 
 This package adds voter details, shared address names, wallet participation badges, a YBC vote summary, separate authoring fields, and public title corrections.
