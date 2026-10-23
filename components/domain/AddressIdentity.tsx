@@ -3,6 +3,7 @@ import { IconPencil } from "@/components/icons/IconPencil";
 import { Badge } from "@/components/ui/Badge";
 import { Button } from "@/components/ui/Button";
 import { AddressLink } from "@/components/ui/ExplorerLink";
+import { cn } from "@/lib/cn";
 import type { DisplayAddressIdentity } from "@/lib/identity/identity";
 import { ADDRESS_ALIAS_MAX_LENGTH } from "@/lib/identity/aliases";
 import type { AddressAliasMutation, AddressAliasMutationResult } from "@/lib/hooks/useAddressAliases";
@@ -16,6 +17,7 @@ export type AddressIdentityProps = {
   alias?: string;
   identity: DisplayAddressIdentity;
   isCurrentMember?: boolean;
+  layout?: "inline" | "stacked";
   onResetAlias?: (address: string) => AddressAliasMutation;
   onSetAlias?: (
     address: string,
@@ -28,6 +30,7 @@ export function AddressIdentity({
   alias,
   identity,
   isCurrentMember = false,
+  layout = "inline",
   onResetAlias,
   onSetAlias,
 }: AddressIdentityProps) {
@@ -168,21 +171,21 @@ export function AddressIdentity({
           </div>
         </>
       ) : (
-        <div className="flex min-w-0 max-w-full flex-wrap items-center gap-x-2 gap-y-0">
+        <div className={cn("flex min-w-0 max-w-full gap-x-2 gap-y-0", layout === "stacked" ? "flex-col items-start" : "flex-wrap items-center")}>
           {canEdit ? (
             <button
               ref={editButtonRef}
               type="button"
-              className="group/name inline-flex min-h-10 min-w-10 max-w-full items-center gap-1 rounded text-left font-bold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary"
+              className={cn("group/name inline-flex min-h-10 min-w-10 max-w-full items-center gap-1 rounded text-left font-bold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary", layout === "stacked" && "w-full leading-5")}
               aria-label={`${copy.edit}: ${identity.label}`}
-              title={copy.edit}
+              title={layout === "stacked" ? `${copy.edit}: ${identity.label}` : copy.edit}
               onClick={() => {
                 setDraft(alias ?? identity.label);
                 setError(null);
                 setIsEditing(true);
               }}
             >
-              <span className="min-w-0 max-w-full break-words [overflow-wrap:anywhere]">
+              <span className={cn("min-w-0 max-w-full", layout === "stacked" ? "truncate" : "break-words [overflow-wrap:anywhere]")} title={layout === "stacked" ? identity.label : undefined}>
                 {identity.label}
               </span>
               <IconPencil
@@ -191,7 +194,7 @@ export function AddressIdentity({
               />
             </button>
           ) : (
-            <span className="min-w-0 max-w-full break-words font-bold text-text-primary [overflow-wrap:anywhere]">
+            <span className={cn("min-w-0 max-w-full font-bold text-text-primary", layout === "stacked" ? "block min-h-10 truncate pt-2.5 leading-5" : "break-words [overflow-wrap:anywhere]")} title={layout === "stacked" ? identity.label : undefined}>
               {identity.label}
             </span>
           )}

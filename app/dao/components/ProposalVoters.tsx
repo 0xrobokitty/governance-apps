@@ -6,6 +6,7 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { TransactionLink } from "@/components/ui/ExplorerLink";
 import { UtcTime } from "@/components/ui/UtcTime";
+import { IconChevron } from "@/components/icons/IconChevron";
 import { deriveDaoVoterRows, type DaoVoterRow } from "@/lib/clients/dao/votes";
 import { formatDaoBasisPoints } from "@/lib/clients/dao/read-display";
 import type { DaoProposal } from "@/lib/clients/dao/types";
@@ -21,6 +22,7 @@ import { daoCopy } from "../messages";
 const PAGE_SIZE = 10;
 const EMPTY_ENS: VerifiedEnsIdentities = {};
 const controlClassName = "min-h-10 min-w-0 rounded-box border border-border bg-surface px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-text-primary";
+const primaryLineClassName = "min-h-10 pt-2.5 text-sm leading-5";
 
 /** Live ENS resolution stays outside the view so mock rendering needs no network. */
 export function ConnectedProposalVoters({ proposal, isMock }: { proposal: DaoProposal; isMock: boolean }) {
@@ -92,10 +94,13 @@ export function ProposalVoters({ proposal, verifiedEns = EMPTY_ENS, onVisibleAdd
           <input type="search" value={search} aria-label={copy.search} placeholder={copy.search}
             className={cn(controlClassName, "w-full flex-1 sm:min-w-48")}
             onChange={(event) => { setSearch(event.target.value); setPage(0); }} />
-          <select className={controlClassName} aria-label={copy.sort} value={sort}
-            onChange={(event) => { setSort(event.target.value as typeof sort); setPage(0); }}>
-            <option value="newest">{copy.newest}</option><option value="oldest">{copy.oldest}</option><option value="power">{copy.highestPower}</option>
-          </select>
+          <div className="relative w-full sm:w-auto sm:min-w-44 sm:shrink-0">
+            <select className={cn(controlClassName, "w-full appearance-none pr-10")} aria-label={copy.sort} value={sort}
+              onChange={(event) => { setSort(event.target.value as typeof sort); setPage(0); }}>
+              <option value="newest">{copy.newest}</option><option value="oldest">{copy.oldest}</option><option value="power">{copy.highestPower}</option>
+            </select>
+            <IconChevron className="pointer-events-none absolute right-3 top-1/2 size-4 -translate-y-1/2 text-text-secondary" aria-hidden="true" />
+          </div>
         </div>
       ) : null}
       <div role="table" aria-label={copy.table} className="min-w-0">
@@ -107,22 +112,22 @@ export function ProposalVoters({ proposal, verifiedEns = EMPTY_ENS, onVisibleAdd
             <div role="row" key={row.address.toLowerCase()} className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-3 py-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] xl:items-start">
               <div role="cell" className="col-span-2 min-w-0 text-sm xl:col-span-1">
                 <AddressIdentity identity={getAddressIdentity(identities, row.address)} alias={aliases[row.address.toLowerCase()]}
-                  onSetAlias={setAlias} onResetAlias={resetAlias} copy={copy.alias} />
+                  onSetAlias={setAlias} onResetAlias={resetAlias} copy={copy.alias} layout="stacked" />
               </div>
-              <div role="cell" className="min-w-0 space-y-1 text-sm">
+              <div role="cell" className="min-w-0 text-sm">
                 <p className="text-xs text-text-tertiary xl:hidden">{copy.choice}</p>
                 <VoterChoice row={row} />
               </div>
-              <div role="cell" className="min-w-0 space-y-1 text-xs tabular-nums text-text-secondary">
+              <div role="cell" className="min-w-0 text-xs tabular-nums text-text-secondary">
                 <p className="text-text-tertiary xl:hidden">{copy.date}</p>
-                <UtcTime timestamp={row.event.log.timestamp} fallback={copy.unknownDate} className="block leading-5" />
+                <UtcTime timestamp={row.event.log.timestamp} fallback={copy.unknownDate} className={cn("block", primaryLineClassName)} />
                 {row.event.log.transactionHash ? <TransactionLink hash={row.event.log.transactionHash} label={copy.transaction} /> : null}
               </div>
-              <div role="cell" className="col-span-2 min-w-0 space-y-1 text-sm tabular-nums xl:col-span-1">
+              <div role="cell" className="col-span-2 min-w-0 text-sm tabular-nums xl:col-span-1">
                 <p className="text-xs text-text-tertiary xl:hidden">{copy.power}</p>
-                <p className="font-bold">{row.formattedWeight === null ? copy.unknownPower : `${row.formattedWeight} YFI`}</p>
+                <p className={cn(primaryLineClassName, "font-bold")}>{row.formattedWeight === null ? copy.unknownPower : `${row.formattedWeight} YFI`}</p>
                 {row.formattedShare !== null ? <p className="text-xs text-text-secondary">{copy.share(row.formattedShare)}</p> : null}
-                {row.shareBps !== null ? <div aria-hidden className="h-1 overflow-hidden rounded-full bg-surface-secondary"><div className="h-full rounded-full bg-text-secondary/40" style={{ width: `${row.shareBps / 100}%` }} /></div> : null}
+                {row.shareBps !== null ? <div aria-hidden className="mt-1 h-1 overflow-hidden rounded-full bg-surface-secondary"><div className="h-full rounded-full bg-text-secondary/40" style={{ width: `${row.shareBps / 100}%` }} /></div> : null}
               </div>
             </div>
           ))}
@@ -141,7 +146,7 @@ export function ProposalVoters({ proposal, verifiedEns = EMPTY_ENS, onVisibleAdd
 
 function VoterChoice({ row }: { row: DaoVoterRow }) {
   const copy = daoCopy.voters;
-  if (row.choice === "unknown") return <span className="text-text-tertiary">{copy.unknownChoice}</span>;
-  if (row.choice === "split") return <div className="space-y-1 text-xs tabular-nums"><p className="font-bold text-green-800 dark:text-green-300">{formatDaoBasisPoints(row.yeaBps!)} {copy.yea}</p><p className="font-bold text-red-700 dark:text-red-300">{formatDaoBasisPoints(10_000 - row.yeaBps!)} {copy.nay}</p></div>;
-  return <span className={cn("inline-flex items-center gap-1.5 font-bold", row.choice === "yea" ? "text-green-800 dark:text-green-300" : "text-red-700 dark:text-red-300")}><span aria-hidden>{row.choice === "yea" ? "✓" : "×"}</span>{copy[row.choice]}</span>;
+  if (row.choice === "unknown") return <p className={cn(primaryLineClassName, "text-text-tertiary")}>{copy.unknownChoice}</p>;
+  if (row.choice === "split") return <div className="text-xs tabular-nums"><p className={cn(primaryLineClassName, "font-bold text-green-800 dark:text-green-300")}>{formatDaoBasisPoints(row.yeaBps!)} {copy.yea}</p><p className="font-bold leading-5 text-red-700 dark:text-red-300">{formatDaoBasisPoints(10_000 - row.yeaBps!)} {copy.nay}</p></div>;
+  return <p className={cn(primaryLineClassName, "flex items-start gap-1.5 font-bold", row.choice === "yea" ? "text-green-800 dark:text-green-300" : "text-red-700 dark:text-red-300")}><span aria-hidden>{row.choice === "yea" ? "✓" : "×"}</span><span>{copy[row.choice]}</span></p>;
 }

@@ -9,6 +9,7 @@ import { resetBridge, waitForTestBridge } from "../utils";
 const VIEWPORTS = [
   { name: "phone", width: 390, height: 844 },
   { name: "desktop", width: 1_280, height: 900 },
+  { name: "wide desktop", width: 1_920, height: 1_080 },
 ] as const;
 
 for (const viewport of VIEWPORTS) {
@@ -31,8 +32,18 @@ for (const viewport of VIEWPORTS) {
     await expect(table.locator("time[datetime]")).toHaveCount(4);
     await expect(table.getByRole("link", { name: /View Ethereum transaction/ })).toHaveCount(4);
     await expectAddress(rows.first(), DAO_MOCK_YBC_AGGREGATE_ADDRESS);
+    await expectIdentityLayout(rows.first());
+    if (viewport.width >= 1_280) await expectPrimaryLineAlignment(rows.first());
 
     const sort = page.getByRole("combobox", { name: "Sort votes" });
+    const chevron = sort.locator("..").locator("svg");
+    await expect(sort).toHaveCSS("appearance", "none");
+    const selectBox = await sort.boundingBox();
+    const chevronBox = await chevron.boundingBox();
+    expect(selectBox).not.toBeNull();
+    expect(chevronBox).not.toBeNull();
+    expect(selectBox!.x + selectBox!.width - chevronBox!.x - chevronBox!.width).toBeGreaterThanOrEqual(10);
+    expect(Math.abs(chevronBox!.y + chevronBox!.height / 2 - selectBox!.y - selectBox!.height / 2)).toBeLessThanOrEqual(1);
     await sort.selectOption("oldest");
     await expectAddress(rows.first(), DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS);
     await sort.selectOption("power");
@@ -50,6 +61,9 @@ for (const viewport of VIEWPORTS) {
     await expectNoHorizontalOverflow(page);
     await page.getByRole("button", { name: "Save", exact: true }).click();
     await expect(rows.first().getByRole("button", { name: "Edit name: Protocol research delegate", exact: true })).toBeVisible();
+    await expect(rows.first().getByRole("button", { name: "Edit name: Protocol research delegate", exact: true })).toHaveAttribute("title", "Edit name: Protocol research delegate");
+    await expectIdentityLayout(rows.first());
+    if (viewport.width >= 1_280) await expectPrimaryLineAlignment(rows.first());
     await search.fill("Protocol research delegate");
     await expect(rows).toHaveCount(1);
     await expectAddress(rows.first(), DAO_MOCK_STYFIX_AGGREGATE_ADDRESS);
@@ -79,4 +93,33 @@ async function expectNoHorizontalOverflow(page: Page) {
     content: document.documentElement.scrollWidth,
   }));
   expect(dimensions.content).toBeLessThanOrEqual(dimensions.viewport);
+}
+
+async function expectIdentityLayout(row: Locator) {
+  const edit = await row.getByRole("button", { name: /^Edit name:/ }).boundingBox();
+  const address = await row.getByRole("link", { name: /^View Ethereum address/ }).boundingBox();
+  expect(edit).not.toBeNull();
+  expect(address).not.toBeNull();
+  expect(edit!.height).toBeGreaterThanOrEqual(40);
+  expect(address!.height).toBeGreaterThanOrEqual(40);
+  expect(address!.y).toBeGreaterThanOrEqual(edit!.y + edit!.height - 1);
+}
+
+async function expectPrimaryLineAlignment(row: Locator) {
+  const linePositions = await row.evaluate((element) => {
+    const cells = element.querySelectorAll('[role="cell"]');
+    const elements = [
+      cells[0].querySelector('button[aria-label^="Edit name:"] > span'),
+      ...Array.from(cells[1].querySelectorAll("p")).filter((paragraph) => paragraph.getBoundingClientRect().height > 0).slice(0, 1),
+      cells[2].querySelector("time"),
+      ...Array.from(cells[3].querySelectorAll("p")).filter((paragraph) => paragraph.getBoundingClientRect().height > 0).slice(0, 1),
+    ];
+    return elements.map((node) => {
+      const range = document.createRange();
+      range.selectNodeContents(node!);
+      return range.getClientRects()[0].y;
+    });
+  });
+  expect(linePositions).toHaveLength(4);
+  expect(Math.max(...linePositions) - Math.min(...linePositions)).toBeLessThanOrEqual(1);
 }
