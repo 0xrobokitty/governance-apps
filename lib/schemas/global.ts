@@ -38,6 +38,9 @@ export const GlobalDataSchema = z.object({
     yfi: z.object({
       totalSupply: zBaseUnit,
       priceCts: zBaseUnit,
+      priceStale: z.boolean().optional(),
+      priceStatus: z.string().optional(),
+      priceUpdatedAt: z.number().int().nonnegative().optional(),
     }),
     veyfi: z.object({
       lockedYfi: zBaseUnit,

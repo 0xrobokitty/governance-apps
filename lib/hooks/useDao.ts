@@ -409,10 +409,11 @@ function applyDaoSurfaceState<
 async function invalidateDaoQueries(
   queryClient: ReturnType<typeof useQueryClient>
 ) {
-  await queryClient.invalidateQueries({
-    queryKey: daoKeys.all,
-    refetchType: "all",
-  });
+  await Promise.all([
+    queryClient.invalidateQueries({ queryKey: daoKeys.all, refetchType: "all" }),
+    queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
+    queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+  ]);
 }
 
 export function useDaoDebugActions() {

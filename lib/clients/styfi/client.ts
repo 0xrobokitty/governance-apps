@@ -21,8 +21,8 @@ export interface StyfiClient {
   getStatsFromChain?: () => Promise<StyfiGlobalStats>;
 
   /**
-   * Returns the current protocol APY in basis points (e.g. 500 = 5%).
-   * Currently, both stYFI and stYFIx share the same APY.
+   * Legacy base staking APR in basis points (500 = 5%). This excludes Vote Boost
+   * and YBC income. The stYFI page uses the dedicated APR snapshot instead.
    */
   getApy(): Promise<bigint>;
 

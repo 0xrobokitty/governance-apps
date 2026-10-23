@@ -21,6 +21,7 @@ import {
   YFI_ADDRESS,
 } from "@/lib/constants";
 import { nowSeconds } from "@/lib/mocks/time";
+import { resetStyfiMockScenario } from "./scenarios";
 
 const GLOBAL_STYFI_STORE = new Map<string, StyfiAccountState>();
 const GLOBAL_LAST_ACCRUAL = new Map<string, number>();
@@ -335,6 +336,7 @@ export function createMockStyfiClient(options?: { latencyMs?: number }) {
 }
 
 export function resetMockStyfiStore() {
+  resetStyfiMockScenario();
   GLOBAL_STYFI_STORE.clear();
   GLOBAL_LAST_ACCRUAL.clear();
   txCounter = 0;
