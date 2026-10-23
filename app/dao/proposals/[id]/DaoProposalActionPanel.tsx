@@ -1,5 +1,8 @@
 "use client";
 
+import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
+import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
+
 import {
   useEffect,
   useId,
@@ -630,7 +633,7 @@ function VoteConfirmation({
   const content = proposal.content.value;
   const parsedContent = content ? parseDaoProposalContent(content) : null;
   const title =
-    parsedContent?.title ?? `Proposal #${proposal.ref.proposalId.toString()}`;
+    getDaoDisplayTitle(proposal.ref, proposal.content.digest, parsedContent?.title) ?? `Proposal #${proposal.ref.proposalId.toString()}`;
   const decayed = account.decayBps < 10_000;
   return (
     <div className="space-y-5">
@@ -678,6 +681,7 @@ function VoteConfirmation({
         ) : null}
       </dl>
       <ConfirmationCopy>{daoCopy.actions.irreversibility}</ConfirmationCopy>
+      <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
 
       {proposal.content.state !== "available" ? (
         <div className="space-y-2">

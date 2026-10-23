@@ -41,6 +41,13 @@ export const daoCopy = {
     totalExplanation: "The total counts each holder's matured stake and active migrated veYFI, plus the stYFIx pool once. It is measured before late-vote decay.",
     snapshot: "Snapshot",
   },
+  titleCorrection: {
+    label: "Title clarified by DAO ops",
+    original: "Original title",
+    unavailable: "Original title unavailable",
+    source: "View public title corrections",
+    unchanged: "The published proposal text is unchanged.",
+  },
   publicationErrors: {
     disabled: "Publication is disabled. Keep your draft and try again later.",
     unavailable: "Publication is temporarily unavailable. Keep your reviewed content and try again later.",

@@ -34,6 +34,8 @@ import {
   ProposalVoteSummary,
 } from "../../components/ProposalReadPrimitives";
 import { daoCopy } from "../../messages";
+import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
+import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
 import {
   createDaoBoardGroupHref,
   createDaoRootHref,
@@ -61,7 +63,7 @@ export function ProposalDetail({
   const parsedContent = proposal.content.value
     ? parseDaoProposalContent(proposal.content.value)
     : null;
-  const title = parsedContent?.title ?? daoCopy.detail.eyebrow(proposalId);
+  const title = getDaoDisplayTitle(proposal.ref, proposal.content.digest, parsedContent?.title) ?? daoCopy.detail.eyebrow(proposalId);
   const summary = parsedContent?.summary;
   const origin = resolveDaoProposalOrigin(
     requestedOrigin,
@@ -94,6 +96,7 @@ export function ProposalDetail({
           <h1 className="text-balance text-2xl font-bold md:text-4xl">
             {title}
           </h1>
+          <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
           {summary ? (
             <p className="max-w-3xl text-pretty text-base leading-7 text-text-secondary">
               {summary}

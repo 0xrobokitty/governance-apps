@@ -4,6 +4,7 @@ import { assertDaoDeployments, getDaoDeployments } from "@/lib/clients/dao/deplo
 import { parseDaoProposalContent } from "@/lib/clients/dao/content";
 import { getDaoProposalSummary } from "@/lib/clients/dao/content-summary";
 import { readDaoContentBytes } from "@/lib/clients/dao/content-bytes";
+import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import { isDaoEnabled, isDaoMockRuntimeEnabled } from "@/lib/runtime/features";
 import { parseDaoFeed } from "@/lib/schemas/dao-feed";
 import type { Hex } from "viem";
@@ -83,8 +84,13 @@ export async function readDaoProposalShareDetails(
     const parsed = content.state === "available" && content.value
       ? parseDaoProposalContent(content.value) : null;
     const summary = parsed ? getDaoProposalSummary(parsed) : null;
+    const title = getDaoDisplayTitle({
+      chainId: feed.chainId,
+      votingAddress: selected.votingAddress,
+      proposalId: BigInt(input.id),
+    }, proposal.contentDigest, parsed?.title);
     return {
-      title: parsed?.title ? `${parsed.title} | Yearn DAO` : `Proposal #${input.id} | Yearn DAO`,
+      title: title ? `${title} | Yearn DAO` : `Proposal #${input.id} | Yearn DAO`,
       description: summary ? summaryExcerpt(summary)
         : `Read proposal #${input.id} and take part in Yearn DAO governance.`,
       path: daoProposalSharePath({ id: input.id, chain: String(feed.chainId), voting: selected.votingAddress }),
