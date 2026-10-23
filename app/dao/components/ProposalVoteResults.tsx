@@ -3,6 +3,7 @@
 import { useId, useState } from "react";
 import Link from "next/link";
 import { UtcTime } from "@/components/ui/UtcTime";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { AddressLink } from "@/components/ui/ExplorerLink";
 import { IconLinkOut } from "@/components/icons/IconLinkOut";
 import { deriveDaoVoteResults, type DaoVoteResultSegment } from "@/lib/clients/dao/vote-results";
@@ -34,6 +35,10 @@ export function ProposalVoteResults({ proposal, hostname }: { proposal: DaoPropo
   if (!vote) return <p className="text-sm text-text-secondary">{daoCopy.voteResults.unavailable}</p>;
   const highlighted = highlightYbc && ybc.state === "voted";
   const segments = highlighted ? results.highlightedSegments : results.canonicalSegments;
+  const visibleSegments = segments.filter((part) => part.units > 0);
+  const segmentLabel = (part: DaoVoteResultSegment) => highlighted && (part.kind === "yea" || part.kind === "nay")
+    ? daoCopy.voteResults.remainingLabels[part.kind]
+    : daoCopy.voteResults.segmentLabels[part.kind];
 
   return (
     <div className="min-w-0 space-y-3" data-testid="dao-vote-results">
@@ -53,10 +58,21 @@ export function ProposalVoteResults({ proposal, hostname }: { proposal: DaoPropo
           {copy.explore}<IconLinkOut className="size-3.5" aria-hidden />
         </Link>
       </div>
-      <div aria-hidden="true" data-testid="dao-total-vote-bar" className="flex h-3 w-full overflow-hidden rounded-full bg-neutral-200 dark:bg-neutral-800">
-        {segments.map((part) => (
-          <span key={part.kind} data-vote-segment={part.kind} className={cn("h-full", SEGMENT_COLORS[part.kind], part.kind.startsWith("ybc-") && YBC_PATTERN)} style={{ width: `${part.widthPercent}%` }} />
-        ))}
+      <div aria-hidden="true" data-testid="dao-total-vote-bar" className="flex h-3 w-full rounded-full bg-neutral-200 dark:bg-neutral-800">
+        {visibleSegments.map((part, index) => {
+          // Position the popup from the segment's visual center, away from the
+          // card edges. Only the painted ends are rounded; popups remain unclipped.
+          const center = visibleSegments.slice(0, index).reduce((sum, segment) => sum + segment.widthPercent, 0) + part.widthPercent / 2;
+          return (
+            <span key={part.kind} data-vote-segment={part.kind} className="h-full" style={{ width: `${part.widthPercent}%` }}>
+              <Tooltip className="h-full w-full align-top" align={center < 33 ? "start" : center > 67 ? "end" : "center"} content={
+                <span className="block w-44 text-pretty"><strong className="font-bold">{segmentLabel(part)}</strong><br />{daoCopy.voteResults.share(part.shareOfTotalPercent)}</span>
+              }>
+                <span className={cn("h-full w-full", SEGMENT_COLORS[part.kind], part.kind.startsWith("ybc-") && YBC_PATTERN, index === 0 && "rounded-l-full", index === visibleSegments.length - 1 && "rounded-r-full")} />
+              </Tooltip>
+            </span>
+          );
+        })}
       </div>
       <div className="space-y-2" data-testid="dao-canonical-vote-totals">
         <p className="font-number text-sm font-bold tabular-nums">{daoCopy.detail.voteBreakdown(vote.yeaPercent, vote.nayPercent)}</p>
@@ -73,13 +89,21 @@ export function ProposalVoteResults({ proposal, hostname }: { proposal: DaoPropo
         </p>
         {highlighted && ybc.state === "voted" ? (
           <dl className="mt-2 grid grid-cols-2 gap-3" aria-label={copy.contribution}>
-            <VoteFact label={copy.yea} value={copy.weight(ybc.formattedYeaWeight)} marker="ybc-yea" />
-            <VoteFact label={copy.nay} value={copy.weight(ybc.formattedNayWeight)} marker="ybc-nay" />
+            <VoteFact label={copy.yea} value={ybc.formattedYeaWeight} marker="ybc-yea" />
+            <VoteFact label={copy.nay} value={ybc.formattedNayWeight} marker="ybc-nay" />
           </dl>
         ) : null}
         <details className="mt-1 text-xs text-text-secondary">
           <summary className="min-h-10 cursor-pointer content-center rounded font-bold focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary">{copy.snapshot}</summary>
           <div className="space-y-2 pb-1">
+            <dl aria-label={daoCopy.voteResults.shares} className="space-y-2">
+              {segments.map((part) => (
+                <div key={part.kind} className="flex flex-wrap justify-between gap-x-3 gap-y-1">
+                  <dt>{segmentLabel(part)}</dt>
+                  <dd className="font-number tabular-nums">{daoCopy.voteResults.share(part.shareOfTotalPercent)}</dd>
+                </div>
+              ))}
+            </dl>
             <p className="text-pretty leading-5">{copy.description}</p>
             {ybc.state === "voted" && ybc.timestamp !== null ? <p>{copy.updated} <UtcTime timestamp={ybc.timestamp} /></p> : null}
             {ybc.address ? <AddressLink address={ybc.address} variant="compact" copyLabel={copy.copyAddress} /> : null}

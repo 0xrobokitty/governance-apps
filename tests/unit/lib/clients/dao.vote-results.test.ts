@@ -21,6 +21,8 @@ describe("canonical vote result highlighting", () => {
     expect(result.state).toBe("ready");
     expect(result.vote).toEqual(deriveDaoVoteDisplay(value));
     expect(result.ybc).toMatchObject({ state: "voted", yeaWeight: 15n * 10n ** 17n, nayWeight: 5n * 10n ** 17n });
+    expect(result.highlightedSegments.map((part) => part.kind)).toEqual(["ybc-yea", "yea", "nay", "ybc-nay"]);
+    expect(result.highlightedSegments.map((part) => part.shareOfTotalPercent)).toEqual(["13.64%", "54.55%", "27.27%", "4.55%"]);
     expect(result.highlightedSegments.reduce((sum, part) => sum + part.weight, 0n)).toBe(value.totalWeight);
     expect(result.highlightedSegments.reduce((sum, part) => sum + part.units, 0)).toBe(1_000_000);
     for (const side of ["yea", "nay"] as const) {
@@ -41,7 +43,7 @@ describe("canonical vote result highlighting", () => {
     expect(result.highlightedSegments.reduce((sum, part) => sum + part.weight, 0n)).toBe(value.totalWeight);
     expect(result.highlightedSegments.reduce((sum, part) => sum + part.units, 0)).toBe(1_000_000);
     expect(result.highlightedSegments.every((part) => part.weight >= 0n && part.units >= 0 && part.units <= 1_000_000 && Number.isFinite(part.widthPercent))).toBe(true);
-    expect(result.highlightedSegments[1].weight).toBe(weight * 3_333n / 10_000n);
+    expect(result.highlightedSegments[0].weight).toBe(weight * 3_333n / 10_000n);
   });
 
   it("does not enlarge a contribution that rounds below one visible bar unit", () => {
@@ -51,8 +53,19 @@ describe("canonical vote result highlighting", () => {
     value.totalWeight = value.yeaWeight;
     setYbc(value, 1n, 10_000);
     const result = deriveDaoVoteResults(value, DAO_MOCK_YBC_AGGREGATE_ADDRESS);
-    expect(result.highlightedSegments[1]).toMatchObject({ weight: 1n, units: 0, widthPercent: 0 });
-    expect(result.highlightedSegments[0].units).toBe(1_000_000);
+    expect(result.highlightedSegments[0]).toMatchObject({ weight: 1n, units: 0, widthPercent: 0, shareOfTotalPercent: "<0.01%" });
+    expect(result.highlightedSegments[1]).toMatchObject({ units: 1_000_000, shareOfTotalPercent: ">99.99%" });
+  });
+
+  it.each([
+    [0n, "0%"], [1n, "<0.01%"], [9n, "<0.01%"], [10n, "0.01%"],
+    [99_990n, "99.99%"], [99_991n, ">99.99%"], [99_999n, ">99.99%"], [100_000n, "100%"],
+  ])("formats %s of total weight without rounding a positive share to zero or a partial share to all", (weight, share) => {
+    const value = proposal();
+    value.yeaWeight = weight;
+    value.nayWeight = 100_000n - weight;
+    value.totalWeight = 100_000n;
+    expect(deriveDaoVoteResults(value, null).canonicalSegments[0].shareOfTotalPercent).toBe(share);
   });
 
   it("keeps zero totals empty and never divides by zero", () => {
@@ -63,6 +76,7 @@ describe("canonical vote result highlighting", () => {
     expect(result.state).toBe("empty");
     expect(result.ybc.state).toBe("not-voted");
     expect(result.canonicalSegments.every((part) => part.units === 0)).toBe(true);
+    expect(result.canonicalSegments.every((part) => part.shareOfTotalPercent === "0%")).toBe(true);
   });
 
   it.each(["missing", "negative", "incoherent"])("does not draw %s canonical totals", (kind) => {

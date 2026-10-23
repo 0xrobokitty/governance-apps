@@ -1,6 +1,6 @@
 import type { Address } from "viem";
 import { deriveDaoYbcVote, type DaoYbcVote } from "./participation";
-import { deriveDaoVoteDisplay, type DaoVoteDisplay } from "./read-display";
+import { deriveDaoVoteDisplay, formatDaoBasisPoints, type DaoVoteDisplay } from "./read-display";
 import type { DaoProposal } from "./types";
 
 const BAR_UNITS = 1_000_000n;
@@ -11,6 +11,7 @@ export type DaoVoteResultSegment = {
   /** Millionths of the whole bar, bounded before conversion to Number. */
   units: number;
   widthPercent: number;
+  shareOfTotalPercent: string;
 };
 
 export type DaoVoteResults = {
@@ -34,7 +35,7 @@ export function deriveDaoVoteResults(proposal: DaoProposal, address: Address | n
 
   const yeaUnits = totalWeight === 0n ? 0n : yeaWeight * BAR_UNITS / totalWeight;
   const nayUnits = totalWeight === 0n ? 0n : BAR_UNITS - yeaUnits;
-  const canonicalSegments = [segment("yea", yeaWeight, yeaUnits), segment("nay", nayWeight, nayUnits)];
+  const canonicalSegments = [segment("yea", yeaWeight, yeaUnits, totalWeight), segment("nay", nayWeight, nayUnits, totalWeight)];
   let ybc = deriveDaoYbcVote(proposal, address);
   if (ybc.state === "voted" && (ybc.yeaWeight > yeaWeight || ybc.nayWeight > nayWeight)) {
     // A stale or inconsistent aggregate must not create negative remainder votes.
@@ -48,10 +49,10 @@ export function deriveDaoVoteResults(proposal: DaoProposal, address: Address | n
     const ybcYeaUnits = yeaWeight === 0n ? 0n : yeaUnits * ybc.yeaWeight / yeaWeight;
     const ybcNayUnits = nayWeight === 0n ? 0n : nayUnits * ybc.nayWeight / nayWeight;
     highlightedSegments = [
-      segment("yea", yeaWeight - ybc.yeaWeight, yeaUnits - ybcYeaUnits),
-      segment("ybc-yea", ybc.yeaWeight, ybcYeaUnits),
-      segment("ybc-nay", ybc.nayWeight, ybcNayUnits),
-      segment("nay", nayWeight - ybc.nayWeight, nayUnits - ybcNayUnits),
+      segment("ybc-yea", ybc.yeaWeight, ybcYeaUnits, totalWeight),
+      segment("yea", yeaWeight - ybc.yeaWeight, yeaUnits - ybcYeaUnits, totalWeight),
+      segment("nay", nayWeight - ybc.nayWeight, nayUnits - ybcNayUnits, totalWeight),
+      segment("ybc-nay", ybc.nayWeight, ybcNayUnits, totalWeight),
     ];
   }
   return {
@@ -60,6 +61,17 @@ export function deriveDaoVoteResults(proposal: DaoProposal, address: Address | n
   };
 }
 
-function segment(kind: DaoVoteResultSegment["kind"], weight: bigint, units: bigint): DaoVoteResultSegment {
-  return { kind, weight, units: Number(units), widthPercent: Number(units) / 10_000 };
+function segment(kind: DaoVoteResultSegment["kind"], weight: bigint, units: bigint, totalWeight: bigint): DaoVoteResultSegment {
+  return { kind, weight, units: Number(units), widthPercent: Number(units) / 10_000, shareOfTotalPercent: shareOfTotal(weight, totalWeight) };
+}
+
+function shareOfTotal(weight: bigint, totalWeight: bigint): string {
+  if (weight === 0n || totalWeight === 0n) return "0%";
+  if (weight === totalWeight) return "100%";
+  const scaledWeight = weight * 10_000n;
+  // Preserve the distinction between a tiny positive share and zero, and
+  // between an almost-complete share and the entire vote. Never round either away.
+  if (scaledWeight < totalWeight) return "<0.01%";
+  if (scaledWeight > totalWeight * 9_999n) return ">99.99%";
+  return formatDaoBasisPoints(Number((scaledWeight + totalWeight / 2n) / totalWeight));
 }

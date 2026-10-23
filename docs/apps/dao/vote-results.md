@@ -1,11 +1,15 @@
 # Vote results and YBC highlighting
 
 Proposal details show one canonical vote bar. The “Highlight YBC” checkbox is enabled by default when a valid contribution exists.
-Patterned sections mark YBC Yea and YBC Nay within that same bar. The legend shows their recorded voting weights.
+The bar shows YBC Yea, remaining Yea, remaining Nay, then YBC Nay from left to right.
+Patterned sections mark the YBC contributions at the outside edges. The legend labels each weight and shows its number without repeated units.
 Turning off the highlight changes only the bar segments and legend. Total weight, percentages, outcome, and threshold remain unchanged.
 There is no result that excludes YBC votes.
 
-The “About YBC votes” disclosure gives the recorded update time and configured collective address.
+Each visible segment has a hover tooltip with its percentage of total votes cast.
+Remaining portions are labeled “non-YBC” while highlighting is enabled.
+The “Vote breakdown details” disclosure gives the same percentages for keyboard and touch users, including contributions too small to draw.
+It also gives the recorded update time and configured collective address.
 The “Explore YBC” link follows the existing host routing rules. Proposal-board summaries keep their compact display.
 
 ## Calculation and unavailable data
@@ -22,11 +26,15 @@ The bar uses one million integer units. Each YBC segment is allocated within its
 Rounding therefore keeps the Yea/Nay boundary fixed. Tiny contributions can have zero visible width; the legend still shows their formatted weight.
 All-zero totals produce an empty bar without division by zero.
 
+Percentage labels use the original bigint weights and total votes cast, independently of bar-width rounding.
+Labels round to two decimal places. Shares below 0.01% show “<0.01%”; partial shares above 99.99% show “>99.99%”.
+Only zero weight shows 0%, and only the full total shows 100%. Independently rounded labels can sum to slightly more or less than 100%.
+
 ## Validation
 
-Domain tests cover exact partition sums, contract rounding, large integers, zero totals, missing data, and oversized contributions.
+Domain tests cover endpoint order, total-weight percentages, exact partition sums, contract rounding, large integers, zero totals, missing data, and oversized contributions.
 Component tests verify that toggling cannot change canonical totals or add another bar.
-Browser tests cover keyboard controls, source disclosure, fixed segment boundaries, and layouts at 390 and 1280 pixels.
+Browser tests cover unclipped segment tooltips, keyboard and touch disclosure, fixed segment boundaries, and layouts at 390 and 1280 pixels.
 The action panel has the `dao-proposal-actions` anchor for proposal-board Vote links.
 
 This change does not alter transaction checks, feed formats, or deployment flags.
