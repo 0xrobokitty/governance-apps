@@ -151,7 +151,7 @@ export const ybcCopy = {
       edit: "Edit name",
       fieldLabel: "Local member name",
       browserOnly:
-        "Saved only in this browser and never sent with a transaction. The Ethereum address remains canonical.",
+        "Shared with DAO in this browser. Names are never sent with a transaction; the Ethereum address remains canonical.",
       save: "Save",
       cancel: "Cancel",
       reset: "Reset",
