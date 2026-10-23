@@ -162,12 +162,11 @@ export function DaoBoardView({
 }) {
   return (
     <DaoRouteFrame>
-      {isConnected ? votingPower : null}
-
       <DaoBoardHeader
         hostname={hostname}
         proposalCount={proposals.length}
         showCount={state === "ready"}
+        votingPower={isConnected ? votingPower : null}
       />
 
       {!isConnected ? <DaoWalletNotice /> : null}
@@ -233,14 +232,16 @@ function DaoBoardHeader({
   hostname,
   proposalCount,
   showCount,
+  votingPower,
 }: {
   hostname?: string;
   proposalCount: number;
   showCount: boolean;
+  votingPower: ReactNode;
 }) {
   return (
-    <header className="flex min-w-0 flex-col gap-5 border-b border-border pb-6 sm:flex-row sm:items-end sm:justify-between">
-      <div className="min-w-0 space-y-2">
+    <header className="flex min-w-0 flex-col gap-4 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+      <div className="min-w-0 flex-1 space-y-2">
         <h1 className="text-balance text-3xl font-bold md:text-4xl">
           {daoCopy.board.title}
         </h1>
@@ -253,7 +254,9 @@ function DaoBoardHeader({
           </p>
         ) : null}
       </div>
-      <div className="flex shrink-0 flex-col gap-2 sm:flex-row sm:items-center">
+      <div className="flex min-w-0 flex-wrap items-center gap-2 lg:max-w-[65%] lg:justify-end">
+        {votingPower}
+        <div className="flex min-w-0 flex-1 flex-wrap items-stretch gap-2 sm:flex-none">
         <a
           href={daoCopy.navigation.forumHref}
           target="_blank"
@@ -262,7 +265,7 @@ function DaoBoardHeader({
           className={getButtonClassName({
             variant: "ghost",
             size: "sm",
-            className: `${daoRouteControlClassName} w-full gap-1.5 sm:w-auto`,
+            className: `${daoRouteControlClassName} h-auto min-h-11 flex-1 gap-1.5 py-2 text-center sm:flex-none`,
           })}
         >
           <span>{daoCopy.navigation.forum}</span>
@@ -272,11 +275,12 @@ function DaoBoardHeader({
           href={createDaoProposeHref(hostname)}
           className={getButtonClassName({
             size: "sm",
-            className: `${daoRouteControlClassName} w-full sm:w-auto`,
+            className: `${daoRouteControlClassName} h-auto min-h-11 flex-1 py-2 text-center sm:flex-none`,
           })}
         >
           {daoCopy.navigation.createProposal}
         </Link>
+        </div>
       </div>
     </header>
   );

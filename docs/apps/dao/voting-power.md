@@ -1,6 +1,8 @@
 # Wallet and total DAO voting power
 
-The DAO front page has a voting-power section above **Proposals**. It shows personal voting power, the corresponding share of the DAO total, and total DAO voting power. The breakdown starts collapsed and expands to show personal and system components.
+The DAO front page shows a compact **Your voting power** control beside the proposal header actions. Its main value is the wallet's share of total DAO voting power. YBC estimates carry a visible qualifier. The control wraps onto a small row on narrow screens, so **Proposals** remains first.
+
+Hover or keyboard focus shows the calculation: personal voting power divided by total DAO voting power. A click or tap opens the full breakdown in a modal. The modal includes the calculation, personal components, system components, snapshot time, and participation assumptions. It traps keyboard focus and returns focus to the control when it closes.
 
 Ordinary wallets use exact `WeightMeasure.weight(account)`. YBC members also see an estimated share of the delegated stYFIx pool and YBC-held stake. The estimate assumes every current YBC member votes. Actual influence depends on which members vote on each proposal. The breakdown distinguishes the member's share of YBC weight from their share of total DAO voting power.
 
@@ -24,13 +26,13 @@ The app loads an explicitly configured companion snapshot. It verifies deploymen
 
 The chain's block hash and timestamp must match the snapshot. A snapshot must be no more than 300 seconds old and must belong to the current governance epoch. The rendered result also checks age and epoch every second, so a paused request cannot preserve an expired percentage.
 
-Missing or stale system data leaves exact personal power visible with an unavailable total and no percentage. Missing YBC roster data leaves direct power and direct share visible. A failed personal read shows unavailable, not zero. Disconnected and wrong-network wallets have no section.
+Missing or stale system data leaves personal power visible with **Share unavailable** and no percentage. The breakdown identifies any YBC estimate. Missing YBC roster data leaves direct power and direct share visible. A failed personal read shows unavailable, not zero. Disconnected and wrong-network wallets have no control.
 
 The YBC feed supplies candidate addresses only. Current membership and `num_members` establish roster completeness. Every member weight is read at the same block as personal power. All pool estimates use matured member weights, not raw YBC reward shares.
 
 ## Local review and production boundary
 
-Set `NEXT_PUBLIC_DAO_VOTING_POWER_URL=/dao-voting-power.json` for a local build. Run:
+For a local app on port `3108`, set `NEXT_PUBLIC_DAO_VOTING_POWER_URL=http://127.0.0.1:3108/dao-voting-power.json`. The server proxy requires an absolute upstream URL. Run:
 
 ```sh
 DAO_VOTING_POWER_RPC_URL=https://ethereum.reth.rs/rpc node scripts/build-dao-voting-power.mjs --watch
@@ -47,8 +49,10 @@ The first verified snapshot, block **26,255,657**, indexed **120 candidates** an
 | Delegated stYFIx snapshot | 431.027945257047456616 |
 | Total | 2,647.123446343477236266 |
 
-The local builder is implemented and verified. Production still needs the [producer integration](voting-power-producer-handoff.md) and an explicit feed URL. No producer deployment or remote publication is part of this change. Without that configuration, the app makes no system-feed request and shows no invented total.
+The Rust producer is implemented in `gov-apps-stats/src/voting_power.rs`, with a durable holder index and a local-only validation CLI. The [producer contract](voting-power-producer-handoff.md) and [coordinated release runbook](voting-power-release-2026-10-23.md) cover configuration and rollout. No producer deployment or remote publication is part of this change. The app's deployment validator requires a feed URL when DAO is enabled.
+
+An independent [Rust-to-app mainnet check](validation/voting-power-rust-mainnet-2026-10-23.json) verified the emitted feed at block **26,256,202**. The actual parser and wallet reader accepted all 111 positive-weight accounts and the same 2,647.123446 YFI total. Every wallet contract read used that canonical block. The exact Rust output is retained as a consumer regression fixture.
 
 An [integrated mainnet read](validation/voting-power-mainnet-2026-10-23.json) also verified a public YBC member at block 26,255,712: direct power was 287.931143 YFI, or 10.87% of the total; estimated combined influence was 626.477946 YFI, or 23.66%. Its 52.50% share of YBC member weight is a different denominator.
 
-DAO mocks use their own wallet, network status, base weight, and clock. The **YBC member** debug control changes the deterministic influence estimate. Tests cover source enumeration, pool replacement, incomplete history, reorgs, malformed sums, stale/epoch-crossing snapshots, same-block personal shares, and the expandable UI.
+DAO mocks use their own wallet, network status, base weight, and clock. The **YBC member** debug control changes the deterministic influence estimate. Domain tests cover source enumeration, pool replacement, incomplete history, reorgs, malformed sums, expired snapshots, epoch boundaries, and personal shares. UI tests cover the header control, tooltip, modal keyboard behavior, touch access, and containment at 200% text size.
