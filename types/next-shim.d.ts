@@ -61,4 +61,6 @@ declare module "next/dist/build/segment-config/app/app-segment-config.js" {
   export type AppSegmentConfig = UnknownRecord;
   export type InstantConfigForTypeCheckInternal = UnknownRecord;
   export type PrefetchForTypeCheckInternal = UnknownRecord;
+  export type Prefetch = "auto" | "partial" | "force-disabled";
+  export type EnsureStatic = "auto" | "shell" | "prefetch" | "navigation" | false;
 }
