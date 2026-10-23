@@ -32,6 +32,7 @@ import type {
   DaoProposalRef,
   DaoProposalType,
   DaoProposerEligibilityInput,
+  DaoVoteDirection,
 } from "./types";
 
 export const DAO_MOCK_NOW = 1_787_054_400;
@@ -397,6 +398,36 @@ export const DAO_MOCK_FIXTURE_IDS = Object.keys(
 
 export function createDaoMockFeed(): DaoSnapshot {
   return parseDaoFeedJson(structuredClone(INTERNAL_DAO_MOCK_FEED_JSON));
+}
+
+/** Default board examples reuse existing contributions, so every displayed total stays exact. */
+const DAO_MOCK_WALLET_VOTE_EXAMPLES = [[3n, "yea"], [21n, "yea"], [22n, "nay"]] as const;
+
+export function seedDaoMockWalletVoteExamples(feed: DaoSnapshot): void {
+  for (const [id, direction] of DAO_MOCK_WALLET_VOTE_EXAMPLES) {
+    const proposal = feed.proposals.find((entry) => entry.ref.proposalId === id);
+    if (!proposal || !setDaoMockWalletVoteExample(proposal, DAO_MOCK_ACCOUNT_ADDRESS, direction)) {
+      throw new Error(`Missing default wallet vote example for proposal ${id}.`);
+    }
+  }
+}
+
+/** Explicit mock controls can release or change an example without altering the proposal's totals. */
+export function setDaoMockWalletVoteExample(proposal: DaoProposal, address: Address, direction: DaoVoteDirection | null): boolean {
+  if (address.toLowerCase() !== DAO_MOCK_ACCOUNT_ADDRESS ||
+      !DAO_MOCK_WALLET_VOTE_EXAMPLES.some(([id]) => id === proposal.ref.proposalId)) return false;
+  for (const event of proposal.events) {
+    if (event.type === "vote" && event.actor?.toLowerCase() === address.toLowerCase()) {
+      if (event.yeaBps === 10_000) event.actor = DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS;
+      if (event.yeaBps === 0) event.actor = DAO_MOCK_HISTORICAL_NAY_VOTER_ADDRESS;
+    }
+  }
+  if (direction === null) return true;
+  const historicalActor = direction === "yea" ? DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS : DAO_MOCK_HISTORICAL_NAY_VOTER_ADDRESS;
+  const vote = proposal.events.find((event) => event.type === "vote" && event.actor === historicalActor);
+  if (!vote) return false;
+  vote.actor = address;
+  return true;
 }
 
 export function getDaoMockFixture(id: DaoMockFixtureId): DaoMockFixture {

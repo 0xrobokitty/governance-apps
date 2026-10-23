@@ -13,8 +13,9 @@ import type {
   DaoProposal,
 } from "@/lib/clients/dao";
 import { getDaoDiscussionUrl, parseDaoProposalContent, serializeDaoProposalRef } from "@/lib/clients/dao";
-import type { DaoParticipation, DaoParticipationMap } from "@/lib/clients/dao/participation";
-import { DaoParticipationBadge } from "./DaoParticipationBadge";
+import { isDaoVoteReviewOpen, type DaoWalletParticipation, type DaoParticipationMap } from "@/lib/clients/dao/participation";
+import { DaoWalletAction } from "./DaoWalletAction";
+import { cn } from "@/lib/cn";
 import {
   createDaoProposalHref,
   DAO_BOARD_GROUPS,
@@ -161,24 +162,26 @@ function ProposalBoardRow({
   now: number;
   origin: DaoDisplayGroup;
   proposal: DaoProposal;
-  participation?: DaoParticipation;
+  participation?: DaoWalletParticipation;
 }) {
   const proposalId = proposal.ref.proposalId.toString();
   const parsed = proposal.content.value
     ? parseDaoProposalContent(proposal.content.value)
     : null;
   const title = getDaoDisplayTitle(proposal.ref, proposal.content.digest, parsed?.title) ?? daoCopy.detail.eyebrow(proposalId);
+  const proposalHref = createDaoProposalHref(proposalId, origin, hostname, proposal.ref);
 
   return (
     <article
       aria-labelledby={`dao-proposal-${proposalId}-title`}
       className="relative min-w-0 cursor-pointer p-4 transition-[background-color] duration-150 ease-out hover:bg-surface-secondary/40 motion-reduce:transition-none md:p-5"
     >
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)] lg:items-center">
+      <div className={cn("grid min-w-0 gap-5 lg:items-center", participation
+        ? "lg:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)_10rem]"
+        : "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)]")}>
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
             <ProposalHeadingFacts proposal={proposal} />
-            <DaoParticipationBadge status={participation} />
           </div>
 
           <div className="min-w-0 space-y-1.5">
@@ -190,7 +193,7 @@ function ProposalBoardRow({
               className="text-balance text-lg font-bold md:text-xl"
             >
               <Link
-                href={createDaoProposalHref(proposalId, origin, hostname, proposal.ref)}
+                href={proposalHref}
                 aria-label={daoCopy.board.proposalLink(proposalId, title)}
                 className="inline-flex min-h-10 max-w-full items-center rounded py-1 text-left transition-[color] duration-150 ease-out hover:text-yearn-blue focus:outline-none focus-visible:after:absolute focus-visible:after:inset-0 focus-visible:after:rounded-box focus-visible:after:ring-2 focus-visible:after:ring-text-primary focus-visible:after:ring-offset-2 focus-visible:after:ring-offset-app after:absolute after:inset-0 after:rounded-box after:content-[''] motion-reduce:transition-none dark:hover:text-blue-300"
               >
@@ -225,6 +228,7 @@ function ProposalBoardRow({
             </p>
           ) : null}
         </div>
+        <DaoWalletAction participation={participation} votingOpen={isDaoVoteReviewOpen(proposal, now)} href={`${proposalHref}#dao-proposal-actions`} />
       </div>
     </article>
   );

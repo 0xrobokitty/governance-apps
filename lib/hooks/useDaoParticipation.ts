@@ -2,7 +2,7 @@
 
 import { useSyncExternalStore } from "react";
 import type { Address } from "viem";
-import { deriveDaoParticipation, type DaoParticipationMap } from "@/lib/clients/dao/participation";
+import { deriveDaoWalletParticipation, type DaoParticipationMap } from "@/lib/clients/dao/participation";
 import { serializeDaoProposalRef } from "@/lib/clients/dao/domain";
 import { readDaoMockAccountProposalState } from "@/lib/clients/dao/store";
 import { daoDeploymentScope, getDaoDeployments } from "@/lib/clients/dao/deployment";
@@ -31,11 +31,8 @@ export function useDaoParticipation(
   const saved = JSON.parse(raw) as Array<string | null>;
   return Object.fromEntries(proposals.map((proposal, index) => {
     const pending = runtime?.pendingAction ?? parseDaoActionRecovery(saved[index] ?? null, proposal.ref, address);
-    const status = deriveDaoParticipation(proposal, address, pending);
-    // Mock controls model account participation independently of fixture history.
-    const value = runtime && status !== "pending"
-      ? readDaoMockAccountProposalState(proposal.ref, address).hasVoted ? "voted" : "not-voted"
-      : status;
+    const value = deriveDaoWalletParticipation(proposal, address, pending,
+      runtime ? readDaoMockAccountProposalState(proposal.ref, address) : undefined);
     return [serializeDaoProposalRef(proposal.ref), value];
   }));
 }

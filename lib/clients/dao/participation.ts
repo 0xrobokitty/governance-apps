@@ -2,10 +2,41 @@ import type { Address } from "viem";
 import { formatTokenAmount } from "@/lib/format";
 import { formatDaoBasisPoints } from "./read-display";
 import { getLatestDaoVoteEvents } from "./votes";
-import type { DaoPendingAction, DaoProposal } from "./types";
+import { deriveDaoLifecycleFacts } from "./domain";
+import type { DaoAccountProposalFacts, DaoPendingAction, DaoProposal } from "./types";
 
 export type DaoParticipation = "voted" | "not-voted" | "pending" | "unknown";
-export type DaoParticipationMap = Record<string, DaoParticipation>;
+export type DaoWalletParticipation = {
+  status: DaoParticipation;
+  choice: "yea" | "nay" | "split" | "unknown" | null;
+};
+export type DaoParticipationMap = Record<string, DaoWalletParticipation>;
+
+/** An open snapshot window permits a review link, not a claim of wallet eligibility. */
+export function isDaoVoteReviewOpen(proposal: DaoProposal, now: number): boolean {
+  return !proposal.retracted && deriveDaoLifecycleFacts(proposal, now).moderation.votingAvailable;
+}
+
+export function deriveDaoWalletParticipation(
+  proposal: DaoProposal,
+  address: Address,
+  pending: DaoPendingAction | null = null,
+  mockAccount?: Pick<DaoAccountProposalFacts, "hasVoted" | "voteDirection">,
+): DaoWalletParticipation {
+  const recordedStatus = deriveDaoParticipation(proposal, address, pending);
+  const status = mockAccount && recordedStatus !== "pending"
+    ? mockAccount.hasVoted ? "voted" : "not-voted"
+    : recordedStatus;
+  if (status !== "voted") return { status, choice: null };
+  if (mockAccount?.voteDirection) return { status, choice: mockAccount.voteDirection };
+  const event = getLatestDaoVoteEvents(proposal).find(
+    (candidate) => candidate.actor?.toLowerCase() === address.toLowerCase(),
+  );
+  const bps = event?.yeaBps;
+  const choice = bps === 10_000 ? "yea" : bps === 0 ? "nay" :
+    typeof bps === "number" && Number.isInteger(bps) && bps > 0 && bps < 10_000 ? "split" : "unknown";
+  return { status, choice };
+}
 
 /** Snapshot participation is informational; it never authorizes a transaction. */
 export function deriveDaoParticipation(
