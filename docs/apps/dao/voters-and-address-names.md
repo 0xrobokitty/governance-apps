@@ -16,6 +16,10 @@ resolution. Otherwise, an address gets a deterministic nickname with a stable
 suffix. The nickname does not change when another app displays a different set
 of addresses. The Ethereum address remains visible and canonical.
 
+ENS requests follow the visible page. A completed negative lookup removes that
+page's previous ENS labels. Pending requests preserve other-page names for
+search. Switching clients or entering mock mode clears the accumulated labels.
+
 Names remain in the browser. The existing `yearn.ybc.member-aliases.v1` storage
 key is retained. Path-based apps share local storage directly. The production DAO
 host uses an isolated iframe on the production YBC host; the beta hosts use a
