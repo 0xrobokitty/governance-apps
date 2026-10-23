@@ -44,4 +44,6 @@ There is no website editor or remote write endpoint for corrections.
 An entry cannot replace Markdown, assets, discussion links, scripts, or other proposal fields.
 Remove an entry and deploy again to restore the original display title.
 
-The initial override list is empty. Add corrections only after DAO ops supplies the exact proposal and intended title.
+The first approved correction is [proposal #4](https://dao.yearn.fi/proposals/4), from “Summary” to “Budget Request: vaultsNG”.
+Its chain, Voting contract, and content digest were verified against the published proposal on 23 October 2026.
+The correction takes effect on deployment.

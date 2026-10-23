@@ -17,6 +17,14 @@ describe("DAO display title overrides", () => {
     expect(daoTitleOverridesSchema.safeParse(deployedOverrides).success).toBe(true);
   });
 
+  it("corrects the approved vaultsNG proposal without matching other proposal #4 identities", () => {
+    const vaultsNgRef: DaoProposalRef = { chainId: 1, votingAddress: "0x543e8871562a8c53e8b6a26835aeecb3a5a13070", proposalId: 4n };
+    const contentDigest = "0x02542f1d35b3c7d32146c0b7d07eda51f631b7cdd2c2d70ac3b76af7a27f6209";
+    expect(getDaoDisplayTitle(vaultsNgRef, contentDigest, "Summary")).toBe("Budget Request: vaultsNG");
+    expect(getDaoDisplayTitle({ ...ref, proposalId: 4n }, contentDigest, "Another proposal")).toBe("Another proposal");
+    expect(getDaoDisplayTitle(vaultsNgRef, digest, "Different content")).toBe("Different content");
+  });
+
   it("matches the complete identity and digest, case insensitively for hex", () => {
     const upper = { ...entry, votingAddress: entry.votingAddress.toUpperCase().replace("0X", "0x"), contentDigest: digest.toUpperCase().replace("0X", "0x") };
     expect(findDaoTitleOverride(ref, digest, { version: 1, overrides: [upper] })?.title).toBe(entry.title);
