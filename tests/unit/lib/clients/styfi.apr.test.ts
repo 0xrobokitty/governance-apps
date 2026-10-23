@@ -209,6 +209,7 @@ describe("stYFI current stream APR", () => {
       eligibleStakeYfi: 10n * UNIT,
       totalEligibleStakeYfi: 500n * UNIT,
       rewardShareBps: 200n,
+      totalRewardBackingYfi: 200n * UNIT,
       rewardBackingYfi: 4n * UNIT,
       rewardsEnabled: true,
     });

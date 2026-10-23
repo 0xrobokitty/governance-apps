@@ -163,7 +163,7 @@ describe("stYFI APR onchain snapshot", () => {
   it("includes a verified member's current reward share without adding collective capital", async () => {
     const { client, globalData } = fixture({ ybcMember: true });
     const result = await fetchStyfiAprSnapshot(client, globalData, USER);
-    expect(result.account?.ybcMembership).toMatchObject({ eligibleStakeYfi: 10n * UNIT, rewardShareBps: 200n, rewardBackingYfi: 2n * UNIT });
+    expect(result.account?.ybcMembership).toMatchObject({ eligibleStakeYfi: 10n * UNIT, rewardShareBps: 200n, totalRewardBackingYfi: 100n * UNIT, rewardBackingYfi: 2n * UNIT });
     expect(result.account?.totalActive).toBe(10n * UNIT);
     expect(result.account?.ybcAprBps).toBeGreaterThan(0);
   });

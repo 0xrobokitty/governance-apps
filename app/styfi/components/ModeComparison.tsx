@@ -23,7 +23,7 @@ export function ModeComparison({
 }: ModeComparisonProps) {
   const { data: apr, isLoading } = useStyfiApr();
   return (
-    <div className={cn("grid gap-4 md:grid-cols-2", className)}>
+    <div className={cn("grid auto-rows-fr gap-4 md:grid-cols-2", className)}>
       <ModeCard
         asset="stYFI"
         selectedAsset={selectedAsset}
@@ -31,7 +31,7 @@ export function ModeComparison({
         title={copy.modeSelector.cards.styfi.title}
         description={copy.modeSelector.cards.styfi.description}
         estimate={<StakingAprEstimate asset="stYFI" snapshot={apr} isLoading={isLoading} />}
-        badges={<Badge>{copy.modeSelector.cards.styfi.badge}</Badge>}
+        badges={<Badge className="h-5 whitespace-nowrap px-1.5 py-0 text-[10px]">{copy.modeSelector.cards.styfi.badge}</Badge>}
       />
       <ModeCard
         asset="stYFIx"
@@ -39,11 +39,11 @@ export function ModeComparison({
         onSelectAsset={onSelectAsset}
         title={copy.modeSelector.cards.x.title}
         description={copy.modeSelector.cards.x.description}
-        estimate={<StakingAprEstimate asset="stYFIx" snapshot={apr} isLoading={isLoading} />}
+        estimate={<StakingAprEstimate asset="stYFIx" snapshot={apr} isLoading={isLoading} valueClassName="text-yearn-blue" />}
         badges={
-          <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="brand">{copy.modeSelector.cards.x.badge}</Badge>
-            <Badge variant="brand">{copy.modeSelector.cards.x.recommended}</Badge>
+          <div className="flex items-center gap-1.5">
+            <Badge variant="brand" className="h-5 whitespace-nowrap px-1.5 py-0 text-[10px]">{copy.modeSelector.cards.x.badge}</Badge>
+            <Badge variant="brand" className="h-5 whitespace-nowrap px-1.5 py-0 text-[10px]">{copy.modeSelector.cards.x.recommended}</Badge>
           </div>
         }
       />
@@ -82,24 +82,22 @@ function ModeCard({
       onClick={() => onSelectAsset(asset)}
       aria-pressed={isActive}
       className={cn(
-        "flex h-full w-full flex-col rounded-box border bg-surface p-5 text-left transition-[border-color,box-shadow,transform] duration-150 ease-out",
+        "grid h-full w-full grid-rows-[auto_1fr_auto] gap-4 rounded-box border bg-surface p-5 text-left transition-[border-color,box-shadow,transform] duration-150 ease-out",
         "hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2",
         isActive ? activeClasses : "border-neutral-200"
       )}
     >
-      <div className="flex items-start justify-between gap-4">
-        <div className="flex items-center gap-3">
-          <Logo className="h-10 w-10" aria-hidden />
-          <div className="space-y-1">
-            <p className="text-base font-bold text-neutral-900">{title}</p>
-            {badges}
-          </div>
+      <div className="grid grid-cols-[2.5rem_minmax(0,1fr)] items-center gap-3" data-testid={`mode-header-${asset.toLowerCase()}`}>
+        <Logo className="h-10 w-10 shrink-0" aria-hidden />
+        <div className="space-y-1">
+          <p className="text-base font-bold leading-6 text-neutral-900">{title}</p>
+          {badges}
         </div>
       </div>
-      <p className="mt-4 flex-1 text-sm text-neutral-600 leading-relaxed">
+      <p className="text-pretty text-sm text-neutral-600 leading-relaxed" data-testid={`mode-description-${asset.toLowerCase()}`}>
         {description}
       </p>
-      <div className="mt-4 w-full">{estimate}</div>
+      <div className="w-full">{estimate}</div>
     </button>
   );
 }

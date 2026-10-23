@@ -2,6 +2,7 @@ import type { StyfiAprSnapshot } from "@/lib/clients/styfi/apr-types";
 import { formatPercent } from "@/lib/format";
 import { styfiCopy } from "../messages";
 import type { StyfiAsset } from "./types";
+import { cn } from "@/lib/cn";
 
 const copy = styfiCopy.stakingApr;
 
@@ -10,11 +11,13 @@ export function StakingAprEstimate({
   snapshot,
   isLoading = false,
   compact = false,
+  valueClassName,
 }: {
   asset: StyfiAsset;
   snapshot: StyfiAprSnapshot | null;
   isLoading?: boolean;
   compact?: boolean;
+  valueClassName?: string;
 }) {
   const base = snapshot?.baseAprBps;
   const full = asset === "stYFI" ? snapshot?.fullBoostEstimateAprBps : snapshot?.fullBoostStyfixEstimateAprBps;
@@ -27,7 +30,7 @@ export function StakingAprEstimate({
   return (
     <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${compact ? "" : "border-t border-border pt-4"}`} data-testid={`staking-apr-${asset.toLowerCase()}`}>
       <p className="text-xs font-semibold text-neutral-500">{copy.label}</p>
-      <p className={`font-number font-bold tabular-nums text-neutral-900 ${compact ? "text-lg" : "text-2xl"}`}>{value}</p>
+      <p className={cn("font-number font-bold tabular-nums text-neutral-900", compact ? "text-lg" : "text-2xl", valueClassName)}>{value}</p>
     </div>
   );
 }

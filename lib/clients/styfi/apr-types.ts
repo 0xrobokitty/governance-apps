@@ -27,6 +27,8 @@ export type StyfiYbcMembership = {
   eligibleStakeYfi: bigint;
   totalEligibleStakeYfi: bigint;
   rewardShareBps: bigint;
+  /** Total active reward-producing capital held by the collective, in YFI units. */
+  totalRewardBackingYfi: bigint;
   /** Proportional collective reward backing, not an owned or withdrawable balance. */
   rewardBackingYfi: bigint;
   annualRewardTokens: bigint;

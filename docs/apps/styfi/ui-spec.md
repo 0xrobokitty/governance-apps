@@ -63,7 +63,7 @@ Personal voting power appears on the DAO front page, beside the proposal board.
 #### A. Active (`stYFI/stYFIx > 0`)
 1. Section: **Staked YFI**
 2. Interactive local rows (`<PositionRow />`) for `stYFI` / `stYFIx`.
-3. Optional section: **Other Governance Positions** when external positions exist.
+3. Optional section: **Other Governance Positions** when external positions or YBC membership exist.
 4. Read-only external rows (`<ExternalPositionRow />`) link to `/veyfi` in a new tab.
 
 #### B. Hybrid (`stYFI/stYFIx = 0` and external > 0)
@@ -93,19 +93,30 @@ Personal voting power appears on the DAO front page, beside the proposal board.
 - **Right column:** Boost display (`{multiplier}x Boost`) + link-out icon.
 - External rows are visually distinct from interactive stYFI/x rows to indicate route-away behavior.
 
+### 4.5 YBC Membership Row
+
+- YBC appears in the governance positions section alongside external token positions.
+- The identity uses the app registry's blue Yearn glyph, **Yearn Builders Collective**, and **YBC**.
+- One right-aligned YFI value is labeled **Estimated backing**. There is no separate percentage metric.
+- Hover, keyboard focus, or tap opens the calculation: reward share × total collective backing ≈ estimated backing.
+- The tooltip explains that this allocation supports rewards. It is not an additional deposit or a withdrawable balance.
+- Existing unstaking and withdrawable amounts remain in their original token rows.
+- A zero-stake member keeps the row. Disabled reward information appears in the tooltip when applicable.
+
 ---
 
 ## 5. ModeComparison (Shared)
 
-- **Layout:** Grid (2 columns desktop, stacked mobile).
+- **Layout:** Equal-height cards in two desktop columns, stacked on mobile. Headers, descriptions, and APR footers use matching rows.
 - **stYFI card:**
   - Badge: "Vote-dependent APR"
   - Description: "Keep your vote. Your participation determines your Vote Boost."
   - Estimated APR range: current base rate through the full configured Vote Boost rate.
 - **stYFIx card:**
-  - Badge: "Delegated voting" + "Recommended" (brand blue)
+  - Badges: "Delegated" + "Recommended" on one line (brand blue)
   - Description: "Delegate your vote to YBC to earn maximum APR."
   - Estimated APR at full YBC participation, adjusted for the delegated pool's backing and active supply.
+  - The estimated APR value uses Yearn blue.
 - **Interaction:** Cards function as buttons to call `onSelectAsset`.
 
 The onboarding cards and compare modal use the same estimates, with adjacent labels and values.
@@ -182,7 +193,7 @@ See [Vote Boost APR derivation](vote-boost-apr.md) for contract sources and calc
 
 ## 8. Copy & Tone
 
-- **Mode Badges:** "Vote-dependent APR" vs "Delegated voting".
+- **Mode Badges:** "Vote-dependent APR" vs "Delegated".
 - **Status Labels:** Active, Unstaking, Withdrawable.
 - **Avoid green** for withdrawable values; use brand accents.
 

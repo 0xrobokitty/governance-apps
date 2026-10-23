@@ -146,6 +146,7 @@ We assume a technically literate DeFi user familiar with:
 - Hover, keyboard focus, or a tap reveals the contribution breakdown in a tooltip.
 - Mixed or earlier external holdings use an account-wide Vote Boost contribution with an explanation in that tooltip.
 - A YBC member sees YBC income included once in the total portfolio APR.
+- The YBC governance row shows one estimated backing value. Its tooltip explains the reward-share calculation without implying personal ownership or withdrawal rights.
 - Current reward rates use the completed reward epoch. The APR tooltip identifies the epoch in which those rewards stream.
 - A compact **Applied Vote Boost** multiplier uses the participation and component scales that fund the current stream.
 - Its tooltip separates that applied multiplier from current participation, which affects rewards from the next epoch.

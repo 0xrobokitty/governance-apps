@@ -1,16 +1,15 @@
 export const styfiCopy = {
   accountSummary: {
     ybc: {
-      section: "Collective rewards",
-      title: "YBC member",
+      section: "Other Governance Positions",
+      title: "Yearn Builders Collective",
+      symbol: "YBC",
       open: "View YBC membership",
-      backing: "Collective reward backing",
-      share: "Your reward share",
-      description: "Your share of YBC income is included in your current APR.",
+      backing: "Estimated backing",
+      calculation: "Your reward share × collective backing",
+      formula: (share: string, total: string, backing: string) => `${share}% × ${total} YFI ≈ ${backing} YFI`,
+      explanation: "This backing supports your YBC rewards. It is not an additional deposit or a withdrawable balance.",
       disabled: "New YBC rewards are disabled. Previously earned rewards remain claimable.",
-      tooltip: (eligible: string, total: string) =>
-        `Your ${eligible} YFI of eligible active stake represents a share of ${total} YFI staked by members. The backing shown is your proportional share of the collective’s active reward-producing positions. It is not personal capital or a withdrawable balance.`,
-      queue: "Your existing stake determines this share. Starting a cooldown reduces it; collective withdrawals belong to YBC.",
     },
   },
   shared: {
@@ -64,7 +63,7 @@ export const styfiCopy = {
       },
       x: {
         title: "stYFIx",
-        badge: "Delegated voting",
+        badge: "Delegated",
         recommended: "Recommended",
         kicker: "For delegated governance",
         description:

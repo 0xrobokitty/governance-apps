@@ -126,7 +126,8 @@ See the [implementation and validation report](validation/vote-boost-review-2026
 
 ## YBC account summary
 
-The YBC row shows the member's reward share and proportional collective reward backing in YFI equivalents.
+The YBC row appears with other governance positions and shows one estimated backing value in YFI equivalents.
+Its tooltip shows the member's reward share multiplied by total collective backing. Displayed values are rounded.
 The reward share is `YBCWeightAggregator.staked(member) / YBCWeightAggregator.supply()`.
 The backing is that share of the collective's active stYFI, stYFIx, liquid-locker, and migrated veYFI positions.
 It is an income allocation, not personal ownership of the collective's assets.
@@ -139,4 +140,5 @@ The YBC reward distributor settles prior income before changing a member's share
 Personal cooldown and withdrawable amounts remain in their original token rows.
 Collective cooldowns and withdrawals belong to YBC and are not assigned to individual members.
 
-The row links to YBC membership details. If new collective rewards are disabled, it preserves membership and explains the disabled income stream.
+The row links to YBC membership details with the app registry's blue Yearn icon.
+If new collective rewards are disabled, it preserves membership and explains the disabled income stream in its tooltip.

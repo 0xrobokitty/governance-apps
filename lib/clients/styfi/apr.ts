@@ -167,6 +167,7 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
         eligibleStakeYfi: ybcStake,
         totalEligibleStakeYfi: input.ybcSupply,
         rewardShareBps: share(10_000n, ybcStake, input.ybcSupply),
+        totalRewardBackingYfi: collectiveActive,
         rewardBackingYfi: share(collectiveActive, ybcStake, input.ybcSupply),
         annualRewardTokens: annualize(ybc),
         rewardsEnabled: input.ybcRewardsEnabled,

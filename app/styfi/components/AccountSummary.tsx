@@ -9,6 +9,7 @@ import { Skeleton } from "@/components/ui/Skeleton";
 import { Tooltip } from "@/components/ui/Tooltip";
 import { LogoStyfi } from "@/components/icons/LogoStyfi";
 import { LogoStyfix } from "@/components/icons/LogoStyfix";
+import { LogoYearnGlyph } from "@/components/icons/LogoYearnGlyph";
 import { IconLinkOut } from "@/components/icons/IconLinkOut";
 import { IconPlaceholderToken } from "@/components/icons/IconPlaceholderToken";
 import { cn } from "@/lib/cn";
@@ -152,6 +153,7 @@ export function AccountSummary({
   );
   const hasInternalPositions = rows.length > 0;
   const hasExternalPositions = externalPositions.length > 0;
+  const hasOtherPositions = hasExternalPositions || !!ybcMembership;
   const veyfiBaseHref = resolveGovernanceAppHref("veyfi", hostname);
 
   return (
@@ -194,9 +196,9 @@ export function AccountSummary({
                   onClick={() => onSelectAsset(row.asset)}
                 />
               ))}
-              {hasExternalPositions ? (
+              {hasOtherPositions ? (
                 <>
-                  <SummarySectionTitle title="Other Governance Positions" />
+                  <SummarySectionTitle title={styfiCopy.accountSummary.ybc.section} />
                   {externalPositions.map((position) => (
                     <ExternalPositionRow
                       key={position.id}
@@ -205,10 +207,11 @@ export function AccountSummary({
                       href={resolveVeyfiHref(position.href, veyfiBaseHref)}
                     />
                   ))}
+                  {ybcMembership && <YbcMembershipRow membership={ybcMembership} href={resolveGovernanceAppHref("ybc", hostname)} />}
                 </>
               ) : null}
             </>
-          ) : hasExternalPositions ? (
+          ) : hasOtherPositions ? (
             <>
               <SummarySectionTitle title="Your Governance Positions" />
               {externalPositions.map((position) => (
@@ -219,6 +222,7 @@ export function AccountSummary({
                   href={resolveVeyfiHref(position.href, veyfiBaseHref)}
                 />
               ))}
+              {ybcMembership && <YbcMembershipRow membership={ybcMembership} href={resolveGovernanceAppHref("ybc", hostname)} />}
               <SummarySectionTitle title="Choose How to Stake" />
               <ModeComparison
                 selectedAsset={selectedAsset}
@@ -234,12 +238,6 @@ export function AccountSummary({
               />
             </>
           )}
-          {isConnected && !isWrongNetwork && ybcMembership && (
-            <>
-              <SummarySectionTitle title={styfiCopy.accountSummary.ybc.section} />
-              <YbcMembershipRow membership={ybcMembership} href={resolveGovernanceAppHref("ybc", hostname)} />
-            </>
-          )}
         </div>
       </div>
     </Card>
@@ -250,30 +248,33 @@ function YbcMembershipRow({ membership, href }: { membership: StyfiYbcMembership
   const copy = styfiCopy.accountSummary.ybc;
   const share = membership.rewardShareBps === 0n && membership.eligibleStakeYfi > 0n ? "<0.01"
     : formatTokenAmount(membership.rewardShareBps, 2, 2);
+  const backing = formatTokenAmount(membership.rewardBackingYfi);
   return (
-    <div className="space-y-3 rounded-lg border border-border bg-surface/50 p-4" data-testid="ybc-membership-row">
-      <div className="flex flex-wrap items-center justify-between gap-4">
-        <a href={href} aria-label={copy.open} className="inline-flex items-center gap-2 rounded text-sm font-bold text-neutral-900 hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900">
-          {copy.title}<IconLinkOut className="size-3.5" />
-        </a>
-        <dl className="flex flex-wrap gap-x-6 gap-y-3 text-right">
-          <div>
-            <dt className="text-xs text-neutral-500">
-              <Tooltip side="top" content={<span>{copy.tooltip(formatTokenAmount(membership.eligibleStakeYfi), formatTokenAmount(membership.totalEligibleStakeYfi))} {copy.queue}</span>}>
-                <button type="button" className="cursor-help rounded underline decoration-dotted underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900" onClick={event => event.currentTarget.focus()} onKeyDown={event => { if (event.key === "Escape") event.currentTarget.blur(); }}>
-                  {copy.backing}
-                </button>
-              </Tooltip>
-            </dt>
-            <dd className="mt-1 font-number text-lg font-bold tabular-nums text-neutral-900">{formatTokenAmount(membership.rewardBackingYfi)} YFI</dd>
-          </div>
-          <div>
-            <dt className="text-xs text-neutral-500">{copy.share}</dt>
-            <dd className="mt-1 font-number text-lg font-bold tabular-nums text-neutral-900">{share}%</dd>
-          </div>
-        </dl>
+    <div className="flex flex-col gap-4 rounded-lg border border-border bg-surface p-4 sm:flex-row sm:items-center sm:justify-between" data-testid="ybc-membership-row">
+      <a href={href} aria-label={copy.open} className="group inline-flex min-h-10 min-w-0 items-center gap-3 self-start rounded transition-colors hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 sm:self-auto">
+        <span aria-hidden className="shrink-0"><LogoYearnGlyph className="size-8" backClassName="text-yearn-blue" frontClassName="text-white" /></span>
+        <span className="min-w-0">
+          <span className="flex items-center gap-1.5 text-base font-bold text-neutral-900">
+            {copy.title}<IconLinkOut className="size-3.5 shrink-0 text-neutral-400" aria-hidden />
+          </span>
+          <span className="block text-xs font-medium text-neutral-500">{copy.symbol}</span>
+        </span>
+      </a>
+      <div className="flex shrink-0 justify-end text-right md:w-52 lg:w-56">
+        <Tooltip side="top" align="end" content={
+          <span className="block space-y-2">
+            <span className="block font-semibold text-neutral-900">{copy.calculation}</span>
+            <span className="block font-number tabular-nums text-neutral-900">{copy.formula(share, formatTokenAmount(membership.totalRewardBackingYfi), backing)}</span>
+            <span className="block">{copy.explanation}</span>
+            {!membership.rewardsEnabled && <span className="block">{copy.disabled}</span>}
+          </span>
+        }>
+          <button type="button" aria-label={copy.backing} className="flex min-h-12 cursor-help flex-col items-end justify-center gap-0.5 rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900" onClick={event => event.currentTarget.focus()} onKeyDown={event => { if (event.key === "Escape") event.currentTarget.blur(); }}>
+            <span className="font-number text-xl font-bold tabular-nums text-neutral-900" data-testid="ybc-estimated-backing">{backing} YFI</span>
+            <span className="text-[10px] font-bold uppercase tracking-wide text-neutral-500 underline decoration-dotted underline-offset-4">{copy.backing}</span>
+          </button>
+        </Tooltip>
       </div>
-      <p className="text-xs text-neutral-500">{membership.rewardsEnabled ? copy.description : copy.disabled}</p>
     </div>
   );
 }

@@ -45,8 +45,14 @@ test("explains current APR and distinguishes applied boost from next-epoch parti
   await selectScenario(page, "YBC member");
   await expect(page.getByTestId("styfi-total-apr")).toHaveText("25%");
   const membership = page.getByTestId("ybc-membership-row");
-  await expect(membership).toContainText("6.25 YFI");
-  await expect(membership).toContainText("6.25%");
+  await expect(membership.getByTestId("ybc-estimated-backing")).toHaveText("6.25 YFI");
+  await expect(membership.getByText("Yearn Builders Collective", { exact: true })).toBeVisible();
+  await expect(page.getByText("Other Governance Positions", { exact: true })).toHaveCount(1);
+  const backing = membership.getByRole("button", { name: "Estimated backing", exact: true });
+  await backing.focus();
+  await expect(membership.getByRole("tooltip")).toContainText("6.25% × 100 YFI ≈ 6.25 YFI");
+  await backing.press("Escape");
+  await expect(membership.getByRole("tooltip")).not.toBeVisible();
   await expect(membership.getByRole("link", { name: "View YBC membership" })).toHaveAttribute("href", "/ybc");
   await total.focus();
   await expect(contributions.getByText("YBC income").locator("..")).toContainText("5%");
@@ -78,7 +84,8 @@ test("opens the APR calculation by touch without mobile overflow", async ({ page
   await page.screenshot({ path: testInfo.outputPath("styfi-ybc-mobile.png"), fullPage: true, animations: "disabled" });
 });
 
-test("keeps mode estimates above both stake and unstake controls", async ({ page }) => {
+for (const width of [1280, 390]) test(`aligns mode comparison and preserves estimates at ${width}px`, async ({ page }) => {
+  await page.setViewportSize({ width, height: 900 });
   await page.goto("/styfi");
   await waitForTestBridge(page);
   await resetBridge(page);
@@ -86,6 +93,20 @@ test("keeps mode estimates above both stake and unstake controls", async ({ page
   const onboarding = page.getByRole("button").filter({ has: page.getByTestId("staking-apr-styfi") });
   await expect(onboarding).toContainText("8%–20%");
   await expect(onboarding).not.toContainText("1×–2.5× Vote Boost");
+  const delegated = page.getByRole("button").filter({ has: page.getByTestId("mode-header-styfix") });
+  const directBounds = await onboarding.boundingBox();
+  const delegatedBounds = await delegated.boundingBox();
+  expect(directBounds).not.toBeNull();
+  expect(delegatedBounds).not.toBeNull();
+  expect(Math.abs(directBounds!.height - delegatedBounds!.height)).toBeLessThanOrEqual(1);
+  const directEstimate = await onboarding.getByTestId("staking-apr-styfi").boundingBox();
+  const delegatedEstimate = await delegated.getByTestId("staking-apr-styfix").boundingBox();
+  expect(Math.abs((directEstimate!.y - directBounds!.y) - (delegatedEstimate!.y - delegatedBounds!.y))).toBeLessThanOrEqual(1);
+  const delegatedBadge = await delegated.getByText("Delegated", { exact: true }).boundingBox();
+  const recommendedBadge = await delegated.getByText("Recommended", { exact: true }).boundingBox();
+  expect(delegatedBadge!.y).toBe(recommendedBadge!.y);
+  await expect(delegated.getByTestId("staking-apr-styfix").getByText("20%", { exact: true })).toHaveCSS("color", "rgb(6, 87, 249)");
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await onboarding.click();
   const stake = page.locator("#stake-manage");
   await expect(stake.getByTestId("staking-apr-styfi")).toContainText("8%–20%");
