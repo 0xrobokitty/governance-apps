@@ -74,6 +74,7 @@ rollback notes.
 
 - Production Worker: `wrangler.jsonc`
 - Preproduction Worker: `wrangler.preprod.jsonc`
+- Worker runtime check: [`docs/shared/cloudflare-worker-runtime.md`](docs/shared/cloudflare-worker-runtime.md)
 - Worker size policy: [`docs/shared/cloudflare-worker-size.md`](docs/shared/cloudflare-worker-size.md)
 - Release checklist: [`docs/shared/release-checklist-template.md`](docs/shared/release-checklist-template.md)
 

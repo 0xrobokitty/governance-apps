@@ -1,5 +1,5 @@
 import { build } from "esbuild";
-import { Miniflare } from "miniflare";
+import { convertV4MiniflareOptions, Miniflare } from "miniflare";
 import { afterEach, beforeAll, describe, expect, it } from "vitest";
 import { daoAction } from "./alerts-bot.dao-fixtures";
 import { contentProposal, daoContentFeed } from "./alerts-bot.dao-content-fixtures";
@@ -38,11 +38,10 @@ beforeAll(async () => {
 afterEach(async () => { await runtime?.dispose(); runtime = undefined; });
 
 async function readInWorkerd(status = 200) {
-  // The locally installed workerd supports dates through 2026-08-08. Live
-  // verification also exercises the bot's production date, 2026-09-03.
-  runtime = new Miniflare({ workers: [
+  // Keep the existing fixture shape through Miniflare's compatibility helper.
+  runtime = new Miniflare(convertV4MiniflareOptions({ workers: [
     {
-      name: "reader", modules: true, script, compatibilityDate: "2026-08-08",
+      name: "reader", modules: true, script, compatibilityDate: "2026-09-03",
       compatibilityFlags: ["nodejs_compat"], serviceBindings: { DAO_APP: "website" },
     },
     {
@@ -54,7 +53,7 @@ async function readInWorkerd(status = 200) {
         return new Response(env.FEED, { headers: { "content-type": "application/json" } });
       } };`,
     },
-  ] });
+  ] }));
   return runtime.dispatchFetch("https://reader.test/");
 }
 

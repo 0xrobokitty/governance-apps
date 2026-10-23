@@ -17,7 +17,7 @@ const exactNpmPackageManager = `npm@${runningNpmVersion}`;
 
 const allowlistedInstallScriptLockPackages = {
   "node_modules/@opennextjs/aws/node_modules/esbuild": {
-    version: "0.25.4",
+    version: "0.28.2",
     hasInstallScript: true,
   },
   "node_modules/bufferutil": {
@@ -49,7 +49,7 @@ const allowlistedInstallScriptLockPackages = {
     hasInstallScript: true,
   },
   "node_modules/workerd": {
-    version: "1.20260801.1",
+    version: "1.20261006.1",
     hasInstallScript: true,
   },
 };

@@ -58,7 +58,7 @@ jobs:
       - name: Unit And Integration Tests
         run: npm test
 
-      - name: Production Build
+      - name: Production Worker Build
         env:
           NEXT_TELEMETRY_DISABLED: "1"
           WRANGLER_SEND_METRICS: "false"
@@ -74,4 +74,7 @@ jobs:
           NEXT_PUBLIC_WC_PROJECT_ID: "ci-placeholder"
           NEXT_PUBLIC_GLOBAL_DATA_URL: "https://example.invalid/global-data.json"
           NEXT_PUBLIC_RPC_URLS: "https://example.invalid/rpc"
-        run: npm run build
+        run: npm run worker:build
+
+      - name: Validate Worker Runtime
+        run: npm run validate:worker-runtime -- wrangler.jsonc
