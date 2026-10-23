@@ -1,4 +1,12 @@
 {
   "version": 1,
-  "overrides": []
+  "overrides": [
+    {
+      "chainId": 1,
+      "votingAddress": "0x543e8871562a8c53e8b6a26835aeecb3a5a13070",
+      "proposalId": "4",
+      "contentDigest": "0x02542f1d35b3c7d32146c0b7d07eda51f631b7cdd2c2d70ac3b76af7a27f6209",
+      "title": "Budget Request: vaultsNG"
+    }
+  ]
 }
