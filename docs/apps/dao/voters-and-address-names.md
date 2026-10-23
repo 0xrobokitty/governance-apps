@@ -4,6 +4,11 @@ Proposal pages show the latest recorded vote for each address. Each row includes
 the choice, UTC timestamp, transaction, effective YFI voting weight, and share of
 recorded voting weight. Split votes show both percentages. Search matches names
 and full addresses; sorting supports recent votes, older votes, and voting power.
+
+The voter name occupies one line, with the address beneath it at every width.
+Long names are shortened visually; the full name remains in the edit control's
+accessible label and tooltip. Desktop rows align the first name, choice, time,
+and weight lines. The sort control reserves space for an inset chevron.
 The header links directly to the voter table. The table appears before lifecycle
 history. ENS names resolve as pages are viewed; ENS search covers those resolved
 names. Full-address and generated or custom-name search covers all rows.
