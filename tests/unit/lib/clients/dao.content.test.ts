@@ -48,6 +48,21 @@ function content(overrides: Partial<DaoProposalContent> = {}): DaoProposalConten
 }
 
 describe("DAO proposal content", () => {
+  it.each(["A complete short proposal.", "## Summary\n\nA complete short proposal."])("accepts a summary-only proposal body: %s", body => {
+    const parsed = parseDaoProposalContent(content({ markdown: `# Decision\n\n${body}` }));
+    expect(parsed.errors).toEqual([]);
+    expect(parsed.summary).toBe("A complete short proposal.");
+  });
+
+  it("still requires visible summary text below an optional Summary heading", () => {
+    expect(parseDaoProposalContent(content({ markdown: "# Decision\n\n## Summary\n\n## Specification\n\nBody." })).errors.map(error => error.code)).toContain("MISSING_SUMMARY");
+  });
+
+  it("does not accept an attachment as a summary below its optional heading", () => {
+    const parsed = parseDaoProposalContent(content({ markdown: "# Decision\n\n## Summary\n\n![Diagram](./assets/architecture.svg)\n\nBody.", assets: [asset()] }));
+    expect(parsed.errors.map(error => error.code)).toContain("UNSAFE_IMAGE");
+  });
+
   it("parses the shared safe grammar and preserves exact source bytes", () => {
     const source = content().markdown;
     const parsed = parseDaoProposalContent(content());

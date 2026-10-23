@@ -312,10 +312,13 @@ contract callers.
 
 ### Section 2: proposal content
 
-Use one `Proposal Markdown` textarea beneath named Write and Preview tabs. The
+Use a `Proposal title` input and a `Proposal body` textarea beneath named Write and Preview tabs. The
 route H1 remains `Create proposal`; form sections are H2. Preview renders the
-parsed title at H3 and maps source H2 through H4 to H4 through H6. The first H1
-is the title, the following paragraph is the summary, and body content follows.
+parsed title at H3 and maps source H2 through H4 to H4 through H6.
+The app adds the title as the document's only H1.
+The body starts with a plain summary paragraph or `## Summary` followed by that paragraph.
+The summary can be the whole body. Further sections are optional.
+Title errors appear beside the title field. Body errors use body line numbers.
 Ordinary supporting links stay in Markdown. Same-document section links such as
 `[References](#references)` work in Preview, final review, and proposal detail.
 Repeated headings use numeric suffixes such as `#references-1`.

@@ -237,13 +237,15 @@ Direct-contract proposals that bypass this rule still appear in history with
 
 ### DAO-FR-031: immutable content
 
-The author supplies one Markdown document, discussion URL, and declared proposal
-type. The first and only H1 is the title, the next paragraph is the summary,
-and body content follows. Title, summary, AST, and attachment resolutions are
-derived results and are never copied into the wire object. The editor preserves
-the exact Markdown source, including whitespace, line endings, and its trailing
-newline. There is one in-place `yearn.dao.proposal.v1` contract and no legacy or
-compatibility parser.
+The author supplies a plain title, Markdown body, discussion URL, and declared proposal type.
+The title field rejects empty titles, multiline titles, and `Summary` as the whole title.
+The app escapes the title as literal Markdown text and adds the document's only H1.
+The body starts with a summary paragraph, optionally under `## Summary`.
+A meaningful summary paragraph can be the whole body. Further sections are optional.
+Title, summary, AST, and attachment resolutions remain derived results outside the wire object.
+The body retains its exact whitespace, line endings, and trailing newline.
+An unchanged imported document retains all original Markdown bytes.
+There is one `yearn.dao.proposal.v1` contract. Existing documents remain compatible.
 
 Only CommonMark plus GFM tables are enabled. Raw HTML, unsupported nodes,
 unsafe links, unpaired surrogates, NUL/control characters, and invalid or

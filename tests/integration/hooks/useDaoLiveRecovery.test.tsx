@@ -26,7 +26,7 @@ describe("public content publication", () => {
   function reviewedContent() {
     const fixture = getDaoMockFixture("discussion"), proposer = deriveDaoProposerState(fixture.proposer);
     const result = createDaoAuthoringReview({ address: proposer.address, createdAt: fixture.now,
-      draft: { markdown: "# Public publication\n\nKeep reviewed bytes.\n\n## Scope\n\nNo publication signature.\n", proposalType: "signal", executableScript: "0x" },
+      draft: { title: "Public publication", markdown: "Keep reviewed bytes.\n\n## Scope\n\nNo publication signature.\n", proposalType: "signal", executableScript: "0x" },
       topic: { topicId: 1001, normalizedUrl: "https://gov.yearn.fi/t/topic/1001", title: "Topic", category: "Proposals", categoryId: 5, author: "user", createdAt: 1 } });
     if (result.state !== "valid") throw new Error("Invalid review");
     return { proposer, review: result.review, identity: deriveDaoProposalContentIdentity(result.review.content) };
@@ -188,7 +188,7 @@ describe("creation replacement recovery", () => {
   it.each(["reverted", "cancelled", "changed"] as const)("retains publication and the %s transaction link through creation reload", async kind => {
     const fixture = getDaoMockFixture("discussion"), proposer = deriveDaoProposerState(fixture.proposer);
     const result = createDaoAuthoringReview({ address: proposer.address, createdAt: fixture.now,
-      draft: { markdown: "# Terminal creation\n\nKeep published bytes.\n\n## Scope\n\nRecover terminal transactions.\n", proposalType: "signal", executableScript: "0x" },
+      draft: { title: "Terminal creation", markdown: "Keep published bytes.\n\n## Scope\n\nRecover terminal transactions.\n", proposalType: "signal", executableScript: "0x" },
       topic: { topicId: 1001, normalizedUrl: "https://gov.yearn.fi/t/topic/1001", title: "Topic", category: "Proposals", categoryId: 5, author: "user", createdAt: 1 } });
     if (result.state !== "valid") throw new Error("Invalid test review");
     const review = result.review, identity = deriveDaoProposalContentIdentity(review.content);
@@ -207,7 +207,7 @@ describe("creation replacement recovery", () => {
   it("decodes proposal zero from the accepted hash and restores that hash on reload", async () => {
     const fixture = getDaoMockFixture("discussion"), proposer = deriveDaoProposerState(fixture.proposer);
     const result = createDaoAuthoringReview({ address: proposer.address, createdAt: fixture.now,
-      draft: { markdown: "# Replacement creation\n\nKeep exact identity.\n\n## Scope\n\nTest recovery.\n", proposalType: "signal", executableScript: "0x" },
+      draft: { title: "Replacement creation", markdown: "Keep exact identity.\n\n## Scope\n\nTest recovery.\n", proposalType: "signal", executableScript: "0x" },
       topic: { topicId: 1001, normalizedUrl: "https://gov.yearn.fi/t/topic/1001", title: "Topic", category: "Proposals", categoryId: 5, author: "user", createdAt: 1 } });
     if (result.state !== "valid") throw new Error("Invalid test review");
     const review = result.review, identity = deriveDaoProposalContentIdentity(review.content);

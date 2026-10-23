@@ -42,6 +42,15 @@ function parsed(): ReturnType<typeof parseDaoProposalContent> {
 }
 
 describe("DaoProposalMarkdown", () => {
+  it("omits both the optional Summary heading and its paragraph on detail", () => {
+    const content = parseDaoProposalContent({ ...parsedContent(), markdown: "# Decision\n\n## Summary\n\nA complete summary.\n\n## Specification\n\nDetails." });
+    expect(content.errors).toEqual([]);
+    render(<DaoProposalMarkdown parsed={content} context="detail" omitTitle omitSummary />);
+    expect(screen.queryByText("A complete summary.")).not.toBeInTheDocument();
+    expect(screen.queryByRole("heading", { name: "Summary" })).not.toBeInTheDocument();
+    expect(screen.getByRole("heading", { name: "Specification" })).toBeVisible();
+  });
+
   it("keeps section links in the current document and gives duplicate headings distinct targets", () => {
     const content = parseDaoProposalContent({
       ...parsedContent(),

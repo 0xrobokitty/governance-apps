@@ -19,7 +19,8 @@ try {
   await page.getByRole("textbox", { name: "Forum discussion", exact: true }).fill("https://gov.yearn.fi/t/local-fork-uat/1234");
   await page.getByRole("button", { name: "Validate topic", exact: true }).click();
   await expect(page.getByText("Forum topic accepted", { exact: true }).last()).toBeVisible();
-  await page.getByLabel("Proposal Markdown").fill("# Built application checkpoint\n\nVerify publication and the released producer on the local fork.\n\n## Execution\n\nSet the disposable marker to 42.\n");
+  await page.getByLabel("Proposal title").fill("Built application checkpoint");
+  await page.getByLabel("Proposal body").fill("Verify publication and the released producer on the local fork.\n\n## Execution\n\nSet the disposable marker to 42.\n");
   await page.getByRole("radio", { name: /Executable/ }).check();
   await page.getByLabel("Full Executor script").fill(state.script);
   await page.getByRole("button", { name: "Review proposal", exact: true }).click();
