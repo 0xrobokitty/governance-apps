@@ -103,6 +103,7 @@ describe("security header policy", () => {
       NEXT_PUBLIC_TEAMS_DATA_URL: "https://teams-data.example/prod/teams.json",
       NEXT_PUBLIC_YETH_GLOBAL_DATA_URL: "https://cdn.example/yeth.json",
       NEXT_PUBLIC_YBC_DATA_URL: "https://ybc-data.example/prod/ybc.json",
+      NEXT_PUBLIC_DAO_VOTING_POWER_URL: "https://governance-data.example/voting-power.json",
     });
 
     expect(origins).toEqual([
@@ -111,6 +112,7 @@ describe("security header policy", () => {
       "https://cdn.example",
       "https://teams-data.example",
       "https://ybc-data.example",
+      "https://governance-data.example",
     ]);
   });
 });

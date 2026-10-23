@@ -33,6 +33,51 @@ The board, proposal content, forum links, script details, and sharing metadata u
 Wallet actions require an appropriate RPC and the normal transaction checks. This walkthrough does not exercise them.
 For editor and transaction-flow coverage, use the mock browser suites below.
 
+## Live wallet review
+
+For live wallet review of the APR and voting-power changes, use a separate preview from the mock test server.
+The reviewed setup serves live stYFI and DAO at port `3108`, and mocks at port `3107`.
+Start the read-only voting-power index in one terminal:
+
+```fish
+env DAO_VOTING_POWER_RPC_URL=https://ethereum.reth.rs/rpc node scripts/build-dao-voting-power.mjs --watch
+```
+
+The first scan builds a holder index. Later scans reuse its local cache.
+Keep this process running while reviewing wallet percentages.
+See [voting-power data requirements](voting-power.md) for completeness and freshness checks.
+
+Build and start the live preview in another terminal:
+
+```fish
+begin
+    set -lx NEXT_PUBLIC_RUNTIME_MODE production
+    set -lx NEXT_PUBLIC_ENABLE_DAO true
+    set -lx NEXT_PUBLIC_USE_MOCKS false
+    set -lx NEXT_PUBLIC_E2E false
+    set -lx NEXT_PUBLIC_ENABLE_SIMULATION_TRANSPORT_FALLBACK false
+    set -lx NEXT_PUBLIC_RPC_URLS https://ethereum-rpc.publicnode.com
+    set -lx NEXT_PUBLIC_GLOBAL_DATA_URL https://data.dao-ops.com/prod/stats.json
+    set -lx NEXT_PUBLIC_YBC_DATA_URL https://data.dao-ops.com/prod/ybc.json
+    set -lx NEXT_PUBLIC_DAO_DEPLOYMENTS (string join '' < docs/apps/dao/examples/mainnet-deployments.json)
+    set -lx NEXT_PUBLIC_DAO_VOTING_POWER_URL /dao-voting-power.json
+    set -lx DAO_DATA_URL https://data.dao-ops.com/prod/dao.json
+    set -lx DAO_PUBLICATION_ENABLED false
+    npm run build
+    and npm run start -- --hostname 127.0.0.1 --port 3108
+end
+```
+
+Use the configured WalletConnect project ID or an injected browser wallet.
+The wallet chooser uses real connectors because both mock flags are false.
+These commands read public chain data and do not submit transactions automatically.
+
+For simultaneous development and live review, keep generated feeds outside the watched checkout.
+The October 23 review uses an isolated index under `/private/tmp/styfi-voting-power-preview` and a loopback feed at `http://127.0.0.1:3109/dao-voting-power.json`.
+Its live build sets `NEXT_PUBLIC_DAO_VOTING_POWER_URL` to that URL.
+The feed server permits reads from the live preview at `http://127.0.0.1:3108`.
+The app includes the configured feed origin in its content security policy.
+
 ## Isolate each test environment
 
 Run from a checkout with no private `.env*` or `.dev.vars*` files.

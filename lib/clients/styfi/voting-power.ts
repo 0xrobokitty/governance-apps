@@ -7,6 +7,7 @@ import { STYFI_GOVERNANCE } from "./deployment";
 import { LIQUID_LOCKERS } from "@/lib/constants";
 import type { StyfiAccountState } from "./types";
 import type { VeyfiAccountState } from "@/lib/clients/veyfi/types";
+import { assertVotingPowerSnapshotFresh, type DaoVotingPowerSnapshot } from "@/lib/clients/dao/voting-power-snapshot";
 
 const votingAbi = parseAbi([
   "function weight_measure() view returns (address)",
@@ -47,6 +48,14 @@ export type StyfiVotingPower = {
   memberWeight: bigint;
   /** A full-participation estimate, never the weight of a submitted DAO vote. */
   ybcInfluence: StyfiYbcVotingInfluence | null;
+  systemPower: {
+    totalPower: bigint;
+    stakedPower: bigint;
+    migratedVePower: bigint;
+    delegatedPower: bigint;
+    directShareBps: bigint | null;
+    estimatedShareBps: bigint | null;
+  } | null;
 };
 
 /** Voter blends only the YBC members who vote on each proposal. This estimate
@@ -84,16 +93,20 @@ export async function readStyfiVotingPower({
   account,
   deployment = { votingAddress: STYFI_GOVERNANCE.voting, supportedVoters: [STYFI_GOVERNANCE.voter] },
   ybcFeed,
+  snapshotBlock,
+  expectedMeasure,
 }: {
   publicClient: PublicClient;
   account: Address;
   deployment?: Pick<DaoDeployment, "votingAddress" | "supportedVoters">;
   ybcFeed?: YbcFeed | null;
+  snapshotBlock?: bigint;
+  expectedMeasure?: string;
 }): Promise<StyfiVotingPower> {
   if (publicClient.chain?.id !== 1 || await publicClient.getChainId() !== 1) {
     throw new Error("Voting power requires an Ethereum Mainnet RPC.");
   }
-  const block = await publicClient.getBlock({ blockTag: "latest" });
+  const block = await publicClient.getBlock(snapshotBlock === undefined ? { blockTag: "latest" } : { blockNumber: snapshotBlock });
   if (block.number === null || block.hash === null) {
     throw new Error("The voting power snapshot is unavailable.");
   }
@@ -109,6 +122,7 @@ export async function readStyfiVotingPower({
   if (!deployment.supportedVoters.some((address) => address.toLowerCase() === voter.toLowerCase())) {
     throw new Error("The current DAO voter is not supported.");
   }
+  if (expectedMeasure && measure.toLowerCase() !== expectedMeasure.toLowerCase()) throw new Error("The voting-power index uses another weight measure.");
   const [aggregator, delegatedStaking, ybc, memberAggregator] = await publicClient.multicall({
     blockNumber,
     allowFailure: false,
@@ -190,8 +204,34 @@ export async function readStyfiVotingPower({
   return {
     address: account, blockNumber, blockHash: block.hash, timestamp: Number(block.timestamp),
     stakedPower, migratedVePower: directPower - stakedPower, directPower, delegatedBalance,
-    isYbcMember, memberWeight, ybcInfluence,
+    isYbcMember, memberWeight, ybcInfluence, systemPower: null,
   };
+}
+
+export async function readIndexedVotingPower(input: {
+  publicClient: PublicClient;
+  account: Address;
+  snapshot: DaoVotingPowerSnapshot;
+  ybcFeed?: YbcFeed | null;
+}): Promise<StyfiVotingPower> {
+  const current = await input.publicClient.getBlock({ blockTag: "latest" });
+  assertVotingPowerSnapshotFresh(input.snapshot, Number(current.timestamp));
+  const power = await readStyfiVotingPower({ ...input, snapshotBlock: BigInt(input.snapshot.block.number), expectedMeasure: input.snapshot.deployment.measure });
+  if (power.blockHash?.toLowerCase() !== input.snapshot.block.hash.toLowerCase()) throw new Error("The indexed voting-power block is no longer canonical.");
+  if (power.timestamp !== input.snapshot.block.timestamp) throw new Error("The indexed voting-power timestamp differs from its canonical block.");
+  const indexed = input.snapshot.accounts.find((entry) => entry.address.toLowerCase() === input.account.toLowerCase());
+  if (BigInt(indexed?.directPower ?? "0") !== power.directPower || BigInt(indexed?.stakedPower ?? "0") !== power.stakedPower) throw new Error("The indexed wallet weight does not match its snapshot.");
+  const totalPower = BigInt(input.snapshot.totals.totalPower);
+  const influence = power.ybcInfluence?.totalPower ?? null;
+  if (power.directPower > totalPower || (influence !== null && influence > totalPower)) throw new Error("Wallet voting power exceeds the system total.");
+  return { ...power, systemPower: {
+    totalPower,
+    stakedPower: BigInt(input.snapshot.totals.stakedPower),
+    migratedVePower: BigInt(input.snapshot.totals.migratedVePower),
+    delegatedPower: BigInt(input.snapshot.totals.delegatedPower),
+    directShareBps: totalPower > 0n ? power.directPower * 10_000n / totalPower : null,
+    estimatedShareBps: totalPower > 0n && influence !== null ? influence * 10_000n / totalPower : null,
+  } };
 }
 
 export function createMockStyfiVotingPowerFromAccounts(input: {
@@ -224,6 +264,10 @@ export function createMockStyfiVotingPower(input: {
 }): StyfiVotingPower {
   const directPower = input.stakedPower + input.migratedVePower;
   const memberWeight = input.isYbcMember ? input.stakedPower : 0n;
+  const ybcInfluence = deriveYbcVotingInfluence({ directPower, memberWeight,
+    totalMemberWeight: memberWeight + 900n * 10n ** 18n,
+    delegatedPoolPower: 2_000n * 10n ** 18n, collectivePoolPower: 100n * 10n ** 18n });
+  const totalPower = directPower + 3_000n * 10n ** 18n;
   return {
     ...input,
     isYbcMember: input.isYbcMember ?? false,
@@ -232,13 +276,9 @@ export function createMockStyfiVotingPower(input: {
     timestamp: 1_800_000_000,
     directPower,
     memberWeight,
-    ybcInfluence: deriveYbcVotingInfluence({
-      directPower,
-      memberWeight,
-      totalMemberWeight: memberWeight + 900n * 10n ** 18n,
-      delegatedPoolPower: 2_000n * 10n ** 18n,
-      collectivePoolPower: 100n * 10n ** 18n,
-    }),
+    ybcInfluence,
+    systemPower: { totalPower, stakedPower: input.stakedPower + 1_000n * 10n ** 18n, migratedVePower: input.migratedVePower, delegatedPower: 2_000n * 10n ** 18n,
+      directShareBps: directPower * 10_000n / totalPower, estimatedShareBps: ybcInfluence.totalPower * 10_000n / totalPower },
   };
 }
 

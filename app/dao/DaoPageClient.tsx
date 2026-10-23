@@ -162,13 +162,15 @@ export function DaoBoardView({
 }) {
   return (
     <DaoRouteFrame>
+      {isConnected ? votingPower : null}
+
       <DaoBoardHeader
         hostname={hostname}
         proposalCount={proposals.length}
         showCount={state === "ready"}
       />
 
-      {isConnected ? votingPower : <DaoWalletNotice />}
+      {!isConnected ? <DaoWalletNotice /> : null}
 
       {isStale && lastGoodSnapshotTimestamp !== null ? (
         <StaleFeedNotice

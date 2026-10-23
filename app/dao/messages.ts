@@ -5,7 +5,9 @@ import type {
 
 export const daoCopy = {
   votingPower: {
-    title: "Your voting power",
+    title: "Voting power",
+    yours: "Your voting power",
+    description: "Your stake and delegated influence in Yearn governance.",
     breakdown: "Voting power breakdown",
     direct: "Direct voting power",
     estimated: "Including YBC · estimate",
@@ -22,6 +24,17 @@ export const daoCopy = {
     unavailable: "Voting power is unavailable. Try again shortly.",
     unit: "YFI",
     mockMember: "YBC member",
+    system: "Total DAO voting power",
+    share: "Your share of total",
+    estimatedShare: "Your estimated share of total",
+    systemBreakdown: "Across the DAO",
+    personalBreakdown: "Your breakdown",
+    systemDelegated: "Delegated stYFIx pool",
+    missingTotal: "Unavailable",
+    loadingTotal: "Loading total…",
+    totalUnavailable: "A complete, current voting-power snapshot is not available yet. Your personal voting power is still shown.",
+    totalExplanation: "The total counts each holder's matured stake and active migrated veYFI, plus the stYFIx pool once. It is measured before late-vote decay.",
+    snapshot: "Snapshot",
   },
   publicationErrors: {
     disabled: "Publication is disabled. Keep your draft and try again later.",

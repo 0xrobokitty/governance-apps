@@ -3,7 +3,9 @@ import type { Address, PublicClient } from "viem";
 import feedExample from "@/docs/apps/ybc/onchain-integration-plan/examples/ybc-feed.example.json";
 import { YbcFeedSchema } from "@/lib/schemas/ybc-feed";
 import { STYFI_GOVERNANCE } from "@/lib/clients/styfi/deployment";
-import { createMockDaoVotingPower, createMockStyfiVotingPower, deriveYbcVotingInfluence, readStyfiVotingPower } from "@/lib/clients/styfi/voting-power";
+import { createMockDaoVotingPower, createMockStyfiVotingPower, deriveYbcVotingInfluence, readIndexedVotingPower, readStyfiVotingPower } from "@/lib/clients/styfi/voting-power";
+import { parseDaoVotingPowerSnapshot } from "@/lib/clients/dao/voting-power-snapshot";
+import { INDEX_DEPLOYMENT, INDEX_FROM_BLOCK, INDEX_TOKENS } from "@/scripts/build-dao-voting-power.mjs";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
 const OTHER = "0x2222222222222222222222222222222222222222" as Address;
@@ -21,11 +23,11 @@ const roster = {
   })),
 };
 
-function makeClient(options: { member?: boolean; count?: bigint; failPower?: boolean; reorg?: boolean; directPower?: bigint; memberWeight?: bigint } = {}) {
+function makeClient(options: { member?: boolean; count?: bigint; failPower?: boolean; reorg?: boolean; directPower?: bigint; memberWeight?: bigint; blockNumber?: bigint } = {}) {
   let blocks = 0;
   const getBlock = vi.fn(async () => {
     blocks += 1;
-    return { number: 123n, hash: options.reorg && blocks > 1 ? `0x${"b".repeat(64)}` : HASH, timestamp: 1_800_000_000n };
+    return { number: options.blockNumber ?? 123n, hash: options.reorg && blocks > 1 ? `0x${"b".repeat(64)}` : HASH, timestamp: 1_800_000_000n };
   });
   const multicall = vi.fn(async ({ contracts }: { contracts: Array<{ address: string; functionName: string; args?: readonly unknown[] }> }) => contracts.map((contract) => {
     const address = contract.address.toLowerCase();
@@ -113,6 +115,35 @@ describe("stYFI governance voting power", () => {
   it("rejects a block replacement during the snapshot", async () => {
     const { client } = makeClient({ reorg: true });
     await expect(readStyfiVotingPower({ publicClient: client, account: ACCOUNT })).rejects.toThrow("snapshot changed");
+  });
+});
+
+describe("indexed DAO wallet shares", () => {
+  const blockNumber = INDEX_FROM_BLOCK + 1n;
+  const snapshot = parseDaoVotingPowerSnapshot({
+    version: 1, chainId: 1, block: { number: String(blockNumber), hash: HASH, timestamp: 1_800_000_000 },
+    deployment: INDEX_DEPLOYMENT,
+    coverage: { fromBlock: String(INDEX_FROM_BLOCK), throughBlock: String(blockNumber), complete: true, tokens: INDEX_TOKENS, candidateCount: 1 },
+    accounts: [{ address: ACCOUNT, stakedPower: String(80n * ETHER), migratedVePower: String(20n * ETHER), directPower: String(100n * ETHER) }],
+    totals: { stakedPower: String(80n * ETHER), migratedVePower: String(20n * ETHER), delegatedPower: String(1_000n * ETHER), totalPower: String(1_100n * ETHER) },
+  });
+
+  it("uses the exact same block for total, personal weight, and both share calculations", async () => {
+    const { client, multicall } = makeClient({ blockNumber });
+    const result = await readIndexedVotingPower({ publicClient: client, account: ACCOUNT, snapshot, ybcFeed: roster });
+    expect(result.systemPower).toMatchObject({ totalPower: 1_100n * ETHER, directShareBps: 909n, estimatedShareBps: 2_909n });
+    expect(result.blockNumber).toBe(blockNumber);
+    for (const [request] of multicall.mock.calls) expect(request).toMatchObject({ blockNumber });
+  });
+
+  it("rejects forged snapshot timestamps even when the block hash is correct", async () => {
+    const { client } = makeClient({ blockNumber });
+    await expect(readIndexedVotingPower({ publicClient: client, account: ACCOUNT, snapshot: { ...snapshot, block: { ...snapshot.block, timestamp: snapshot.block.timestamp - 1 } } })).rejects.toThrow("timestamp differs");
+  });
+
+  it("rejects missing wallet entries and replaced canonical blocks", async () => {
+    await expect(readIndexedVotingPower({ publicClient: makeClient({ blockNumber }).client, account: ACCOUNT, snapshot: { ...snapshot, accounts: [] } })).rejects.toThrow("indexed wallet weight");
+    await expect(readIndexedVotingPower({ publicClient: makeClient({ blockNumber, reorg: true }).client, account: ACCOUNT, snapshot })).rejects.toThrow("no longer canonical");
   });
 });
 
