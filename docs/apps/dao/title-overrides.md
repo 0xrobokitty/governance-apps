@@ -5,8 +5,9 @@ The deployed website serves that same file at `/dao-title-overrides.json`.
 Git history records each correction. Changes take effect after deployment.
 
 The correction changes the board title, detail heading, vote confirmation, and share title.
-A small pencil identifies corrected titles on the board and detail page.
+A small pencil follows corrected titles on the board and detail page.
 Hover, keyboard focus, or tap shows the original title and confirms that the published text is unchanged.
+The tooltip appears above the proposer address and other row controls.
 Published content, body text, content digest, and transaction data remain unchanged.
 
 ## Add a correction

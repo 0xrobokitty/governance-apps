@@ -177,7 +177,6 @@ function ProposalBoardRow({
               {daoCopy.detail.eyebrow(proposalId)}
             </p>
             <div className="flex min-w-0 items-start">
-              <ProposalTitleCorrection proposal={proposal} originalTitle={parsed?.title} />
               <h3
                 id={`dao-proposal-${proposalId}-title`}
                 className="min-w-0 text-balance text-lg font-bold md:text-xl"
@@ -190,6 +189,7 @@ function ProposalBoardRow({
                   <span className="break-words [overflow-wrap:anywhere]">{title}</span>
                 </Link>
               </h3>
+              <ProposalTitleCorrection proposal={proposal} originalTitle={parsed?.title} />
             </div>
           </div>
 

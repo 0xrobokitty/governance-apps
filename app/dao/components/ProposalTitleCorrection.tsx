@@ -12,7 +12,7 @@ export function ProposalTitleCorrection({ proposal, originalTitle }: {
 }) {
   if (!findDaoTitleOverride(proposal.ref, proposal.content.digest)) return null;
   return (
-    <Tooltip side="bottom" align="start" className="relative z-10 shrink-0 align-middle" content={
+    <Tooltip side="bottom" align="end" className="relative z-30 shrink-0 align-middle" content={
       <span className="block space-y-1.5 text-left font-normal">
         <span className="block font-semibold">{daoCopy.titleCorrection.label}</span>
         <span className="block break-words [overflow-wrap:anywhere]">
