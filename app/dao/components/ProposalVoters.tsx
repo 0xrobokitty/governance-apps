@@ -162,7 +162,7 @@ export function ProposalVoters({ proposal, isMock = isDaoMockRuntimeEnabled(), h
 function CollectiveVoteRow({ vote, hostname }: { vote: DaoCollectiveVote | null; hostname?: string }) {
   const copy = daoCopy.voters;
   return (
-    <div role="rowgroup" aria-label={copy.collective.group} className="border-t border-border bg-surface-secondary/50">
+    <div role="rowgroup" aria-label={copy.collective.group} className="-mx-3 border-t border-border bg-surface-secondary/50 px-3">
       <div role="row" className={rowClassName}>
         <div role="cell" className="col-span-2 min-w-0 xl:col-span-1">
           <p className={cn(primaryLineClassName, "font-bold")}>{copy.collective.title}</p>

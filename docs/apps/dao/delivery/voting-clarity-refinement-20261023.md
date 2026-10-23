@@ -138,3 +138,10 @@ All three focused phone and desktop voter checks then passed. Manual review also
 The final compiled build passed all 59 full browser tests, including keyboard and touch name editing.
 The smoke suite passed 65 tests; one production-only test was skipped in the mock runtime.
 The integration checkpoint is tagged `integration/dao-individual-voters-20261023`.
+
+## Collective row spacing
+
+The final visual review adds 12 pixels of horizontal padding inside the gray collective row.
+The background extends into the card's existing padding, so the text columns stay aligned with individual rows.
+Typecheck, lint, the optimized build, and all four voter-table browser checks passed.
+Manual review confirmed the 12-pixel inset and matching text alignment.
