@@ -23,7 +23,13 @@ for (const width of [390, 1280]) {
   test(`shows coherent wallet choices and a separate review action at ${width}px`, async ({ page }) => {
     await page.setViewportSize({ width, height: 900 });
     await expect(page.getByRole("article", { name: /Guarded executable proposal/ }).getByRole("button", { name: /Voted Yea/ })).toBeDisabled();
-    await expect(page.getByRole("article", { name: /Permissionless executable proposal/ }).getByRole("button", { name: /Voted Nay/ })).toBeDisabled();
+    const recorded = page.getByRole("article", { name: /Permissionless executable proposal/ }).getByRole("button", { name: /Voted Nay/ });
+    await expect(recorded).toBeDisabled();
+    await recorded.scrollIntoViewIfNeeded();
+    const recordedBox = await recorded.boundingBox();
+    expect(recordedBox).not.toBeNull();
+    await page.mouse.click(recordedBox!.x + recordedBox!.width / 2, recordedBox!.y + recordedBox!.height / 2);
+    await expect(page).toHaveURL(/\/dao$/);
     await expect(page.getByRole("article", { name: /Renew security operations/ }).getByRole("button", { name: /Voted Yea/ })).toBeDisabled();
     const row = page.getByRole("article", { name: /Fund protocol research/ });
     const action = row.getByTestId("dao-wallet-action");
