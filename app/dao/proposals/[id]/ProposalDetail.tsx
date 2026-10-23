@@ -110,25 +110,27 @@ export function ProposalDetail({
         ]}
       />
 
-      <Card className="min-w-0 space-y-5 overflow-hidden">
-        <div className="min-w-0 space-y-3">
-          <p className="break-words font-number text-xs font-bold tabular-nums text-text-secondary [overflow-wrap:anywhere]">
-            {daoCopy.detail.eyebrow(proposalId)}
-          </p>
-          <ProposalHeadingFacts proposal={proposal} />
-          <h1 className="text-balance text-2xl font-bold md:text-4xl">
+      <Card data-testid="dao-proposal-header" className="min-w-0 space-y-4 overflow-hidden">
+        <div className="min-w-0 space-y-2">
+          <div className="flex min-w-0 flex-wrap items-start gap-x-3 gap-y-2">
+            <p className="inline-flex min-h-6 shrink-0 items-center font-number text-xs font-bold tabular-nums text-text-secondary">
+              {daoCopy.detail.eyebrow(proposalId)}
+            </p>
+            <ProposalHeadingFacts proposal={proposal} />
+          </div>
+          <h1 className="text-balance text-2xl font-bold md:text-3xl">
             {title}
           </h1>
           <ProposalTitleCorrection proposal={proposal} originalTitle={parsedContent?.title} />
           {summary ? (
-            <p className="max-w-3xl text-pretty text-base leading-7 text-text-secondary">
+            <p className="max-w-4xl text-pretty text-sm leading-6 text-text-secondary">
               {summary}
             </p>
           ) : null}
         </div>
 
-        <div className="grid min-w-0 gap-4 border-t border-border pt-5 md:grid-cols-2">
-          <div className="min-w-0 space-y-1">
+        <div className="grid min-w-0 items-center gap-x-8 gap-y-2 border-t border-border pt-3 sm:grid-cols-2 xl:grid-cols-[minmax(0,1fr)_minmax(0,1fr)_auto]">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-2">
             <p className="text-xs font-bold text-text-secondary">
               {daoCopy.detail.proposedBy}
             </p>
@@ -139,10 +141,7 @@ export function ProposalDetail({
             />
           </div>
           <ProposalTiming now={now} proposal={proposal} showExact />
-        </div>
-
-        <div className="flex min-w-0 flex-col gap-x-6 gap-y-2 border-t border-border pt-3 sm:flex-row sm:items-start sm:justify-between">
-          <div className="flex min-w-0 flex-wrap items-center gap-x-6 gap-y-1">
+          <div className="flex min-w-0 flex-wrap items-center gap-x-4 gap-y-1 sm:col-span-2 xl:col-span-1 xl:justify-end">
             <a
               href="#dao-proposal-votes"
               className="inline-flex min-h-10 items-center rounded text-sm font-bold text-yearn-blue transition-colors hover:text-blue-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary motion-reduce:transition-none dark:text-blue-300 dark:hover:text-blue-200"
@@ -151,69 +150,66 @@ export function ProposalDetail({
             </a>
             <DiscussionLink proposal={proposal} />
           </div>
-          {snapshotNotice}
         </div>
+        {snapshotNotice}
         <ContentWarning proposal={proposal} />
       </Card>
 
-      <div className="grid min-w-0 gap-5 lg:grid-cols-[minmax(0,1fr)_20rem] lg:items-start">
-        <aside
-          className="order-first min-w-0 space-y-5 lg:order-last"
-          aria-label={daoCopy.detail.actionSidebar}
-        >
-          <Card className="min-w-0 space-y-5" aria-label={daoCopy.detail.voteResults}>
-            <div className="space-y-3">
-              <h3 className="text-balance text-xl font-bold">
-                {daoCopy.detail.voteResults}
-              </h3>
-              <p className="text-sm font-bold">
-                {lifecycleFacts.voteResult
-                  ? daoCopy.detail.voteResult[lifecycleFacts.voteResult]
-                  : lifecycleFacts.moderation.kind !== null
-                    ? daoCopy.detail.lifecycleFacts.noCommunityResult
-                    : daoCopy.detail.lifecycleFacts.notDecided}
-              </p>
-              <ProposalVoteSummary proposal={proposal} hostname={hostname} />
-            </div>
-
-            {proposal.type === "signal" &&
-            proposal.displayStatus === "approved" ? (
-              <div className="space-y-1 border-t border-border pt-4">
-                <p
-                  className="text-lg font-bold text-green-800 dark:text-green-300"
-                  data-testid="dao-approved-signal"
-                >
-                  {daoCopy.detail.approvedSignal}
+      <ProposalDetailTabs
+        proposalKey={serializeDaoProposalRef(proposal.ref)}
+        voterCount={voterCount}
+        labels={daoCopy.detail.tabs}
+        sidebar={
+          <aside
+            className="min-w-0 space-y-5"
+            aria-label={daoCopy.detail.actionSidebar}
+          >
+            <Card className="min-w-0 space-y-5" aria-label={daoCopy.detail.voteResults}>
+              <div className="space-y-3">
+                <h3 className="text-balance text-xl font-bold md:text-2xl">
+                  {daoCopy.detail.voteResults}
+                </h3>
+                <p className="text-sm font-bold">
+                  {lifecycleFacts.voteResult
+                    ? daoCopy.detail.voteResult[lifecycleFacts.voteResult]
+                    : lifecycleFacts.moderation.kind !== null
+                      ? daoCopy.detail.lifecycleFacts.noCommunityResult
+                      : daoCopy.detail.lifecycleFacts.notDecided}
                 </p>
-                <p className="text-pretty text-sm font-bold text-text-secondary">
-                  {daoCopy.detail.noExecutableActions}
-                </p>
+                <ProposalVoteSummary proposal={proposal} hostname={hostname} />
               </div>
-            ) : null}
 
-            <ProposalRules proposal={proposal} />
-          </Card>
-          {actionPanel ? <div id="dao-proposal-actions" className="scroll-mt-24 rounded-box focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary" tabIndex={-1}>{actionPanel}</div> : null}
-        </aside>
+              {proposal.type === "signal" &&
+              proposal.displayStatus === "approved" ? (
+                <div className="space-y-1 border-t border-border pt-4">
+                  <p
+                    className="text-lg font-bold text-green-800 dark:text-green-300"
+                    data-testid="dao-approved-signal"
+                  >
+                    {daoCopy.detail.approvedSignal}
+                  </p>
+                  <p className="text-pretty text-sm font-bold text-text-secondary">
+                    {daoCopy.detail.noExecutableActions}
+                  </p>
+                </div>
+              ) : null}
 
-        <div className="order-last min-w-0 lg:order-first">
-          <ProposalDetailTabs
-            proposalKey={serializeDaoProposalRef(proposal.ref)}
-            voterCount={voterCount}
-            labels={daoCopy.detail.tabs}
-            proposal={<>
-              <ImmutableContent hostname={hostname} parsed={parsedContent} proposal={proposal} />
-              <ProposedActionsSummary proposal={proposal} />
-            </>}
-            votes={voterPanel ?? <ProposalVoters proposal={proposal} hostname={hostname} isMock={isMock} />}
-            details={<>
-              <ProposalLifecycle now={now} proposal={proposal} />
-              <ExecutionAnalysis proposal={proposal} />
-              <TechnicalDetails feed={feed} proposal={proposal} />
-            </>}
-          />
-        </div>
-      </div>
+              <ProposalRules proposal={proposal} />
+            </Card>
+            {actionPanel ? <div id="dao-proposal-actions" className="scroll-mt-24 rounded-box focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary" tabIndex={-1}>{actionPanel}</div> : null}
+          </aside>
+        }
+        proposal={<>
+          <ImmutableContent hostname={hostname} parsed={parsedContent} proposal={proposal} />
+          <ProposedActionsSummary proposal={proposal} />
+        </>}
+        votes={voterPanel ?? <ProposalVoters proposal={proposal} hostname={hostname} isMock={isMock} />}
+        details={<>
+          <ProposalLifecycle now={now} proposal={proposal} />
+          <ExecutionAnalysis proposal={proposal} />
+          <TechnicalDetails feed={feed} proposal={proposal} />
+        </>}
+      />
     </article>
   );
 }

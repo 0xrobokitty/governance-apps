@@ -199,6 +199,38 @@ describe("DAO proposal detail tabs", () => {
     selectedTab(/^Votes/);
   });
 
+  it("keeps one sidebar mounted outside all panels across selection and content updates", () => {
+    const sidebar = <aside aria-label="Voting"><label>Vote amount<input defaultValue="" /></label></aside>;
+    const { rerender } = render(<ProposalDetailTabs {...baseProps} sidebar={sidebar} />);
+    const aside = screen.getByRole("complementary", { name: "Voting" });
+    const input = within(aside).getByRole("textbox", { name: "Vote amount" });
+    fireEvent.change(input, { target: { value: "42" } });
+    expect(aside.closest('[role="tabpanel"]')).toBeNull();
+    expect(aside.compareDocumentPosition(screen.getByTestId("dao-proposal-detail-tabs")) & Node.DOCUMENT_POSITION_FOLLOWING).toBeTruthy();
+    for (const name of [/^Votes/, "Details", "Proposal"]) {
+      fireEvent.click(screen.getByRole("tab", { name }));
+      expect(aside).toBeVisible();
+      expect(input).toHaveValue("42");
+    }
+    rerender(<ProposalDetailTabs {...baseProps} sidebar={sidebar} voterCount={9} />);
+    expect(screen.getAllByRole("complementary", { name: "Voting" })).toEqual([aside]);
+    expect(input).toHaveValue("42");
+  });
+
+  it("preserves selection for native action anchors inside the new sidebar slot", async () => {
+    render(<ProposalDetailTabs
+      {...baseProps}
+      sidebar={<aside id="dao-proposal-actions"><a href="#dao-proposal-actions">Vote now</a><button>Cast vote</button></aside>}
+    />);
+    fireEvent.click(screen.getByRole("tab", { name: /^Votes/ }));
+    fireEvent.click(screen.getByRole("link", { name: "Vote now" }));
+    await waitFor(() => expect(window.location.hash).toBe("#dao-proposal-actions"));
+    await navigate("#dao-proposal-actions");
+    selectedTab(/^Votes/);
+    expect(screen.getByRole("button", { name: "Cast vote" })).toBeVisible();
+    expect(scrollIntoView.mock.contexts).not.toContain(document.getElementById("dao-proposal-actions"));
+  });
+
   it("waits for a decoded Markdown heading to mount before scrolling without replacing its fragment", async () => {
     location("/dao/proposals/2#proposal%20heading");
     const { rerender } = render(<ProposalDetailTabs {...baseProps} proposal={<p>Loading content</p>} />);
@@ -242,27 +274,30 @@ describe("DAO proposal detail tabs", () => {
     }
   });
 
-  it("measures the sticky strip and scrolls tab changes only when its natural position is above the header", async () => {
+  it("measures the sticky strip and returns to the panels instead of the mobile sidebar when scrolled past the strip", async () => {
     const resize = { callback: null as ResizeObserverCallback | null, disconnect: vi.fn() };
     vi.stubGlobal("ResizeObserver", class {
       constructor(callback: ResizeObserverCallback) { resize.callback = callback; }
       observe() {}
       disconnect() { resize.disconnect(); }
     });
-    const { unmount } = render(<ProposalDetailTabs {...baseProps} />);
+    const { unmount } = render(<ProposalDetailTabs {...baseProps} sidebar={<aside>Voting controls</aside>} />);
     const strip = screen.getByTestId("dao-proposal-detail-tabs");
+    const panels = screen.getByTestId("dao-proposal-detail-panels");
     const root = strip.parentElement!;
     strip.style.top = "64px";
     vi.spyOn(strip, "getBoundingClientRect").mockReturnValue({ height: 72 } as DOMRect);
-    vi.spyOn(root, "getBoundingClientRect").mockReturnValue({ top: 300 } as DOMRect);
+    vi.spyOn(root, "getBoundingClientRect").mockReturnValue({ top: -300 } as DOMRect);
+    vi.spyOn(panels, "getBoundingClientRect").mockReturnValue({ top: 300 } as DOMRect);
     act(() => resize.callback?.([], {} as ResizeObserver));
     expect(root.style.getPropertyValue("--dao-detail-tabs-height")).toBe("72px");
     fireEvent.click(screen.getByRole("tab", { name: /^Votes/ }));
     await act(async () => new Promise<void>((resolve) => window.requestAnimationFrame(() => resolve())));
     expect(scrollIntoView).not.toHaveBeenCalled();
-    vi.mocked(root.getBoundingClientRect).mockReturnValue({ top: -300 } as DOMRect);
+    vi.mocked(panels.getBoundingClientRect).mockReturnValue({ top: -300 } as DOMRect);
     fireEvent.click(screen.getByRole("tab", { name: "Details" }));
-    await waitFor(() => expect(scrollIntoView.mock.contexts).toContain(root));
+    await waitFor(() => expect(scrollIntoView.mock.contexts).toContain(panels));
+    expect(scrollIntoView.mock.contexts).not.toContain(root);
     unmount();
     expect(resize.disconnect).toHaveBeenCalled();
   });

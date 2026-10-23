@@ -2,6 +2,7 @@
 
 import { useEffect, useRef, useState, type CSSProperties, type ReactNode } from "react";
 import { Tabs } from "@/components/ui/Tabs";
+import { cn } from "@/lib/cn";
 
 type ProposalDetailTab = "proposal" | "votes" | "details";
 
@@ -24,6 +25,7 @@ export interface ProposalDetailTabsProps {
   proposal: ReactNode;
   votes: ReactNode;
   details: ReactNode;
+  sidebar?: ReactNode;
   labels: {
     navigation: string;
     proposal: string;
@@ -61,9 +63,11 @@ export function ProposalDetailTabs(props: ProposalDetailTabsProps) {
   return <ProposalDetailTabPanels key={props.proposalKey} {...props} />;
 }
 
-function ProposalDetailTabPanels({ voterCount, proposal, votes, details, labels }: ProposalDetailTabsProps) {
+function ProposalDetailTabPanels({ voterCount, proposal, votes, details, sidebar, labels }: ProposalDetailTabsProps) {
   const rootRef = useRef<HTMLDivElement>(null);
   const stripRef = useRef<HTMLDivElement>(null);
+  const panelsRef = useRef<HTMLDivElement>(null);
+  const hasSidebar = sidebar !== undefined && sidebar !== null;
   const [navigation, setNavigation] = useState<Navigation>({
     tab: "proposal",
     fragment: "",
@@ -74,7 +78,7 @@ function ProposalDetailTabPanels({ voterCount, proposal, votes, details, labels 
     const applyHash = (hash: string) => {
       const fragment = decodeFragment(hash);
       const target = fragment ? document.getElementById(fragment) : null;
-      const outsidePanels = target && !rootRef.current?.contains(target);
+      const outsidePanels = target && !panelsRef.current?.contains(target);
       setNavigation((current) => ({
         tab: outsidePanels ? current.tab : tabForFragment(fragment),
         fragment,
@@ -126,18 +130,23 @@ function ProposalDetailTabPanels({ voterCount, proposal, votes, details, labels 
 
   useEffect(() => {
     const root = rootRef.current;
-    if (!root || navigation.scroll === "none") return;
+    const panels = panelsRef.current;
+    if (!root || !panels || navigation.scroll === "none") return;
     let observer: MutationObserver | null = null;
     let frame: number | null = null;
     const scroll = (): boolean => {
       if (navigation.scroll === "tab") {
-        const top = stripRef.current ? Number.parseFloat(window.getComputedStyle(stripRef.current).top) || 0 : 0;
-        if (root.getBoundingClientRect().top < top) root.scrollIntoView?.({ block: "start" });
+        const strip = stripRef.current;
+        const top = strip ? Number.parseFloat(window.getComputedStyle(strip).top) || 0 : 0;
+        const stripHeight = strip?.getBoundingClientRect().height ?? 0;
+        // The panels' natural position remains measurable while the strip sticks.
+        // Its scroll margin returns to the strip, excluding the mobile sidebar.
+        if (panels.getBoundingClientRect().top - stripHeight < top) panels.scrollIntoView?.({ block: "start" });
         return true;
       }
       const target = document.getElementById(navigation.fragment);
       const panel = document.getElementById(PANEL_IDS[navigation.tab]);
-      if (target && !root.contains(target)) return true;
+      if (target && !panels.contains(target)) return true;
       if (!target || !panel?.contains(target)) return false;
       const disclosure = target instanceof HTMLDetailsElement ? target : target.querySelector(":scope > details");
       if (disclosure instanceof HTMLDetailsElement) disclosure.open = true;
@@ -158,7 +167,7 @@ function ProposalDetailTabPanels({ voterCount, proposal, votes, details, labels 
     // Content can resolve after route hydration. Observe only this proposal until
     // the requested heading exists, and stop on navigation or unmount.
     observer = new MutationObserver(scheduleScroll);
-    observer.observe(root, { childList: true, subtree: true, attributes: true, attributeFilter: ["id"] });
+    observer.observe(panels, { childList: true, subtree: true, attributes: true, attributeFilter: ["id"] });
     scheduleScroll();
     return () => {
       observer?.disconnect();
@@ -180,15 +189,23 @@ function ProposalDetailTabPanels({ voterCount, proposal, votes, details, labels 
   return (
     <div
       ref={rootRef}
-      className="min-w-0 scroll-mt-[var(--dao-header-height,4rem)] [&_[id]]:scroll-mt-[var(--dao-detail-scroll-margin)]"
+      className={cn(
+        "grid min-w-0 grid-cols-1 items-start gap-x-5 [&_[id]]:scroll-mt-[var(--dao-detail-scroll-margin)]",
+        hasSidebar && "lg:grid-cols-[minmax(0,1fr)_20rem]"
+      )}
       style={{
         "--dao-detail-scroll-margin": "calc(var(--dao-header-height, 4rem) + var(--dao-detail-tabs-height, 3.5rem) + 1rem)",
       } as CSSProperties}
     >
+      {hasSidebar ? (
+        <div className="mb-5 min-w-0 lg:col-start-2 lg:row-start-2 lg:mb-0">
+          {sidebar}
+        </div>
+      ) : null}
       <div
         ref={stripRef}
         data-testid="dao-proposal-detail-tabs"
-        className="sticky top-[var(--dao-header-height,4rem)] z-30 bg-app pb-3 pt-2"
+        className="sticky top-[var(--dao-header-height,4rem)] z-30 bg-app pb-3 pt-2 lg:col-span-full lg:row-start-1"
       >
         <Tabs
           variant="line"
@@ -208,19 +225,25 @@ function ProposalDetailTabPanels({ voterCount, proposal, votes, details, labels 
           ]}
         />
       </div>
-      {(["proposal", "votes", "details"] as const).map((tab) => (
-        <div
-          key={tab}
-          id={PANEL_IDS[tab]}
-          role="tabpanel"
-          aria-labelledby={tabId(tab)}
-          tabIndex={0}
-          hidden={navigation.tab !== tab}
-          className="min-w-0 space-y-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary"
-        >
-          {{ proposal, votes, details }[tab]}
-        </div>
-      ))}
+      <div
+        ref={panelsRef}
+        data-testid="dao-proposal-detail-panels"
+        className="min-w-0 scroll-mt-[calc(var(--dao-header-height,4rem)+var(--dao-detail-tabs-height,3.5rem))] lg:col-start-1 lg:row-start-2"
+      >
+        {(["proposal", "votes", "details"] as const).map((tab) => (
+          <div
+            key={tab}
+            id={PANEL_IDS[tab]}
+            role="tabpanel"
+            aria-labelledby={tabId(tab)}
+            tabIndex={0}
+            hidden={navigation.tab !== tab}
+            className="min-w-0 space-y-5 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-text-primary"
+          >
+            {{ proposal, votes, details }[tab]}
+          </div>
+        ))}
+      </div>
     </div>
   );
 }

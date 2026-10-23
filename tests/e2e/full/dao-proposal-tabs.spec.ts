@@ -44,6 +44,30 @@ test("keeps vote results and the selected action outside all three panels", asyn
   await expect(page.getByRole("dialog", { name: "Confirm your vote" }).getByRole("button", { name: "Vote Nay" })).toBeEnabled();
 });
 
+for (const width of [1280, 1920]) {
+  test(`aligns vote results with the active content card at ${width}px`, async ({ page }) => {
+    await page.setViewportSize({ width, height: 1080 });
+    await page.goto("/dao/proposals/2");
+    await expectHeaderMetadata(page, 2);
+
+    for (const panel of ["Proposal", "Votes", "Details"] as const) {
+      await page.getByRole("tab", { name: panel === "Votes" ? /^Votes/ : panel, exact: panel !== "Votes" }).click();
+      await expectSelectedPanel(page, panel);
+      await expect.poll(async () => {
+        const layout = await readCardLayout(page);
+        return Math.abs(layout.results.top - layout.content.top);
+      }).toBeLessThanOrEqual(1);
+      const layout = await readCardLayout(page);
+      expect(layout.results.left).toBeGreaterThanOrEqual(layout.content.right);
+      expect(layout.results.top).toBeGreaterThanOrEqual(layout.strip.bottom - 1);
+      expect(layout.content.top).toBeGreaterThanOrEqual(layout.strip.bottom - 1);
+      expect(layout.strip.left).toBeLessThanOrEqual(layout.content.left + 1);
+      expect(layout.strip.right).toBeGreaterThanOrEqual(layout.results.right - 1);
+      await expectNoDocumentOverflow(page);
+    }
+  });
+}
+
 test("keeps individual-voter search and sort when returning to Votes", async ({ page }) => {
   await page.goto("/dao/proposals/2");
   await page.getByRole("link", { name: "View votes", exact: true }).click();
@@ -161,8 +185,16 @@ for (const { width, textScale } of [{ width: 390, textScale: 100 }, { width: 128
     await page.setViewportSize({ width, height: 900 });
     await page.goto("/dao/proposals/21");
     if (textScale !== 100) await page.addStyleTag({ content: `html { font-size: ${textScale}%; }` });
+    await expectHeaderMetadata(page, 21);
     const strip = page.getByTestId("dao-proposal-detail-tabs");
     await expect(strip).toBeVisible();
+    if (width < 1024) {
+      const sidebar = page.getByRole("complementary", { name: "Proposal actions and vote results", exact: true });
+      const sidebarBox = (await sidebar.boundingBox())!;
+      const layout = await readCardLayout(page);
+      expect(sidebarBox.y + sidebarBox.height).toBeLessThanOrEqual(layout.strip.top + 1);
+      expect(layout.strip.bottom).toBeLessThanOrEqual(layout.content.top + 1);
+    }
     await strip.evaluate((element) => window.scrollTo(0, element.getBoundingClientRect().top + window.scrollY + 200));
     await expect.poll(async () => strip.evaluate((element) => {
       const header = document.querySelector("header.sticky")!;
@@ -177,10 +209,57 @@ for (const { width, textScale } of [{ width: 390, textScale: 100 }, { width: 128
       expect(box!.height).toBeGreaterThanOrEqual(40);
       await tab.click();
       await expectSelectedPanel(page, panel);
-      const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
-      expect(dimensions.content).toBeLessThanOrEqual(dimensions.width);
+      await expectNoDocumentOverflow(page);
     }
   });
+}
+
+async function expectHeaderMetadata(page: Page, proposalId: 2 | 21) {
+  const header = page.getByTestId("dao-proposal-header");
+  await expect(header).toBeVisible();
+  const metadata = [
+    header.getByText(`Proposal #${proposalId}`, { exact: true }),
+    header.getByRole("heading", { level: 1, name: proposalId === 2 ? "Fund protocol research" : "Guarded executable proposal", exact: true }),
+    header.getByTestId("dao-proposal-heading-facts"),
+    header.getByText("This proposal records the decision and rationale presented for DAO review.", { exact: true }),
+    header.getByText("Proposed by", { exact: true }),
+    header.getByRole("link", { name: /^View Ethereum address/ }),
+    header.getByText(proposalId === 2 ? "Voting ends in 6 hours" : "Execution expires in 6 hours", { exact: true }),
+    header.locator("time[datetime]").first(),
+    header.getByRole("link", { name: "View votes", exact: true }),
+    header.getByRole("link", { name: "Open this proposal's forum discussion in a new tab", exact: true }),
+  ];
+  const headerBox = (await header.boundingBox())!;
+  for (const item of metadata) {
+    await expect(item).toBeVisible();
+    const box = (await item.boundingBox())!;
+    expect(box.x).toBeGreaterThanOrEqual(headerBox.x - 1);
+    expect(box.x + box.width).toBeLessThanOrEqual(headerBox.x + headerBox.width + 1);
+    expect(box.y).toBeGreaterThanOrEqual(headerBox.y - 1);
+    expect(box.y + box.height).toBeLessThanOrEqual(headerBox.y + headerBox.height + 1);
+  }
+  await expectNoDocumentOverflow(page);
+}
+
+async function readCardLayout(page: Page) {
+  return page.evaluate(() => {
+    const rect = (selector: string) => {
+      const element = document.querySelector(selector);
+      if (!element) throw new Error(`Missing layout target: ${selector}`);
+      const { top, bottom, left, right } = element.getBoundingClientRect();
+      return { top, bottom, left, right };
+    };
+    return {
+      strip: rect('[data-testid="dao-proposal-detail-tabs"]'),
+      content: rect('[role="tabpanel"]:not([hidden]) > :first-child'),
+      results: rect('[aria-label="Vote results"]'),
+    };
+  });
+}
+
+async function expectNoDocumentOverflow(page: Page) {
+  const dimensions = await page.evaluate(() => ({ width: document.documentElement.clientWidth, content: document.documentElement.scrollWidth }));
+  expect(dimensions.content).toBeLessThanOrEqual(dimensions.width);
 }
 
 async function expectSelectedPanel(page: Page, name: "Proposal" | "Votes" | "Details") {

@@ -11,8 +11,13 @@ Details groups Lifecycle, Proposed script, and Technical details into expandable
 
 The title, status, content warnings, results, and action panel remain outside the tabs.
 Switching tabs preserves the selected vote and voter search. Hidden panels remain mounted, but their controls leave keyboard navigation.
-The tab bar stays below the measured global header while scrolling within the content column.
+On desktop, the tab bar spans both columns. Content and vote results start at the same height below it.
+On mobile, results and voting stay above the tabs. The active panel follows the tab bar.
+The tab bar stays below the measured global header while scrolling through the proposal.
 The header and tab heights adjust to screen size and text scaling.
+
+The proposal header groups its number and status badges on one row.
+Proposer, timing, and navigation links share a compact metadata section that wraps on smaller screens.
 
 The shared tab control supports arrow keys, Home, and End. Direct links move focus to the revealed section.
 The URL fragment records the selected tab. Refresh, Back, and Forward restore the matching panel.
