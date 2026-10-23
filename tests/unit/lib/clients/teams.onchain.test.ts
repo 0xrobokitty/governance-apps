@@ -349,7 +349,8 @@ describe("Teams feed mapper", () => {
     expect(team.bonus.totalClaimableRaw).toBe("1000000000000000000");
     expect(bonusPeriod.claimableYfi).toBe("1");
     expect(bonusPeriod.claimableYfiRaw).toBe("1000000000000000000");
-    expect(bonusPeriod.spotPriceUsd).toBe("7500");
+    expect(bonusPeriod.adjustedPriceUsd).toBe("7500");
+    expect(bonusPeriod.bonusFactorBps).toBe(1000);
     expect(bonusPeriod.ybcSplitBps).toBe(1000);
   });
 

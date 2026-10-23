@@ -227,9 +227,8 @@
                   "finalized": true,
                   "claimed": true,
                   "profitUsd": "50000.00",
-                  "spotPriceUsd": "3000.00",
                   "adjustedPriceUsd": "2700.00",
-                  "growthFactorBps": 10500,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"
@@ -334,9 +333,8 @@
                   "finalized": false,
                   "claimed": false,
                   "profitUsd": "0.00",
-                  "spotPriceUsd": "3200.00",
                   "adjustedPriceUsd": "3200.00",
-                  "growthFactorBps": 10000,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"
@@ -417,9 +415,8 @@
                   "finalized": true,
                   "claimed": false,
                   "profitUsd": "0.00",
-                  "spotPriceUsd": "3000.00",
                   "adjustedPriceUsd": "3000.00",
-                  "growthFactorBps": 10000,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"
@@ -690,9 +687,8 @@
                   "finalized": true,
                   "claimed": true,
                   "profitUsd": "50000.00",
-                  "spotPriceUsd": "3000.00",
                   "adjustedPriceUsd": "2700.00",
-                  "growthFactorBps": 10500,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"
@@ -824,7 +820,7 @@
             "bonus": {
               "tokenSymbol": "YFI",
               "status": "claimable",
-              "totalClaimable": "14.5",
+              "totalClaimable": "9.259259259259259259",
               "includedPeriodCount": 2,
               "periods": [
                 {
@@ -833,12 +829,11 @@
                   "finalized": true,
                   "claimed": false,
                   "profitUsd": "50000.00",
-                  "spotPriceUsd": "3000.00",
                   "adjustedPriceUsd": "2700.00",
-                  "growthFactorBps": 11000,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
-                  "claimableYfi": "14.5",
-                  "claimableYfiRaw": "14500000000000000000"
+                  "claimableYfi": "9.259259259259259259",
+                  "claimableYfiRaw": "9259259259259259259"
                 },
                 {
                   "period": 4,
@@ -846,16 +841,15 @@
                   "finalized": false,
                   "claimed": false,
                   "profitUsd": "90000.00",
-                  "spotPriceUsd": "3200.00",
                   "adjustedPriceUsd": "3040.00",
-                  "growthFactorBps": 10400,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"
                 }
               ],
               "tokenDecimals": 18,
-              "totalClaimableRaw": "14500000000000000000"
+              "totalClaimableRaw": "9259259259259259259"
             }
           }
         ]
@@ -1145,9 +1139,8 @@
                   "finalized": true,
                   "claimed": false,
                   "profitUsd": "0.00",
-                  "spotPriceUsd": "3000.00",
                   "adjustedPriceUsd": "3000.00",
-                  "growthFactorBps": 10000,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"
@@ -1339,9 +1332,8 @@
                   "finalized": true,
                   "claimed": true,
                   "profitUsd": "50000.00",
-                  "spotPriceUsd": "3000.00",
                   "adjustedPriceUsd": "2700.00",
-                  "growthFactorBps": 10500,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"
@@ -1446,9 +1438,8 @@
                   "finalized": false,
                   "claimed": false,
                   "profitUsd": "0.00",
-                  "spotPriceUsd": "3200.00",
                   "adjustedPriceUsd": "3200.00",
-                  "growthFactorBps": 10000,
+                  "bonusFactorBps": 5000,
                   "ybcSplitBps": 1000,
                   "claimableYfi": "0",
                   "claimableYfiRaw": "0"

@@ -759,7 +759,7 @@ describe("TeamsPageClient", () => {
     const lifecycleCard = document.getElementById("lifecycle");
     expect(bonusCard).not.toBeNull();
     expect(lifecycleCard).not.toBeNull();
-    expect(within(bonusCard!).getAllByText("14.5 YFI").length).toBeGreaterThan(0);
+    expect(within(bonusCard!).getAllByText("9.26 YFI").length).toBeGreaterThan(0);
     expect(within(bonusCard!).getByText("2 periods")).toBeInTheDocument();
     expect(within(bonusCard!).getByText("1 period")).toBeInTheDocument();
 
@@ -830,6 +830,9 @@ describe("TeamsPageClient", () => {
       })
     ).toBeDisabled();
     expect(within(bonusSection!).getByText(teamsCopy.bonus.action.claimedBody)).toBeInTheDocument();
+    await user.click(within(bonusSection!).getByText(teamsCopy.bonus.periodDetailSummary));
+    expect(within(bonusSection!).getByText("Unclaimed gross bonus")).toBeInTheDocument();
+    expect(within(bonusSection!).getAllByText("0 YFI").length).toBeGreaterThan(0);
 
     await user.click(
       screen.getByRole("link", { name: teamsCopy.app.routeKey })
