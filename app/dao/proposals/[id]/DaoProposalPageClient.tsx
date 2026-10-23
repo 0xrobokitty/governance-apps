@@ -69,7 +69,7 @@ export function DaoProposalPageClient({
   return (
     <>
       <DaoProposalView
-        voterPanel={envelope ? <ConnectedProposalVoters proposal={envelope.proposal} isMock={Boolean(runtime)} /> : null}
+        voterPanel={envelope ? <ConnectedProposalVoters proposal={envelope.proposal} isMock={Boolean(runtime)} hostname={hostname} /> : null}
         snapshotNotice={!runtime ? <DaoSnapshotNotice snapshot={envelope?.feed} error={proposalQuery.error} onRetry={() => { void proposalQuery.refetch(); }} /> : null}
         actionPanel={
           envelope ? (

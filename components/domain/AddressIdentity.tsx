@@ -17,6 +17,7 @@ export type AddressIdentityProps = {
   alias?: string;
   identity: DisplayAddressIdentity;
   isCurrentMember?: boolean;
+  /** Stacked names extend their hit area 20px upward; callers must leave that space free of other controls. */
   layout?: "inline" | "stacked";
   onResetAlias?: (address: string) => AddressAliasMutation;
   onSetAlias?: (
@@ -165,21 +166,18 @@ export function AddressIdentity({
           <div className="mt-1 min-w-0">
             <AddressLink
               address={identity.address}
-              className="min-w-0"
+              className={cn("min-w-0", layout === "stacked" && "[&>a]:px-0")}
               variant="compact"
             />
           </div>
         </>
       ) : (
-        <div className={cn("flex min-w-0 max-w-full gap-x-2 gap-y-0", layout === "stacked" ? "relative flex-col items-start" : "flex-wrap items-center", layout === "stacked" && canEdit && "pr-10")}>
-          {layout === "stacked" && canEdit ? (
-            <span data-identity-label className="block w-full min-w-0 truncate font-bold leading-5 text-text-primary" title={identity.label}>{identity.label}</span>
-          ) : null}
+        <div className={cn("flex min-w-0 max-w-full gap-x-2 gap-y-0", layout === "stacked" ? "flex-col items-start" : "flex-wrap items-center")}>
           {canEdit ? (
             <button
               ref={editButtonRef}
               type="button"
-              className={cn("group/name inline-flex min-h-10 min-w-10 max-w-full items-center gap-1 rounded text-left font-bold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary", layout === "stacked" && "absolute right-0 top-0 size-10 justify-center")}
+              className={cn("group/name relative inline-flex min-w-10 max-w-full items-center gap-1 rounded text-left font-bold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary", layout === "stacked" ? "min-h-5 before:absolute before:inset-x-0 before:-top-5 before:bottom-0" : "min-h-10")}
               aria-label={`${copy.edit}: ${identity.label}`}
               title={layout === "stacked" ? `${copy.edit}: ${identity.label}` : copy.edit}
               onClick={() => {
@@ -188,11 +186,11 @@ export function AddressIdentity({
                 setIsEditing(true);
               }}
             >
-              <span className={cn("min-w-0 max-w-full", layout === "stacked" ? "sr-only" : "break-words [overflow-wrap:anywhere]")}>
+              <span data-identity-label className={cn("min-w-0 max-w-full", layout === "stacked" ? "truncate leading-5" : "break-words [overflow-wrap:anywhere]")}>
                 {identity.label}
               </span>
               <IconPencil
-                className={cn("pointer-events-none size-4 shrink-0 text-text-tertiary transition-opacity duration-150 ease-out group-focus-visible/name:opacity-100", layout === "stacked" ? "opacity-60 group-hover/name:opacity-100" : "opacity-0 [@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:group-hover/name:opacity-100")}
+                className="pointer-events-none size-4 shrink-0 text-text-tertiary opacity-0 transition-opacity duration-150 ease-out group-focus-visible/name:opacity-100 [@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:group-hover/name:opacity-100"
                 aria-hidden="true"
               />
             </button>
@@ -206,7 +204,7 @@ export function AddressIdentity({
           ) : null}
           <AddressLink
             address={identity.address}
-            className="min-w-0"
+            className={cn("min-w-0", layout === "stacked" && "[&>a]:px-0")}
             variant="compact"
           />
         </div>

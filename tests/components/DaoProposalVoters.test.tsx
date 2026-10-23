@@ -19,41 +19,48 @@ describe("DAO voters and shared address names", () => {
   });
   afterEach(() => vi.unstubAllEnvs());
 
-  it("shows current voters, split choices, dates and searchable saved names", () => {
+  it("keeps individual choices sortable and a combined YBC vote pinned through searches", () => {
     render(<ProposalVoters proposal={proposal} />);
     const table = screen.getByRole("table", { name: "Proposal votes" });
-    expect(within(table).getAllByRole("row")).toHaveLength(5);
-    expect(within(table).getAllByText("75% Yea")).toHaveLength(2);
-    expect(within(table).getAllByText("25% Nay")).toHaveLength(2);
+    const individuals = within(table).getByRole("rowgroup", { name: "Individual voters" });
+    const collective = within(table).getByRole("rowgroup", { name: "Current YBC vote" });
+    expect(within(individuals).getAllByRole("row")).toHaveLength(2);
+    expect(within(collective).getByText("75% Yea")).toBeVisible();
+    expect(within(collective).getByText("25% Nay")).toBeVisible();
+    expect(within(collective).getByText("6 YFI")).toBeVisible();
+    expect(within(collective).getByText("54.54% of votes")).toBeVisible();
+    expect(within(collective).getByText("Includes stYFIx")).toBeVisible();
+    expect(within(collective).queryByRole("button", { name: /Edit name/ })).not.toBeInTheDocument();
     expect(within(table).getByText("Yea", { exact: true })).toBeVisible();
     expect(within(table).getByText("Nay", { exact: true })).toBeVisible();
-    expect(within(table).getByRole("button", { name: "Edit name: YBC vote" })).toBeVisible();
-    expect(within(table).getByRole("button", { name: "Edit name: stYFIx delegated vote" })).toBeVisible();
-    expect(within(table).getAllByRole("link", { name: /transaction/i })).toHaveLength(4);
+    expect(within(individuals).getAllByRole("link", { name: /transaction/i })).toHaveLength(2);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "power" } });
+    expect(within(individuals).getAllByRole("row")[0]).toHaveTextContent("3 YFI");
     fireEvent.click(within(table).getAllByRole("button", { name: /Edit name/ })[0]);
     fireEvent.change(screen.getByLabelText("Local voter name"), { target: { value: "Treasury delegate" } });
     fireEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(screen.getByRole("button", { name: "Edit name: Treasury delegate" })).toBeVisible();
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "Treasury delegate" } });
-    expect(within(table).getAllByRole("row")).toHaveLength(2);
+    expect(within(individuals).getAllByRole("row")).toHaveLength(1);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "does-not-exist" } });
     expect(screen.getByRole("status")).toHaveTextContent("No voters match your search.");
+    expect(within(collective).getByText("6 YFI")).toBeVisible();
+    expect(within(collective).getByText("75% Yea")).toBeVisible();
   });
 
-  it("keeps saved names and verified ENS ahead of collective defaults", () => {
-    const address = DAO_MOCK_YBC_AGGREGATE_ADDRESS.toLowerCase();
-    localStorage.setItem(ADDRESS_ALIASES_STORAGE_KEY, JSON.stringify({ version: 1, aliases: { [address]: "My collective" } }));
-    render(<ProposalVoters proposal={proposal} verifiedEns={{ [address]: "ybc.eth" }} />);
-    expect(screen.getByRole("button", { name: "Edit name: My collective" })).toBeVisible();
-    fireEvent.click(screen.getByRole("button", { name: "Edit name: My collective" }));
+  it("keeps saved names ahead of verified ENS for individual YBC members", () => {
+    localStorage.setItem(ADDRESS_ALIASES_STORAGE_KEY, JSON.stringify({ version: 1, aliases: { [address.toLowerCase()]: "My delegate" } }));
+    render(<ProposalVoters proposal={proposal} verifiedEns={{ [address.toLowerCase()]: "member.eth" }} />);
+    expect(screen.getByRole("button", { name: "Edit name: My delegate" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Edit name: My delegate" }));
     fireEvent.click(screen.getByRole("button", { name: "Reset" }));
-    expect(screen.getByRole("button", { name: "Edit name: ybc.eth" })).toBeVisible();
+    expect(screen.getByRole("button", { name: "Edit name: member.eth" })).toBeVisible();
   });
 
-  it("does not apply mainnet collective names on another chain", () => {
+  it("does not exclude mainnet collective addresses on another chain", () => {
     render(<ProposalVoters proposal={{ ...proposal, ref: { ...proposal.ref, chainId: 10 } }} />);
-    expect(screen.queryByRole("button", { name: "Edit name: YBC vote" })).not.toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Edit name: stYFIx delegated vote" })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("rowgroup", { name: "Individual voters" })).getAllByRole("row")).toHaveLength(4);
+    expect(screen.queryByRole("rowgroup", { name: "Current YBC vote" })).not.toBeInTheDocument();
   });
 
   it("uses configured live addresses instead of mock collective addresses", () => {
@@ -61,8 +68,20 @@ describe("DAO voters and shared address names", () => {
     const live = { ...proposal, events: proposal.events.map((event) => event.actor === DAO_MOCK_YBC_AGGREGATE_ADDRESS
       ? { ...event, actor: YBC_MAINNET_DEPLOYMENT.ybc } : event) };
     render(<ProposalVoters proposal={live} />);
+    expect(within(screen.getByRole("rowgroup", { name: "Individual voters" })).getAllByRole("row")).toHaveLength(3);
+    expect(screen.queryByRole("link", { name: `View Ethereum address ${YBC_MAINNET_DEPLOYMENT.ybc} on Etherscan` })).not.toBeInTheDocument();
+    expect(screen.getByText("YBC vote data is incomplete.")).toBeVisible();
+    expect(screen.queryByText("6 YFI")).not.toBeInTheDocument();
+  });
+
+  it("keeps the summary independent of aliases and handles an absent collective vote", () => {
+    localStorage.setItem(ADDRESS_ALIASES_STORAGE_KEY, JSON.stringify({ version: 1, aliases: { [address.toLowerCase()]: "YBC vote" } }));
+    const { rerender } = render(<ProposalVoters proposal={proposal} />);
     expect(screen.getByRole("button", { name: "Edit name: YBC vote" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: "Edit name: stYFIx delegated vote" })).not.toBeInTheDocument();
+    expect(within(screen.getByRole("rowgroup", { name: "Individual voters" })).getAllByRole("row")).toHaveLength(2);
+    rerender(<ProposalVoters proposal={{ ...proposal, events: [] }} />);
+    expect(screen.getByText("No YBC vote recorded.")).toBeVisible();
+    expect(screen.queryByText("6 YFI")).not.toBeInTheDocument();
   });
 
   it("reads deployed YBC names and synchronizes edits and resets across mounted apps", () => {
@@ -94,10 +113,12 @@ describe("DAO voters and shared address names", () => {
       log: { ...event.log, blockNumber: BigInt(index + 1) },
     }));
     const resolveVisible = vi.fn();
-    render(<ProposalVoters proposal={{ ...proposal, events }} onVisibleAddressesChange={resolveVisible} />);
+    const collectiveEvents = proposal.events.filter((candidate) => candidate.type === "vote" && candidate.yeaBps === 7_500);
+    render(<ProposalVoters proposal={{ ...proposal, events: [...events, ...collectiveEvents] }} onVisibleAddressesChange={resolveVisible} />);
     expect(resolveVisible.mock.lastCall?.[0]).toHaveLength(10);
     for (let page = 0; page < 7; page += 1) fireEvent.click(screen.getByRole("button", { name: "Next" }));
     expect(resolveVisible.mock.lastCall?.[0]).toHaveLength(5);
     expect(new Set(resolveVisible.mock.calls.flatMap(([addresses]) => addresses)).size).toBe(75);
+    expect(within(screen.getByRole("rowgroup", { name: "Current YBC vote" })).getByText("6 YFI")).toBeVisible();
   });
 });

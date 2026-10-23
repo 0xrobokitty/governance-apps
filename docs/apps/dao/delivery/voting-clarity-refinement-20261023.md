@@ -106,3 +106,35 @@ The three focused voter browser checks passed. The final compiled build passed a
 One production-only smoke case was skipped in the mock runtime.
 Manual review confirmed the shorter rows and collective labels in the demo; an existing saved YBC name remained intact.
 The checkpoint is tagged `integration/dao-voter-rows-20261023`.
+
+## Individual voters and collective summary
+
+The next review separates individual voters from the two collective accounts. This replaces the aggregate naming approach above.
+
+| Before | After |
+| --- | --- |
+| YBC and stYFIx appear as two sortable voter rows. | Individual voters remain in the list; one fixed bottom row combines both collective accounts. |
+| The voter count includes both aggregate accounts. | The count includes only individual rows. Individual YBC members remain visible. |
+| Collective rows move or disappear during searches. | The YBC summary stays visible during search, sorting, and pagination. |
+| An always-visible pencil sits beside the identity block. | Hovering or keyboard-focusing the name reveals the pencil beside it; touch keeps it visible. |
+| The address has a small left inset. | Name and address share the same left edge, with separate accessible hit areas. |
+
+The footer says **YBC vote — Includes stYFIx** and links to the appropriate YBC app host.
+It adds the latest account weights and preserves each account's contribution rounding.
+Proposal 2 shows two individual voters and a combined 6 YFI collective vote: 75% Yea and 25% Nay.
+Its share is 54.54% of the 11 YFI total. The separate results chart retains the YBC-only highlight.
+
+Classification uses exact configured addresses and the correct mainnet or mock context. Labels and member status do not affect classification.
+Missing fields or inconsistent splits do not produce a fabricated common vote. Contributions above the canonical total suppress the common split and share.
+Independent review found that overflow case; the final domain guard and regression test address it.
+
+Integration requires no deployment order changes, new dependencies, contracts, or write permissions.
+The local review route remains `http://localhost:3323/dao/proposals/2#dao-proposal-votes`.
+
+Typecheck, lint, and the optimized mock build passed. All 2,307 unit tests passed across 208 files.
+The 27 domain checks include missing contributions, exact address matching, rounding, replacement votes, and inconsistent totals.
+The first layout check measured an icon container instead of its text. The corrected check compares glyph positions across all four columns.
+All three focused phone and desktop voter checks then passed. Manual review also checked name editing and the fixed summary during search.
+The final compiled build passed all 59 full browser tests, including keyboard and touch name editing.
+The smoke suite passed 65 tests; one production-only test was skipped in the mock runtime.
+The integration checkpoint is tagged `integration/dao-individual-voters-20261023`.

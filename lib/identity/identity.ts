@@ -8,7 +8,7 @@ import {
   type AddressAliases,
 } from "./aliases";
 
-export type AddressIdentitySource = "local" | "ens" | "default" | "generated";
+export type AddressIdentitySource = "local" | "ens" | "generated";
 
 export type DisplayAddressIdentity = {
   address: string;
@@ -25,7 +25,6 @@ export type BuildAddressIdentityMapOptions = {
   trustRecordEns?: boolean;
   verifiedEns?: VerifiedEnsIdentities;
   visibleAddresses?: string[];
-  defaultLabels?: Record<string, string>;
 };
 
 export function buildAddressIdentityMap(
@@ -36,7 +35,6 @@ export function buildAddressIdentityMap(
     trustRecordEns = true,
     verifiedEns = {},
     visibleAddresses = [],
-    defaultLabels = {},
   }: BuildAddressIdentityMapOptions = {}
 ): AddressIdentityMap {
   const recordsByAddress = new Map<string, IdentityRecord>();
@@ -66,7 +64,6 @@ export function buildAddressIdentityMap(
           generatedLabel: generatedLabels[record.address.toLowerCase()],
           trustRecordEns,
           verifiedEns,
-          defaultLabels,
         }
       );
       return [identity.address.toLowerCase(), identity];
@@ -81,7 +78,6 @@ export function getAddressBaseIdentity(
     generatedLabel,
     trustRecordEns = true,
     verifiedEns = {},
-    defaultLabels = {},
   }: BuildAddressIdentityMapOptions & {
     generatedLabel?: string;
   } = {}
@@ -113,8 +109,6 @@ export function getAddressBaseIdentity(
     };
   }
 
-  const defaultLabel = normalizeAddressAlias(defaultLabels[normalizedAddress] ?? "");
-  if (defaultLabel) return { address: record.address, label: defaultLabel, source: "default" };
   return getAddressFallbackIdentity(record.address, generatedLabel);
 }
 

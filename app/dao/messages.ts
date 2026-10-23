@@ -13,11 +13,15 @@ export const daoCopy = {
   },
   voters: {
     viewVotes: "View votes",
-    title: "Votes", latest: "Latest vote per address · snapshot data", table: "Proposal votes",
+    title: "Votes", latest: "Latest vote per voter · snapshot data", table: "Proposal votes",
     voter: "Voter", choice: "Choice", date: "Last voted (UTC)", power: "Voting power",
     search: "Search name or address", sort: "Sort votes", newest: "Newest first", oldest: "Oldest first", highestPower: "Most voting power",
     yea: "Yea", nay: "Nay", unknownChoice: "Choice unavailable", unknownDate: "Time unavailable", unknownPower: "Weight unavailable",
-    collectives: { ybc: "YBC vote", styfix: "stYFIx delegated vote" },
+    individuals: "Individual voters",
+    collective: {
+      title: "YBC vote", group: "Current YBC vote", includes: "Includes stYFIx", explore: "Explore YBC",
+      empty: "No YBC vote recorded.", incomplete: "YBC vote data is incomplete.", inconsistent: "YBC vote data is inconsistent.",
+    },
     transaction: "Transaction", share: (value: string) => `${value} of votes`,
     empty: "No votes recorded yet.", noMatches: "No voters match your search.",
     previous: "Previous", next: "Next", page: (page: number, total: number) => `Page ${page} of ${total}`,
