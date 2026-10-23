@@ -155,7 +155,7 @@ function CollectiveVoteRow({ vote, hostname }: { vote: DaoCollectiveVote | null;
   const copy = daoCopy.voters;
   return (
     <div role="rowgroup" aria-label={copy.collective.group} className="-mx-3 border-t border-border bg-surface-secondary/50 px-3">
-      <div role="row" className={rowClassName}>
+      <div role="row" className={cn(rowClassName, !vote && "items-center xl:items-center")}>
         <div role="cell" className="col-span-2 min-w-0 xl:col-span-1">
           <p className={cn(primaryLineClassName, "font-bold")}>{copy.collective.title}</p>
           <p className="text-xs leading-5 text-text-secondary">{copy.collective.includes}</p>
@@ -164,7 +164,7 @@ function CollectiveVoteRow({ vote, hostname }: { vote: DaoCollectiveVote | null;
           {vote?.status === "complete" && vote.yeaBps !== null ? <VoterChoice row={{ choice: "split", yeaBps: vote.yeaBps }} /> :
             <p className={cn(primaryLineClassName, "text-text-secondary")}>{vote ? copy.collective[vote.status === "inconsistent" ? "inconsistent" : "incomplete"] : copy.collective.empty}</p>}
         </div>
-        <div role="cell" className="min-w-0 text-text-secondary">
+        <div role="cell" className="flex min-w-0 flex-col items-start text-text-secondary">
           {vote ? <UtcTime timestamp={vote.timestamp} fallback={copy.unknownDate} className={cn("block tabular-nums", primaryLineClassName)} /> : null}
           <Link href={resolveGovernanceAppHref("ybc", hostname)} className="inline-flex min-h-10 items-center gap-1.5 rounded text-xs font-bold text-yearn-blue hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 dark:text-blue-300">{copy.collective.explore}<IconLinkOut className="size-3.5" aria-hidden /></Link>
         </div>

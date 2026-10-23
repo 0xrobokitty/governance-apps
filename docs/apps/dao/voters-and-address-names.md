@@ -21,6 +21,7 @@ The client sums each aggregate account's latest weight and separately rounded Ye
 It never adds an earlier replacement vote or counts a duplicate configured address twice.
 Missing or invalid contributions show incomplete data, without a combined total. Mismatched fractions show inconsistent data, without a common split.
 When neither aggregate has a vote, the footer shows **No YBC vote recorded**.
+The empty footer vertically centers its label, message, and link within each grid row.
 
 The voter name occupies one line, with the address directly beneath it at every width.
 The name and address share the same left edge. Hovering or keyboard-focusing the name reveals its edit pencil.
