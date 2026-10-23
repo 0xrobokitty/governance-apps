@@ -35,6 +35,7 @@ Only zero weight shows 0%, and only the full total shows 100%. Independently rou
 Domain tests cover endpoint order, total-weight percentages, exact partition sums, contract rounding, large integers, zero totals, missing data, and oversized contributions.
 Component tests verify that toggling cannot change canonical totals or add another bar.
 Browser tests cover unclipped segment tooltips, keyboard and touch disclosure, fixed segment boundaries, and layouts at 390 and 1280 pixels.
+Tooltip content stays within its container at 200% text scaling, including when the popup is hidden.
 The action panel has the `dao-proposal-actions` anchor for proposal-board Vote links.
 
 This change does not alter transaction checks, feed formats, or deployment flags.
