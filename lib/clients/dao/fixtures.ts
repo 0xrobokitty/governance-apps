@@ -54,6 +54,11 @@ export const DAO_MOCK_EXECUTOR_ADDRESS =
   "0x3333333333333333333333333333333333333333" as Address;
 export const DAO_MOCK_ACCOUNT_ADDRESS =
   "0xf39fd6e51aad88f6f4ce6ab8827279cfffb92266" as Address;
+// Historical voters must remain distinct from the selectable demo accounts.
+export const DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS =
+  "0xaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa" as Address;
+export const DAO_MOCK_HISTORICAL_NAY_VOTER_ADDRESS =
+  "0xbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb" as Address;
 export const DAO_MOCK_PROPOSER_ADDRESS =
   "0x4444444444444444444444444444444444444444" as Address;
 export const DAO_MOCK_OPERATOR_ADDRESS =
@@ -664,7 +669,7 @@ function createEvents(
       transactionIndex: 2,
     };
     events.push(
-      createEvent(options, nextLogIndex++, "vote", DAO_MOCK_ACCOUNT_ADDRESS, {
+      createEvent(options, nextLogIndex++, "vote", DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS, {
         log: yeaTransaction,
         yeaBps: 10_000,
         direction: "yea",
@@ -692,7 +697,7 @@ function createEvents(
           weight: 2n * UNIT,
         }
       ),
-      createEvent(options, nextLogIndex++, "vote", DAO_MOCK_OPERATOR_ADDRESS, {
+      createEvent(options, nextLogIndex++, "vote", DAO_MOCK_HISTORICAL_NAY_VOTER_ADDRESS, {
         log: nayTransaction,
         yeaBps: 0,
         direction: "nay",
@@ -725,7 +730,7 @@ function createEvents(
     const nayWeight = totalWeight - yeaWeight;
     if (yeaWeight > 0n) {
       events.push(
-        createEvent(options, nextLogIndex++, "vote", DAO_MOCK_ACCOUNT_ADDRESS, {
+        createEvent(options, nextLogIndex++, "vote", DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS, {
           yeaBps: 10_000,
           direction: "yea",
           weight: yeaWeight,
@@ -734,7 +739,7 @@ function createEvents(
     }
     if (nayWeight > 0n) {
       events.push(
-        createEvent(options, nextLogIndex++, "vote", DAO_MOCK_OPERATOR_ADDRESS, {
+        createEvent(options, nextLogIndex++, "vote", DAO_MOCK_HISTORICAL_NAY_VOTER_ADDRESS, {
           yeaBps: 0,
           direction: "nay",
           weight: nayWeight,

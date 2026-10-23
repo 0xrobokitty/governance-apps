@@ -1,5 +1,6 @@
 import { beforeEach, describe, expect, it } from "vitest";
 import type { Address } from "viem";
+import { deriveDaoVoterRows } from "@/lib/clients/dao/votes";
 import {
   applyDaoMockFixture,
   DAO_BLOCKED_REASONS,
@@ -39,6 +40,7 @@ describe("DAO mock proposal actions", () => {
 
   it("keeps a submitted vote out of canonical history until indexing", async () => {
     const before = selectedProposal();
+    expect(deriveDaoVoterRows(before).some((row) => row.address === DAO_MOCK_ACCOUNT_ADDRESS)).toBe(false);
     const totals = {
       total: before.totalWeight,
       yea: before.yeaWeight,
@@ -88,6 +90,10 @@ describe("DAO mock proposal actions", () => {
       direction: "yea",
       weight: 100n * 10n ** 18n,
     });
+    const rows = deriveDaoVoterRows(indexed);
+    expect(rows.reduce((sum, row) => sum + (row.weight ?? 0n), 0n)).toBe(indexed.totalWeight);
+    expect(rows.reduce((sum, row) => sum + (row.yeaWeight ?? 0n), 0n)).toBe(indexed.yeaWeight);
+    expect(rows.reduce((sum, row) => sum + (row.nayWeight ?? 0n), 0n)).toBe(indexed.nayWeight);
     expect(getDaoMockSnapshot().pendingAction).toBeNull();
   });
 
