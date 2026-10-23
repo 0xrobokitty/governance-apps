@@ -58,6 +58,21 @@ describe("Tooltip", () => {
     expect(tooltip.className).toContain("pointer-events-none");
   });
 
+  it("dismisses hover content with Escape without moving focus or the pointer", () => {
+    render(<Tooltip content="Tooltip body"><button type="button">Trigger</button></Tooltip>);
+    const trigger = screen.getByRole("button", { name: "Trigger" });
+    const tooltip = screen.getByRole("tooltip");
+    act(() => trigger.focus());
+    fireEvent.mouseEnter(trigger);
+    expect(tooltip.className).toContain("pointer-events-auto");
+    fireEvent.keyDown(window, { key: "Escape" });
+    expect(tooltip.className).toContain("pointer-events-none");
+    expect(trigger).toHaveFocus();
+    fireEvent.mouseLeave(trigger);
+    fireEvent.mouseEnter(trigger);
+    expect(tooltip.className).toContain("pointer-events-auto");
+  });
+
   it("can align an edge tooltip within a viewport-width constraint", () => {
     render(
       <Tooltip content="Tooltip body" align="end">

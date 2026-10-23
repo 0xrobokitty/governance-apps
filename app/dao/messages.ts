@@ -41,12 +41,11 @@ export const daoCopy = {
   ybcVote: {
     highlight: "Highlight YBC",
     explore: "Explore YBC",
-    yea: "YBC Yea",
-    nay: "YBC Nay",
-    weight: (amount: string) => `${amount} voting weight`,
+    yea: "YBC Yea weight",
+    nay: "YBC Nay weight",
     included: "YBC is included in the totals.",
     contribution: "YBC contribution included in totals",
-    snapshot: "About YBC votes",
+    snapshot: "Vote breakdown details",
     description: "The patterned sections show YBC's latest recorded contribution within the total votes. Members update this collective vote when they vote in YBC. Amounts show voting weight, not member counts.",
     notVoted: "No recorded YBC voting weight.",
     unavailable: "YBC vote is unavailable.",
@@ -55,6 +54,10 @@ export const daoCopy = {
   },
   voteResults: {
     unavailable: "Vote totals are unavailable in this snapshot.",
+    segmentLabels: { yea: "Yea", nay: "Nay", "ybc-yea": "YBC Yea", "ybc-nay": "YBC Nay" },
+    remainingLabels: { yea: "Remaining Yea (non-YBC)", nay: "Remaining Nay (non-YBC)" },
+    share: (percent: string) => `${percent} of total votes cast`,
+    shares: "Share of total votes cast",
   },
   publicationErrors: {
     disabled: "Publication is disabled. Keep your draft and try again later.",

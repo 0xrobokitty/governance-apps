@@ -48,6 +48,17 @@ export function Tooltip({
     };
   }, [clearCloseTimeout]);
 
+  React.useEffect(() => {
+    if (!open) return;
+    const dismiss = (event: KeyboardEvent) => {
+      if (event.key !== "Escape") return;
+      clearCloseTimeout();
+      setOpen(false);
+    };
+    window.addEventListener("keydown", dismiss);
+    return () => window.removeEventListener("keydown", dismiss);
+  }, [open, clearCloseTimeout]);
+
   const verticalAlignClasses =
     align === "start"
       ? "left-0"

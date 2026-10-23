@@ -1,5 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { cleanup, fireEvent, render, screen } from "@testing-library/react";
+import { cleanup, fireEvent, render, screen, within } from "@testing-library/react";
 import { ProposalVoteSummary } from "@/app/dao/components/ProposalReadPrimitives";
 import { DAO_MOCK_FEED } from "@/lib/clients/dao/fixtures";
 
@@ -19,20 +19,26 @@ describe("YBC within canonical vote results", () => {
     expect(checkbox).toHaveAccessibleDescription("YBC is included in the totals.");
     expect(screen.getAllByTestId("dao-total-vote-bar")).toHaveLength(1);
     expect(screen.getByTestId("dao-total-vote-bar").querySelectorAll("[data-vote-segment]")).toHaveLength(4);
-    expect(screen.getByText("YBC Yea")).toBeVisible();
-    expect(screen.getByText("1.5 voting weight")).toBeVisible();
-    expect(screen.getByText("YBC Nay")).toBeVisible();
-    expect(screen.getByText("0.5 voting weight")).toBeVisible();
+    expect(screen.getByText("YBC Yea weight")).toBeVisible();
+    expect(screen.getByText("1.5")).toBeVisible();
+    expect(screen.getByText("YBC Nay weight")).toBeVisible();
+    expect(screen.getByText("0.5")).toBeVisible();
     expect(screen.getByRole("link", { name: "Explore YBC" })).toHaveAttribute("href", "https://ybc-beta.dao-ops.com");
-    expect(screen.getByText("About YBC votes").closest("details")).not.toHaveAttribute("open");
+    expect(screen.getByText("Vote breakdown details").closest("details")).not.toHaveAttribute("open");
+    const shares = screen.getByLabelText("Share of total votes cast");
+    expect(within(shares).getByText("Remaining Yea (non-YBC)")).toBeInTheDocument();
+    expect(within(shares).getByText("13.64% of total votes cast")).toBeInTheDocument();
+    expect(within(shares).getByText("4.55% of total votes cast")).toBeInTheDocument();
     const totals = screen.getByTestId("dao-canonical-vote-totals").textContent;
     fireEvent.click(checkbox);
     expect(checkbox).not.toBeChecked();
     expect(screen.getByTestId("dao-total-vote-bar").querySelectorAll("[data-vote-segment]")).toHaveLength(2);
-    expect(screen.queryByText("YBC Yea")).not.toBeInTheDocument();
+    expect(screen.queryByText("YBC Yea weight")).not.toBeInTheDocument();
     expect(screen.getByTestId("dao-canonical-vote-totals")).toHaveTextContent(totals!);
+    expect(within(shares).getByText("68.18% of total votes cast")).toBeInTheDocument();
+    expect(within(shares).queryByText("Remaining Yea (non-YBC)")).not.toBeInTheDocument();
     fireEvent.click(checkbox);
-    expect(screen.getByText("1.5 voting weight")).toBeVisible();
+    expect(screen.getByText("1.5")).toBeVisible();
     expect(screen.getByTestId("dao-canonical-vote-totals").textContent).toBe(totals);
   });
 
@@ -60,7 +66,7 @@ describe("YBC within canonical vote results", () => {
     render(<ProposalVoteSummary proposal={value} />);
     expect(screen.getByRole("checkbox", { name: "Highlight YBC" })).toBeDisabled();
     expect(screen.getByText("YBC vote is unavailable.")).toBeVisible();
-    expect(screen.getByTestId("dao-total-vote-bar").querySelectorAll("[data-vote-segment]")).toHaveLength(2);
+    expect(screen.getByTestId("dao-total-vote-bar").querySelectorAll("[data-vote-segment]")).toHaveLength(1);
   });
 
   it("omits invented results for incoherent totals", () => {
