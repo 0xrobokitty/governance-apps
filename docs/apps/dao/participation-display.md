@@ -17,17 +17,20 @@ Mock controls retain their separate account-state model.
 Historical fixture votes use addresses separate from the selectable demo wallets.
 Default wallets therefore start unvoted, and indexed demo votes add distinct voter rows with totals that match the proposal.
 
-The proposal sidebar shows the configured YBC collective's latest contribution.
+The proposal's Vote results bar highlights the configured YBC collective's latest contribution.
 The app uses its reviewed mainnet YBC deployment address, not feed-supplied labels.
 Mock mode uses the fixture's explicit YBC aggregate address.
 Other chains show the YBC vote as unavailable.
 
-For and Against show the split of recorded voting weight, not a member count.
-The calculation follows `Voting.vote`: For equals weight multiplied by yea basis points, divided by 10,000 with integer rounding.
-Against is the remaining weight. A replacement event replaces the earlier contribution; it is never added to it.
-The sidebar keeps source information under “Recorded in this snapshot”.
+Yea and Nay show the split of recorded voting weight, not a member count.
+The calculation follows `Voting.vote`: Yea equals weight multiplied by yea basis points, divided by 10,000 with integer rounding.
+Nay is the remaining weight. A replacement event replaces the earlier contribution; it is never added to it.
+The “Highlight YBC” checkbox marks YBC's Yea and Nay weight within the canonical total bar.
+Turning it off keeps the same totals, percentages, and Yea/Nay boundary.
+The results keep source information under “About YBC votes”.
 That disclosure includes the latest vote time and collective address.
 The Explore YBC link follows the existing shared-host and subdomain routing rules.
+See [Vote results](vote-results.md) for rounding, consistency checks, and browser coverage.
 
 These displays never authorize a write. The transaction flow still makes fresh eligibility and simulation checks.
 

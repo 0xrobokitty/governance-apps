@@ -18,18 +18,3 @@ test("updates wallet participation badges without rearranging the board", async 
   await page.evaluate(async () => { await window.__TEST__?.setDaoAccountState?.("disconnected"); });
   await expect(page.getByTestId("dao-participation-badge")).toHaveCount(0);
 });
-
-test("shows the latest YBC split on narrow and wide proposal views", async ({ page }) => {
-  for (const width of [390, 1280]) {
-    await page.setViewportSize({ width, height: 900 });
-    await page.goto("/dao/proposals/2");
-    const card = page.getByLabel("YBC vote", { exact: true });
-    await expect(card.getByRole("img", { name: "YBC vote: 75% for, 25% against" })).toBeVisible();
-    await expect(card.getByText("1.5 voting weight")).toBeVisible();
-    await expect(card.getByRole("link", { name: "Explore YBC" })).toHaveAttribute("href", "/ybc");
-    await expect(card.locator("details")).not.toHaveAttribute("open");
-    await card.locator("summary").click();
-    await expect(card.getByText(/Last vote update:/)).toBeVisible();
-    expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
-  }
-});
