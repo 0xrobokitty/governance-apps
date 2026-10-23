@@ -88,6 +88,8 @@ test("renders the DAO proposal board shell", async ({ page }) => {
   await forumLink.focus();
   await expect(forumLink).toBeFocused();
   await page.keyboard.press("Tab");
+  await expect(page.getByRole("button", { name: /Your voting power/ })).toBeFocused();
+  await page.keyboard.press("Tab");
   await expect(createProposalLink).toBeFocused();
 
   await expectMinimumHitArea(createProposalLink);
