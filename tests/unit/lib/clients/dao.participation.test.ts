@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { DAO_MOCK_ACCOUNT_ADDRESS, DAO_MOCK_FEED, DAO_MOCK_YBC_AGGREGATE_ADDRESS } from "@/lib/clients/dao/fixtures";
+import { DAO_MOCK_ACCOUNT_ADDRESS, DAO_MOCK_FEED, DAO_MOCK_FIXTURE_IDS, DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS, DAO_MOCK_YBC_AGGREGATE_ADDRESS, getDaoMockFixture } from "@/lib/clients/dao/fixtures";
 import { deriveDaoParticipation, deriveDaoYbcVote } from "@/lib/clients/dao/participation";
 import type { DaoPendingAction, DaoProposal } from "@/lib/clients/dao/types";
 
@@ -9,8 +9,17 @@ function proposal(): DaoProposal {
 
 describe("DAO snapshot participation", () => {
   it("reports a positive current contribution and an absent account separately", () => {
-    expect(deriveDaoParticipation(proposal(), DAO_MOCK_ACCOUNT_ADDRESS)).toBe("voted");
-    expect(deriveDaoParticipation(proposal(), "0x0000000000000000000000000000000000000001")).toBe("not-voted");
+    expect(deriveDaoParticipation(proposal(), DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS)).toBe("voted");
+    expect(deriveDaoParticipation(proposal(), DAO_MOCK_ACCOUNT_ADDRESS)).toBe("not-voted");
+  });
+
+  it("keeps seeded historical voters separate from each fixture's unvoted wallet", () => {
+    for (const id of DAO_MOCK_FIXTURE_IDS) {
+      const fixture = getDaoMockFixture(id);
+      const value = DAO_MOCK_FEED.proposals.find((entry) => entry.ref.proposalId === fixture.proposalRef.proposalId)!;
+      expect(fixture.account.hasVoted).toBe(false);
+      expect(deriveDaoParticipation(value, fixture.account.address)).toBe("not-voted");
+    }
   });
 
   it("does not resurrect an old vote after a zero or invalid replacement", () => {
@@ -30,10 +39,10 @@ describe("DAO snapshot participation", () => {
       direction: "yea", effectiveVotingWeight: 3n, reason: null, receiptState: "confirmed",
     };
     expect(deriveDaoParticipation(value, DAO_MOCK_ACCOUNT_ADDRESS, pending)).toBe("pending");
-    expect(deriveDaoParticipation(value, DAO_MOCK_ACCOUNT_ADDRESS, { ...pending, ref: { ...pending.ref, chainId: 2 } })).toBe("voted");
-    expect(deriveDaoParticipation(value, DAO_MOCK_ACCOUNT_ADDRESS, { ...pending, receiptState: "reverted" })).toBe("voted");
-    const event = value.events.find((entry) => entry.type === "vote" && entry.actor === DAO_MOCK_ACCOUNT_ADDRESS)!;
-    event.log.transactionHash = pending.transactionHash;
+    expect(deriveDaoParticipation(value, DAO_MOCK_ACCOUNT_ADDRESS, { ...pending, ref: { ...pending.ref, chainId: 2 } })).toBe("not-voted");
+    expect(deriveDaoParticipation(value, DAO_MOCK_ACCOUNT_ADDRESS, { ...pending, receiptState: "reverted" })).toBe("not-voted");
+    const event = value.events.find((entry) => entry.type === "vote")!;
+    value.events.push({ ...event, actor: DAO_MOCK_ACCOUNT_ADDRESS, log: { ...event.log, transactionHash: pending.transactionHash } });
     expect(deriveDaoParticipation(value, DAO_MOCK_ACCOUNT_ADDRESS, pending)).toBe("voted");
   });
 });

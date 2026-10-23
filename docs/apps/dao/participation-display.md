@@ -14,6 +14,8 @@ Proposal identity includes the chain, Voting contract, and proposal ID.
 A zero-weight replacement removes the previous contribution.
 The board uses the existing feed and local receipt store; it adds no RPC request per proposal.
 Mock controls retain their separate account-state model.
+Historical fixture votes use addresses separate from the selectable demo wallets.
+Default wallets therefore start unvoted, and indexed demo votes add distinct voter rows with totals that match the proposal.
 
 The proposal sidebar shows the configured YBC collective's latest contribution.
 The app uses its reviewed mainnet YBC deployment address, not feed-supplied labels.
