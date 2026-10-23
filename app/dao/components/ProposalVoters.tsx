@@ -8,6 +8,10 @@ import { TransactionLink } from "@/components/ui/ExplorerLink";
 import { UtcTime } from "@/components/ui/UtcTime";
 import { IconChevron } from "@/components/icons/IconChevron";
 import { deriveDaoVoterRows, type DaoVoterRow } from "@/lib/clients/dao/votes";
+import { DAO_MOCK_YBC_AGGREGATE_ADDRESS, DAO_MOCK_STYFIX_AGGREGATE_ADDRESS } from "@/lib/clients/dao/fixtures";
+import { YBC_MAINNET_DEPLOYMENT } from "@/lib/clients/ybc/deployment";
+import deployment from "@/lib/deployment.json";
+import { isDaoMockRuntimeEnabled } from "@/lib/runtime/features";
 import { formatDaoBasisPoints } from "@/lib/clients/dao/read-display";
 import type { DaoProposal } from "@/lib/clients/dao/types";
 import { buildAddressIdentityMap, getAddressIdentity } from "@/lib/identity/identity";
@@ -22,7 +26,7 @@ import { daoCopy } from "../messages";
 const PAGE_SIZE = 10;
 const EMPTY_ENS: VerifiedEnsIdentities = {};
 const controlClassName = "min-h-10 min-w-0 rounded-box border border-border bg-surface px-3 text-sm outline-none focus-visible:ring-2 focus-visible:ring-text-primary";
-const primaryLineClassName = "min-h-10 pt-2.5 text-sm leading-5";
+const primaryLineClassName = "text-sm leading-5";
 
 /** Live ENS resolution stays outside the view so mock rendering needs no network. */
 export function ConnectedProposalVoters({ proposal, isMock }: { proposal: DaoProposal; isMock: boolean }) {
@@ -58,10 +62,18 @@ export function ProposalVoters({ proposal, verifiedEns = EMPTY_ENS, onVisibleAdd
   const [sort, setSort] = useState<"newest" | "oldest" | "power">("newest");
   const [page, setPage] = useState(0);
   const rows = useMemo(() => deriveDaoVoterRows(proposal), [proposal]);
+  const defaultLabels = useMemo(() => {
+    if (proposal.ref.chainId !== mainnet.id) return {};
+    const isMock = isDaoMockRuntimeEnabled();
+    return {
+      [(isMock ? DAO_MOCK_YBC_AGGREGATE_ADDRESS : YBC_MAINNET_DEPLOYMENT.ybc).toLowerCase()]: copy.collectives.ybc,
+      [(isMock ? DAO_MOCK_STYFIX_AGGREGATE_ADDRESS : deployment.STYFIX).toLowerCase()]: copy.collectives.styfix,
+    };
+  }, [proposal.ref.chainId, copy.collectives]);
   const identities = useMemo(() => buildAddressIdentityMap([], [], {
-    aliases, verifiedEns, trustRecordEns: false,
+    aliases, verifiedEns, trustRecordEns: false, defaultLabels,
     visibleAddresses: rows.map((row) => row.address),
-  }), [aliases, verifiedEns, rows]);
+  }), [aliases, verifiedEns, rows, defaultLabels]);
   const filtered = useMemo(() => {
     const query = search.trim().toLowerCase();
     const matches = rows.filter((row) => !query || row.address.toLowerCase().includes(query) ||
@@ -104,12 +116,12 @@ export function ProposalVoters({ proposal, verifiedEns = EMPTY_ENS, onVisibleAdd
         </div>
       ) : null}
       <div role="table" aria-label={copy.table} className="min-w-0">
-        <div role="row" className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] gap-4 border-b border-border pb-3 text-xs font-bold text-text-tertiary xl:grid">
+        <div role="row" className="hidden grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_minmax(0,1fr)] gap-4 border-b border-border pb-3 text-xs font-bold text-text-tertiary xl:grid">
           {[copy.voter, copy.choice, copy.date, copy.power].map((label) => <span role="columnheader" key={label}>{label}</span>)}
         </div>
         <div role="rowgroup" className="divide-y divide-border">
           {visibleRows.map((row) => (
-            <div role="row" key={row.address.toLowerCase()} className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-3 py-4 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,1fr)_minmax(0,1fr)_minmax(0,1fr)] xl:items-start">
+            <div role="row" key={row.address.toLowerCase()} className="grid min-w-0 grid-cols-2 gap-x-4 gap-y-2 py-3 xl:grid-cols-[minmax(0,1.5fr)_minmax(0,0.9fr)_minmax(0,1.4fr)_minmax(0,1fr)] xl:items-start">
               <div role="cell" className="col-span-2 min-w-0 text-sm xl:col-span-1">
                 <AddressIdentity identity={getAddressIdentity(identities, row.address)} alias={aliases[row.address.toLowerCase()]}
                   onSetAlias={setAlias} onResetAlias={resetAlias} copy={copy.alias} layout="stacked" />
@@ -147,6 +159,6 @@ export function ProposalVoters({ proposal, verifiedEns = EMPTY_ENS, onVisibleAdd
 function VoterChoice({ row }: { row: DaoVoterRow }) {
   const copy = daoCopy.voters;
   if (row.choice === "unknown") return <p className={cn(primaryLineClassName, "text-text-tertiary")}>{copy.unknownChoice}</p>;
-  if (row.choice === "split") return <div className="text-xs tabular-nums"><p className={cn(primaryLineClassName, "font-bold text-green-800 dark:text-green-300")}>{formatDaoBasisPoints(row.yeaBps!)} {copy.yea}</p><p className="font-bold leading-5 text-red-700 dark:text-red-300">{formatDaoBasisPoints(10_000 - row.yeaBps!)} {copy.nay}</p></div>;
+  if (row.choice === "split") return <div className="flex flex-wrap gap-x-2 gap-y-0 tabular-nums"><p className={cn(primaryLineClassName, "font-bold text-green-800 dark:text-green-300")}>{formatDaoBasisPoints(row.yeaBps!)} {copy.yea}</p><p className={cn(primaryLineClassName, "font-bold text-red-700 dark:text-red-300")}>{formatDaoBasisPoints(10_000 - row.yeaBps!)} {copy.nay}</p></div>;
   return <p className={cn(primaryLineClassName, "flex items-start gap-1.5 font-bold", row.choice === "yea" ? "text-green-800 dark:text-green-300" : "text-red-700 dark:text-red-300")}><span aria-hidden>{row.choice === "yea" ? "✓" : "×"}</span><span>{copy[row.choice]}</span></p>;
 }

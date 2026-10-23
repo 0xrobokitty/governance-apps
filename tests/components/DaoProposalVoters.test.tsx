@@ -1,24 +1,34 @@
 import { act, fireEvent, render, renderHook, screen, within } from "@testing-library/react";
-import { beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ProposalVoters } from "@/app/dao/components/ProposalVoters";
-import { DAO_MOCK_FEED } from "@/lib/clients/dao/fixtures";
+import { DAO_MOCK_FEED, DAO_MOCK_YBC_AGGREGATE_ADDRESS } from "@/lib/clients/dao/fixtures";
 import { useAddressAliases } from "@/lib/hooks/useAddressAliases";
 import { useYbcMemberAliases } from "@/app/ybc/useYbcMemberAliases";
 import { ADDRESS_ALIASES_STORAGE_KEY } from "@/lib/identity/aliases";
+import { YBC_MAINNET_DEPLOYMENT } from "@/lib/clients/ybc/deployment";
 import type { Address } from "viem";
 
 const proposal = DAO_MOCK_FEED.proposals.find((entry) => entry.events.some((event) => event.yeaBps === 7_500))!;
 const address = proposal.events.find((event) => event.type === "vote")!.actor!;
 
 describe("DAO voters and shared address names", () => {
-  beforeEach(() => localStorage.clear());
+  beforeEach(() => {
+    localStorage.clear();
+    vi.stubEnv("NEXT_PUBLIC_USE_MOCKS", "true");
+    vi.stubEnv("NEXT_PUBLIC_RUNTIME_MODE", "development");
+  });
+  afterEach(() => vi.unstubAllEnvs());
 
   it("shows current voters, split choices, dates and searchable saved names", () => {
     render(<ProposalVoters proposal={proposal} />);
     const table = screen.getByRole("table", { name: "Proposal votes" });
     expect(within(table).getAllByRole("row")).toHaveLength(5);
-    expect(within(table).getAllByText("75% For")).toHaveLength(2);
-    expect(within(table).getAllByText("25% Against")).toHaveLength(2);
+    expect(within(table).getAllByText("75% Yea")).toHaveLength(2);
+    expect(within(table).getAllByText("25% Nay")).toHaveLength(2);
+    expect(within(table).getByText("Yea", { exact: true })).toBeVisible();
+    expect(within(table).getByText("Nay", { exact: true })).toBeVisible();
+    expect(within(table).getByRole("button", { name: "Edit name: YBC vote" })).toBeVisible();
+    expect(within(table).getByRole("button", { name: "Edit name: stYFIx delegated vote" })).toBeVisible();
     expect(within(table).getAllByRole("link", { name: /transaction/i })).toHaveLength(4);
     fireEvent.click(within(table).getAllByRole("button", { name: /Edit name/ })[0]);
     fireEvent.change(screen.getByLabelText("Local voter name"), { target: { value: "Treasury delegate" } });
@@ -28,6 +38,31 @@ describe("DAO voters and shared address names", () => {
     expect(within(table).getAllByRole("row")).toHaveLength(2);
     fireEvent.change(screen.getByRole("searchbox"), { target: { value: "does-not-exist" } });
     expect(screen.getByRole("status")).toHaveTextContent("No voters match your search.");
+  });
+
+  it("keeps saved names and verified ENS ahead of collective defaults", () => {
+    const address = DAO_MOCK_YBC_AGGREGATE_ADDRESS.toLowerCase();
+    localStorage.setItem(ADDRESS_ALIASES_STORAGE_KEY, JSON.stringify({ version: 1, aliases: { [address]: "My collective" } }));
+    render(<ProposalVoters proposal={proposal} verifiedEns={{ [address]: "ybc.eth" }} />);
+    expect(screen.getByRole("button", { name: "Edit name: My collective" })).toBeVisible();
+    fireEvent.click(screen.getByRole("button", { name: "Edit name: My collective" }));
+    fireEvent.click(screen.getByRole("button", { name: "Reset" }));
+    expect(screen.getByRole("button", { name: "Edit name: ybc.eth" })).toBeVisible();
+  });
+
+  it("does not apply mainnet collective names on another chain", () => {
+    render(<ProposalVoters proposal={{ ...proposal, ref: { ...proposal.ref, chainId: 10 } }} />);
+    expect(screen.queryByRole("button", { name: "Edit name: YBC vote" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Edit name: stYFIx delegated vote" })).not.toBeInTheDocument();
+  });
+
+  it("uses configured live addresses instead of mock collective addresses", () => {
+    vi.stubEnv("NEXT_PUBLIC_USE_MOCKS", "false");
+    const live = { ...proposal, events: proposal.events.map((event) => event.actor === DAO_MOCK_YBC_AGGREGATE_ADDRESS
+      ? { ...event, actor: YBC_MAINNET_DEPLOYMENT.ybc } : event) };
+    render(<ProposalVoters proposal={live} />);
+    expect(screen.getByRole("button", { name: "Edit name: YBC vote" })).toBeVisible();
+    expect(screen.queryByRole("button", { name: "Edit name: stYFIx delegated vote" })).not.toBeInTheDocument();
   });
 
   it("reads deployed YBC names and synchronizes edits and resets across mounted apps", () => {

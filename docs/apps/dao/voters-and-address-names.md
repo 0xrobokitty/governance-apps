@@ -2,10 +2,16 @@
 
 Proposal pages show the latest recorded vote for each address. Each row includes
 the choice, UTC timestamp, transaction, effective YFI voting weight, and share of
-recorded voting weight. Split votes show both percentages. Search matches names
+recorded voting weight. Individual choices use Yea or Nay. YBC and stYFIx
+collective votes can split; those rows show both percentages together. Search matches names
 and full addresses; sorting supports recent votes, older votes, and voting power.
 
-The voter name occupies one line, with the address beneath it at every width.
+The [reviewed Voter](https://github.com/yearn/stYFI/blob/9395d5e6fffdfe21fda32af94d32fca1a4f7840b/contracts/governance/Voter.vy#L198-L207)
+updates both collective accounts with the YBC fraction. Individual vote entry points accept only Yea or Nay.
+
+The voter name occupies one line, with the address directly beneath it at every width.
+The separate pencil control opens the name editor. Edit and address targets remain
+at least 40 pixels high, with no overlapping click areas.
 Long names are shortened visually; the full name remains in the edit control's
 accessible label and tooltip. Desktop rows align the first name, choice, time,
 and weight lines. The sort control reserves space for an inset chevron.
@@ -20,7 +26,10 @@ The snapshot notice also applies to this table; it is not a live wallet read.
 
 DAO and YBC use the same address identity modules and editor. A saved name takes
 priority over verified mainnet ENS. ENS requires matching reverse and forward
-resolution. Otherwise, an address gets a deterministic nickname with a stable
+resolution. Configured mainnet collective addresses then use “YBC vote” or
+“stYFIx delegated vote” as default names. Mock mode uses its own fixture addresses.
+These defaults do not classify other addresses or replace recorded vote fractions.
+Otherwise, an address gets a deterministic nickname with a stable
 suffix. The nickname does not change when another app displays a different set
 of addresses. The Ethereum address remains visible and canonical.
 
@@ -46,6 +55,7 @@ failed saves keep the editor open and show an error.
 Validation covers replacement votes, malformed latest records, migration,
 same-tab sharing, storage denial, unsafe names, exact origins, frame sources,
 bounded messages, and cross-origin persistence in a browser.
+Layout checks cover compact rows, aligned primary text, and separate name-edit and address targets.
 
 Integration: include the matching middleware and parent frame-source policy
 changes before release. No transaction contracts or proposal content change.

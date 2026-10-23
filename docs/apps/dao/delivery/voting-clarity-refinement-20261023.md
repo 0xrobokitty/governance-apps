@@ -79,3 +79,30 @@ Tooltips and the breakdown disclosure now share the same labels. YBC labels and 
 Typecheck, lint, the optimized build, and all 2,279 unit tests passed.
 The four affected browser checks passed on the compiled demo, including mobile, touch, and 200% text scaling.
 The first unit run was interrupted after local worker-service failures in the restricted environment; the unrestricted rerun passed.
+
+## Voter table follow-up
+
+The 17:02 screenshot prompted a final pass on the proposal voter table.
+
+| Before | After |
+| --- | --- |
+| Individual choices use For and Against. | All choices use Yea and Nay. |
+| Collective addresses receive generated nicknames. | Known addresses default to YBC vote and stYFIx delegated vote. Saved names and verified ENS take priority. |
+| The editable name and address each occupy a separate tall row. | The name sits directly above the address, with a separate pencil control beside them. |
+| Split choices occupy two tall lines. | Their percentages share one compact line when space permits. |
+
+The reviewed Voter updates both YBC and stYFIx with the collective split. Individual vote entry points remain binary.
+The display preserves recorded fractions instead of converting collective votes into individual choices.
+Default names match exact configured mainnet addresses, or the separate mock addresses. They do not classify arbitrary addresses.
+
+Independent review found no trust, identity-priority, or click-target blockers.
+Browser checks confirm primary-line alignment, compact row height, and separate edit/address click targets at phone and desktop widths.
+Name editing, searching, sorting, and persistence remain covered.
+
+Validation: typecheck, lint, and the optimized mock build passed.
+The initial unit run passed 2,279 tests and found one shared YBC hover-class regression.
+Restoring YBC's existing pointer rule resolved it; all 40 affected unit checks passed, including live/mock name scoping.
+The three focused voter browser checks passed. The final compiled build passed all 58 full browser tests and 65 smoke tests.
+One production-only smoke case was skipped in the mock runtime.
+Manual review confirmed the shorter rows and collective labels in the demo; an existing saved YBC name remained intact.
+The checkpoint is tagged `integration/dao-voter-rows-20261023`.

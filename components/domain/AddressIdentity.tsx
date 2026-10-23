@@ -171,12 +171,15 @@ export function AddressIdentity({
           </div>
         </>
       ) : (
-        <div className={cn("flex min-w-0 max-w-full gap-x-2 gap-y-0", layout === "stacked" ? "flex-col items-start" : "flex-wrap items-center")}>
+        <div className={cn("flex min-w-0 max-w-full gap-x-2 gap-y-0", layout === "stacked" ? "relative flex-col items-start" : "flex-wrap items-center", layout === "stacked" && canEdit && "pr-10")}>
+          {layout === "stacked" && canEdit ? (
+            <span data-identity-label className="block w-full min-w-0 truncate font-bold leading-5 text-text-primary" title={identity.label}>{identity.label}</span>
+          ) : null}
           {canEdit ? (
             <button
               ref={editButtonRef}
               type="button"
-              className={cn("group/name inline-flex min-h-10 min-w-10 max-w-full items-center gap-1 rounded text-left font-bold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary", layout === "stacked" && "w-full leading-5")}
+              className={cn("group/name inline-flex min-h-10 min-w-10 max-w-full items-center gap-1 rounded text-left font-bold text-text-primary focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary", layout === "stacked" && "absolute right-0 top-0 size-10 justify-center")}
               aria-label={`${copy.edit}: ${identity.label}`}
               title={layout === "stacked" ? `${copy.edit}: ${identity.label}` : copy.edit}
               onClick={() => {
@@ -185,16 +188,16 @@ export function AddressIdentity({
                 setIsEditing(true);
               }}
             >
-              <span className={cn("min-w-0 max-w-full", layout === "stacked" ? "truncate" : "break-words [overflow-wrap:anywhere]")} title={layout === "stacked" ? identity.label : undefined}>
+              <span className={cn("min-w-0 max-w-full", layout === "stacked" ? "sr-only" : "break-words [overflow-wrap:anywhere]")}>
                 {identity.label}
               </span>
               <IconPencil
-                className="pointer-events-none size-4 shrink-0 text-text-tertiary opacity-0 transition-opacity duration-150 ease-out [@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:group-hover/name:opacity-100 group-focus-visible/name:opacity-100"
+                className={cn("pointer-events-none size-4 shrink-0 text-text-tertiary transition-opacity duration-150 ease-out group-focus-visible/name:opacity-100", layout === "stacked" ? "opacity-60 group-hover/name:opacity-100" : "opacity-0 [@media(pointer:coarse)]:opacity-100 [@media(pointer:fine)]:group-hover/name:opacity-100")}
                 aria-hidden="true"
               />
             </button>
           ) : (
-            <span className={cn("min-w-0 max-w-full font-bold text-text-primary", layout === "stacked" ? "block min-h-10 truncate pt-2.5 leading-5" : "break-words [overflow-wrap:anywhere]")} title={layout === "stacked" ? identity.label : undefined}>
+            <span className={cn("min-w-0 max-w-full font-bold text-text-primary", layout === "stacked" ? "block truncate leading-5" : "break-words [overflow-wrap:anywhere]")} title={layout === "stacked" ? identity.label : undefined}>
               {identity.label}
             </span>
           )}

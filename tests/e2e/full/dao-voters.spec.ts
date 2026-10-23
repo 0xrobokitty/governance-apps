@@ -27,13 +27,20 @@ for (const viewport of VIEWPORTS) {
     await expect(page.getByLabel("Votes", { exact: true })).toBeFocused();
     // Six vote events yield four voters: collective replacements never become extra rows.
     await expect(rows).toHaveCount(4);
-    await expect(table.getByText("75% For", { exact: true })).toHaveCount(2);
-    await expect(table.getByText("25% Against", { exact: true })).toHaveCount(2);
+    await expect(table.getByText("75% Yea", { exact: true })).toHaveCount(2);
+    await expect(table.getByText("25% Nay", { exact: true })).toHaveCount(2);
+    await expect(table.getByText("Yea", { exact: true })).toHaveCount(1);
+    await expect(table.getByText("Nay", { exact: true })).toHaveCount(1);
+    await expect(table.getByRole("button", { name: "Edit name: YBC vote", exact: true })).toBeVisible();
+    await expect(table.getByRole("button", { name: "Edit name: stYFIx delegated vote", exact: true })).toBeVisible();
     await expect(table.locator("time[datetime]")).toHaveCount(4);
     await expect(table.getByRole("link", { name: /View Ethereum transaction/ })).toHaveCount(4);
     await expectAddress(rows.first(), DAO_MOCK_YBC_AGGREGATE_ADDRESS);
     await expectIdentityLayout(rows.first());
-    if (viewport.width >= 1_280) await expectPrimaryLineAlignment(rows.first());
+    if (viewport.width >= 1_280) {
+      await expectPrimaryLineAlignment(rows.first());
+      expect((await rows.first().boundingBox())!.height).toBeLessThanOrEqual(90);
+    }
 
     const sort = page.getByRole("combobox", { name: "Sort votes" });
     const chevron = sort.locator("..").locator("svg");
@@ -98,18 +105,21 @@ async function expectNoHorizontalOverflow(page: Page) {
 async function expectIdentityLayout(row: Locator) {
   const edit = await row.getByRole("button", { name: /^Edit name:/ }).boundingBox();
   const address = await row.getByRole("link", { name: /^View Ethereum address/ }).boundingBox();
+  const label = await row.locator("[data-identity-label]").boundingBox();
   expect(edit).not.toBeNull();
   expect(address).not.toBeNull();
   expect(edit!.height).toBeGreaterThanOrEqual(40);
   expect(address!.height).toBeGreaterThanOrEqual(40);
-  expect(address!.y).toBeGreaterThanOrEqual(edit!.y + edit!.height - 1);
+  expect(label).not.toBeNull();
+  expect(address!.y - label!.y - label!.height).toBeLessThanOrEqual(1);
+  expect(address!.x + address!.width).toBeLessThanOrEqual(edit!.x);
 }
 
 async function expectPrimaryLineAlignment(row: Locator) {
   const linePositions = await row.evaluate((element) => {
     const cells = element.querySelectorAll('[role="cell"]');
     const elements = [
-      cells[0].querySelector('button[aria-label^="Edit name:"] > span'),
+      cells[0].querySelector('[data-identity-label]'),
       ...Array.from(cells[1].querySelectorAll("p")).filter((paragraph) => paragraph.getBoundingClientRect().height > 0).slice(0, 1),
       cells[2].querySelector("time"),
       ...Array.from(cells[3].querySelectorAll("p")).filter((paragraph) => paragraph.getBoundingClientRect().height > 0).slice(0, 1),
