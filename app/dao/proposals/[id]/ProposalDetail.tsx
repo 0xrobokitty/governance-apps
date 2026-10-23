@@ -34,6 +34,7 @@ import {
   ProposalVoteSummary,
 } from "../../components/ProposalReadPrimitives";
 import { daoCopy } from "../../messages";
+import { DaoYbcVoteCard } from "../../components/DaoYbcVoteCard";
 import {
   createDaoBoardGroupHref,
   createDaoRootHref,
@@ -162,6 +163,7 @@ export function ProposalDetail({
             <ProposalRules proposal={proposal} />
           </Card>
           {actionPanel}
+          <DaoYbcVoteCard proposal={proposal} hostname={hostname} />
         </aside>
 
         <div className="order-last min-w-0 space-y-5 lg:order-first">
