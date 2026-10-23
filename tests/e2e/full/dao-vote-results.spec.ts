@@ -48,6 +48,7 @@ for (const width of [390, 1280]) {
     await expect(results.getByText("1.5")).toBeVisible();
     await expect(results.getByRole("link", { name: "Explore YBC" })).toHaveAttribute("href", "/ybc");
     await results.getByRole("heading", { name: "Vote results", exact: true }).hover();
+    await expect(bar.locator('[role="tooltip"]:visible')).toHaveCount(0);
     await results.screenshot({ path: test.info().outputPath(`vote-results-${width}.png`), animations: "disabled" });
     const disclosure = results.getByText("Vote breakdown details", { exact: true });
     await expect(disclosure.locator("..")).not.toHaveAttribute("open");
