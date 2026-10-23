@@ -63,6 +63,29 @@ for (const width of [390, 1280]) {
   });
 }
 
+test("contains hidden and open vote tooltips at 200% text scaling", async ({ page }) => {
+  await page.setViewportSize({ width: 390, height: 844 });
+  for (const proposalId of [2, 21]) {
+    await page.goto(`/dao/proposals/${proposalId}`);
+    await page.addStyleTag({ content: "html { font-size: 200%; }" });
+    const bar = page.getByTestId("dao-total-vote-bar");
+    await expect(bar).toBeVisible();
+    expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+    for (const part of await bar.locator("[data-vote-segment]").all()) {
+      await part.hover();
+      const tooltip = part.locator('[role="tooltip"]');
+      await expect(tooltip).toBeVisible();
+      const bounds = (await tooltip.boundingBox())!;
+      expect(bounds.x).toBeGreaterThanOrEqual(0);
+      expect(bounds.x + bounds.width).toBeLessThanOrEqual(390);
+      expect(await tooltip.evaluate((element) => element.scrollWidth <= element.clientWidth)).toBe(true);
+      expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390);
+      await page.keyboard.press("Escape");
+      await expect(tooltip).not.toBeVisible();
+    }
+  }
+});
+
 test.describe("touch vote breakdown", () => {
   test.use({ hasTouch: true, viewport: { width: 390, height: 900 } });
   test("exposes the same segment percentages through a large disclosure target", async ({ page }) => {

@@ -66,7 +66,7 @@ export function ProposalVoteResults({ proposal, hostname }: { proposal: DaoPropo
           return (
             <span key={part.kind} data-vote-segment={part.kind} className="h-full" style={{ width: `${part.widthPercent}%` }}>
               <Tooltip className="h-full w-full align-top" align={center < 33 ? "start" : center > 67 ? "end" : "center"} content={
-                <span className="block w-44 text-pretty"><strong className="font-bold">{segmentLabel(part)}</strong><br />{daoCopy.voteResults.share(part.shareOfTotalPercent)}</span>
+                <span className="block w-44 max-w-full text-pretty"><strong className="font-bold">{segmentLabel(part)}</strong><br />{daoCopy.voteResults.share(part.shareOfTotalPercent)}</span>
               }>
                 <span className={cn("h-full w-full", SEGMENT_COLORS[part.kind], part.kind.startsWith("ybc-") && YBC_PATTERN, index === 0 && "rounded-l-full", index === visibleSegments.length - 1 && "rounded-r-full")} />
               </Tooltip>
