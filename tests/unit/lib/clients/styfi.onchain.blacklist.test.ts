@@ -32,6 +32,21 @@ function createPublicClient(options: {
 }
 
 describe("OnchainStyfiClient blacklist probing", () => {
+  it("reads the deployed middleware's canonical blacklist getter", async () => {
+    const publicClient = createPublicClient({
+      readContract: async ({ address, functionName }) => {
+        if (address === STAKING_MIDDLEWARE && functionName === "blacklist") return true;
+        if (functionName === "decimals") return 6;
+        throw new Error("unsupported");
+      },
+    });
+    const state = await new OnchainStyfiClient(publicClient, null).getAccountState(USER);
+    expect(state.blacklistStatus).toBe("blocked");
+    const probes = vi.mocked(publicClient.readContract).mock.calls.filter(([args]) => args.address === STAKING_MIDDLEWARE);
+    expect(probes).toHaveLength(1);
+    expect(probes[0][0].functionName).toBe("blacklist");
+  });
+
   it("uses middleware fallback probes and maps true blacklist status", async () => {
     const publicClient = createPublicClient({
       readContract: async ({ address, functionName }) => {
