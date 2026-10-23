@@ -13,6 +13,13 @@ const PINNED_VOTING_SOURCE_URL =
   "https://github.com/yearn/stYFI/blob/9395d5e6fffdfe21fda32af94d32fca1a4f7840b/contracts/governance/Voting.vy";
 
 describe("DAO proposal detail", () => {
+  it.each(["A complete short proposal.", "## Summary\n\nA complete short proposal."])("keeps a short proposal visible in its content card: %s", (body) => {
+    const value = structuredClone(proposal(4n));
+    value.content.value!.markdown = `# A short proposal\n\n${body}`;
+    render(<ProposalDetail envelope={envelope(value)} />);
+    expect(within(screen.getByTestId("dao-proposal-markdown")).getByText("A complete short proposal.")).toBeVisible();
+  });
+
   it.each([
     [4n, "approved"],
     [6n, "executed"],

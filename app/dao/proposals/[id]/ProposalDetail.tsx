@@ -36,6 +36,7 @@ import {
 import { daoCopy } from "../../messages";
 import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
+import { getDaoSummaryNodeIndex } from "@/lib/clients/dao/content";
 import {
   createDaoBoardGroupHref,
   createDaoRootHref,
@@ -247,7 +248,7 @@ function ImmutableContent({
           <DaoProposalMarkdown
             context="detail"
             hostname={hostname}
-            omitSummary
+            omitSummary={parsed.ast.children.length > getDaoSummaryNodeIndex(parsed.ast) + 1}
             omitTitle
             parsed={parsed}
           />
