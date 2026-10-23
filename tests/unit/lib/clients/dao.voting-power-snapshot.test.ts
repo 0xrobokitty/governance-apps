@@ -3,6 +3,7 @@ import { assertVotingPowerSnapshotFresh, isVotingPowerTimestampCurrent, parseDao
 import { EPOCH_LENGTH, GENESIS } from "@/lib/constants";
 import { INDEX_DEPLOYMENT, INDEX_FROM_BLOCK, INDEX_TOKENS, buildVotingPowerSnapshot, collectVotingCandidates } from "@/scripts/build-dao-voting-power.mjs";
 import { zeroAddress } from "viem";
+import rustSnapshot from "@/tests/fixtures/dao-voting-power/rust-mainnet-2026-10-23.json";
 
 const A = "0x1111111111111111111111111111111111111111";
 const B = "0x2222222222222222222222222222222222222222";
@@ -33,6 +34,21 @@ function fakeClient() {
 }
 
 describe("exact DAO voting-power index", () => {
+  it("accepts the independent Rust producer's mainnet wire format and conserved totals", () => {
+    const snapshot = parseDaoVotingPowerSnapshot(rustSnapshot);
+    expect(snapshot.block.number).toBe("26256202");
+    expect(snapshot.coverage).toMatchObject({ complete: true, candidateCount: 120, throughBlock: snapshot.block.number });
+    expect(snapshot.accounts).toHaveLength(111);
+    expect(snapshot.totals).toEqual({
+      stakedPower: "1312362506740752357048",
+      migratedVePower: "903732994345677422602",
+      delegatedPower: "431027945257047456616",
+      totalPower: "2647123446343477236266",
+    });
+    expect(snapshot).toEqual(rustSnapshot);
+    expect(() => assertVotingPowerSnapshotFresh(snapshot, snapshot.block.timestamp + 301)).toThrow("fresh");
+  });
+
   it("includes ve-only holders and counts the delegated pool exactly once", async () => {
     const result = await buildVotingPowerSnapshot(fakeClient());
     expect(result.snapshot.totals).toEqual({ stakedPower: "90", migratedVePower: "70", delegatedPower: "200", totalPower: "360" });

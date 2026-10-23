@@ -60,7 +60,7 @@ begin
     set -lx NEXT_PUBLIC_GLOBAL_DATA_URL https://data.dao-ops.com/prod/stats.json
     set -lx NEXT_PUBLIC_YBC_DATA_URL https://data.dao-ops.com/prod/ybc.json
     set -lx NEXT_PUBLIC_DAO_DEPLOYMENTS (string join '' < docs/apps/dao/examples/mainnet-deployments.json)
-    set -lx NEXT_PUBLIC_DAO_VOTING_POWER_URL /dao-voting-power.json
+    set -lx NEXT_PUBLIC_DAO_VOTING_POWER_URL http://127.0.0.1:3108/dao-voting-power.json
     set -lx DAO_DATA_URL https://data.dao-ops.com/prod/dao.json
     set -lx DAO_PUBLICATION_ENABLED false
     npm run build
@@ -75,8 +75,9 @@ These commands read public chain data and do not submit transactions automatical
 For simultaneous development and live review, keep generated feeds outside the watched checkout.
 The October 23 review uses an isolated index under `/private/tmp/styfi-voting-power-preview` and a loopback feed at `http://127.0.0.1:3109/dao-voting-power.json`.
 Its live build sets `NEXT_PUBLIC_DAO_VOTING_POWER_URL` to that URL.
-The feed server permits reads from the live preview at `http://127.0.0.1:3108`.
-The app includes the configured feed origin in its content security policy.
+Use an absolute URL because the app's same-origin API proxy fetches this feed on the server.
+The browser reads `/api/dao-voting-power`, so the upstream needs no browser CORS policy.
+The final coordinated review replaces the JavaScript updater with the Rust producer's local-only CLI, refreshing the same loopback object every 60 seconds. It loads no publisher credentials and writes no remote object.
 
 ## Isolate each test environment
 

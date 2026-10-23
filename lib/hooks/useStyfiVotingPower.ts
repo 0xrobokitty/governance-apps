@@ -45,7 +45,7 @@ export function useStyfiVotingPower() {
     queryKey: ["styfi", "voting-power", "system", chainId, address, snapshotUrl, ybcFeed.data?.blockHash ?? null],
     queryFn: async () => {
       if (!snapshotUrl || !address || !mainnetPublicClient) throw new Error("The system voting-power snapshot is unavailable.");
-      const snapshot = await fetchDaoVotingPowerSnapshot(snapshotUrl);
+      const snapshot = await fetchDaoVotingPowerSnapshot("/api/dao-voting-power");
       return readIndexedVotingPower({ publicClient: mainnetPublicClient, account: address, snapshot, ybcFeed: ybcFeed.data });
     },
     enabled: enabled && !usesMockBackend && !!snapshotUrl && !!mainnetPublicClient && isVisible,

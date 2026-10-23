@@ -1,12 +1,12 @@
-# DAO voting-power snapshot producer handoff
+# DAO voting-power producer contract
 
-The frontend needs one companion feed. Keep the existing proposal feed V2 unchanged. The implemented schema is `DaoVotingPowerSnapshot` in `lib/clients/dao/voting-power-snapshot.ts`; the executable reference producer is `scripts/build-dao-voting-power.mjs`.
+The frontend consumes one companion feed. The existing proposal feed V2 stays unchanged. The implemented schema is `DaoVotingPowerSnapshot` in `lib/clients/dao/voting-power-snapshot.ts`. The Rust producer is `gov-apps-stats/src/voting_power.rs`; `scripts/build-dao-voting-power.mjs` remains the executable development reference.
 
-## Existing producer gap
+## Why a companion feed is required
 
 Read-only inspection of `gov-apps-stats/src/stats.rs` found raw token supply and balance reads, not a complete matured-weight total. `src/veyfi.rs` indexes SetSnapshot accounts and cumulative migrated amounts. That cumulative amount does not remove expired or exited locks and is unsuitable as a governance denominator. `src/dao/acquire.rs` reads proposal totals, which count votes cast rather than all current voting power.
 
-Add a separate voting-power acquisition module and persisted cursor in gov-apps-stats. Reuse its canonical block, RPC, reorg, and publication infrastructure. Do not change the frontend's total to use existing supply or cumulative migration fields.
+The new module has a separate persisted cursor and refresh task. It reuses bounded RPC and atomic storage helpers, validates canonical blocks, and recovers from reorgs. The frontend's total does not use raw supply or cumulative migration fields.
 
 ## Complete candidate index
 
@@ -40,6 +40,8 @@ Read all values at the selected block. Reject any failed call, incomplete histor
 
 Each direct amount must equal its two components. System component sums must equal the account sums. `totalPower` must equal staked plus migrated plus delegated. Coverage must end at `block.number`. Preserve full integer precision in decimal strings.
 
-Publish frequently enough that confirmed block age plus refresh delay stays under 300 seconds. The current local reference uses 12 confirmations and 60-second refreshes. A snapshot from a previous governance epoch is rejected even if its age is otherwise acceptable.
+Publish frequently enough that confirmed block age plus refresh delay stays under 300 seconds. The Rust producer defaults to 8 confirmations and 60-second refreshes. It checks a 240-second publication limit again after canonical RPC validation and uploads with `Cache-Control: no-store`. A snapshot from a previous governance epoch is rejected even if its age is otherwise acceptable.
+
+The producer's `docs/voting-power.md` covers `VOTING_POWER_ENABLED`, the durable state directory, and an optional archive RPC override. See the [coordinated release runbook](voting-power-release-2026-10-23.md) for the producer-first rollout.
 
 Configure the frontend's `NEXT_PUBLIC_DAO_VOTING_POWER_URL` to the approved public feed. The existing transport permits at most 4 MiB and 10 seconds. The producer is a trusted data source; arithmetic and canonical-block checks do not independently prove that a malicious producer enumerated every holder. Its source coverage and checkpoint handling therefore belong in producer review and monitoring.

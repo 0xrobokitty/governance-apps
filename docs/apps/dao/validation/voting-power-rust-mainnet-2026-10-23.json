@@ -1,0 +1,100 @@
+{
+  "purpose": "Independent read-only validation of the live Rust producer output through the real frontend parser and indexed voting-power reader.",
+  "startedAt": "2026-10-23T15:27:13.135Z",
+  "completedAt": "2026-10-23T15:27:15.508Z",
+  "reproduction": {
+    "command": "node /private/tmp/verify-rust-voting-power-consumer.mjs /private/tmp/gov-voting-rust.json",
+    "producer": "/Users/hydra/Developer/dao-operations/gov-apps-stats/src/voting_power.rs",
+    "snapshotPath": "/private/tmp/gov-voting-rust.json",
+    "rpcUrl": "https://ethereum.reth.rs/rpc",
+    "rosterUrl": "https://data.dao-ops.com/prod/ybc.json",
+    "parser": "parseDaoVotingPowerSnapshot",
+    "reader": "readIndexedVotingPower"
+  },
+  "wire": {
+    "sha256": "79d9d26d2e16cf66dac3ae9a8849e487715e2b5c39fa8677f0dd49a323036394",
+    "bytes": 22772,
+    "accounts": 111
+  },
+  "block": {
+    "number": "26256202",
+    "hash": "0xdef95ed2ccf34e99df2f5edbd8cbaa48a810333ed41781df6714f778aebcfe18",
+    "timestamp": 1792769051
+  },
+  "freshness": {
+    "latestBlock": "26256217",
+    "latestTimestamp": 1792769231,
+    "ageSeconds": 180,
+    "wallClockAgeSeconds": 184,
+    "maximumAgeSeconds": 300,
+    "canonicalHashAndTimestampVerified": true
+  },
+  "contractReadBlocks": [
+    "26256202",
+    "26256202",
+    "26256202",
+    "26256202",
+    "26256202",
+    "26256202"
+  ],
+  "coverage": {
+    "fromBlock": "24320000",
+    "throughBlock": "26256202",
+    "complete": true,
+    "tokens": [
+      "0x42b25284e8ae427d79da78b65dffc232aaecc016",
+      "0xa16f6fc7380300525c812ea2733ad62dda58143b",
+      "0x52aa16860e0d42b6a7b6ecc15688472eb20135c9",
+      "0x3d4ced97adb0ae3a53da95a47ffc749aad26bc8f"
+    ],
+    "candidateCount": 120
+  },
+  "totals": {
+    "stakedPower": "1312362506740752357048",
+    "migratedVePower": "903732994345677422602",
+    "delegatedPower": "431027945257047456616",
+    "totalPower": "2647123446343477236266"
+  },
+  "rounded": {
+    "systemTotalYfi": "2647.123446",
+    "directYfi": "287.931143",
+    "delegatedViaYbcYfi": "226.291170",
+    "collectiveViaYbcYfi": "112.255632",
+    "combinedEstimateYfi": "626.477946",
+    "directPercentOfSystem": 10.87,
+    "estimatedPercentOfSystem": 23.66,
+    "percentOfYbcMemberWeight": 52.5
+  },
+  "result": {
+    "address": "0x9cc96683eee232f52c0968b4f4bc1a0f312c0306",
+    "blockNumber": "26256202",
+    "blockHash": "0xdef95ed2ccf34e99df2f5edbd8cbaa48a810333ed41781df6714f778aebcfe18",
+    "timestamp": 1792769051,
+    "stakedPower": "287931143211339000000",
+    "migratedVePower": "0",
+    "directPower": "287931143211339000000",
+    "delegatedBalance": "0",
+    "isYbcMember": true,
+    "memberWeight": "287931143211339000000",
+    "ybcInfluence": {
+      "delegatedPower": "226291170344887629722",
+      "collectivePower": "112255632293303923160",
+      "totalPower": "626477945849530552882",
+      "memberShareBps": "5250"
+    },
+    "systemPower": {
+      "totalPower": "2647123446343477236266",
+      "stakedPower": "1312362506740752357048",
+      "migratedVePower": "903732994345677422602",
+      "delegatedPower": "431027945257047456616",
+      "directShareBps": "1087",
+      "estimatedShareBps": "2366"
+    }
+  },
+  "notes": [
+    "All personal and YBC contract reads use the producer's canonical block.",
+    "The exact total counts YBC once and replaces the delegated pool's underlying stake once.",
+    "Combined YBC influence assumes all current members vote. It is not a fixed per-proposal cast vote weight.",
+    "No private RPC URL, environment file, signature, transaction, or remote publication was used."
+  ]
+}
