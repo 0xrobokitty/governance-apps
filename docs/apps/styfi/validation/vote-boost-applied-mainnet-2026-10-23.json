@@ -1,0 +1,102 @@
+{
+  "purpose": "Read-only verification of the applied reward-epoch multiplier, separate current participation, direct Chainlink valuation, and YBC member income allocation.",
+  "contractSource": {
+    "path": "/Users/hydra/Developer/yearn/styfi",
+    "commit": "001dda500be30e16d0837f8e7e05a75c8fe9710f"
+  },
+  "reproduction": {
+    "command": "node /private/tmp/verify-styfi-applied.mjs",
+    "entryPoint": "fetchStyfiAprSnapshot(mainnetPublicClient, globalData, publicMemberAddress)",
+    "reader": "lib/clients/styfi/apr-onchain.ts",
+    "derivation": "lib/clients/styfi/apr.ts"
+  },
+  "observedAt": "2026-10-23T13:33:59.000Z",
+  "rawHistorical": {
+    "cursor": {
+      "count": "19",
+      "last": "17"
+    },
+    "latestStakingEntry": {
+      "epoch": "18",
+      "weight": "1390183853744555586648"
+    },
+    "previousStakingEntry": {
+      "epoch": "17",
+      "weight": "1389246759982821931487"
+    },
+    "selectedHistoricalStakingEntry": {
+      "epoch": "17",
+      "weight": "1389246759982821931487"
+    },
+    "scaledStakingWeight": "5556987039931287725948",
+    "scaledVoteBoostWeight": "11097026588340000000000",
+    "packedBoostTotal": "1308724898804873952578541204759796627316001926096209958754462111478317056",
+    "unpackedBoostTotal": "3699008862780000000000",
+    "normalizedBoostTotal": "1849504431390000000000",
+    "stakingScale": 4,
+    "boostScale": 6
+  },
+  "snapshot": {
+    "status": "available",
+    "blockNumber": "26255652",
+    "timestamp": 1792762439,
+    "currentEpoch": 18,
+    "rewardEpoch": 17,
+    "baseAprBps": 808.273548,
+    "maxAprBps": 2021.50175,
+    "maxVoteBoostMultiplier": 2.5,
+    "appliedMaxVoteBoostMultiplier": 2.5,
+    "fullBoostEstimateAprBps": 2020.68387,
+    "fullBoostStyfixEstimateAprBps": 2020.684061,
+    "styfixAprBps": 2023.496431,
+    "delegatedParticipation": {
+      "votes": "6",
+      "proposals": "6"
+    },
+    "valuation": {
+      "yfiPriceCts": "218333",
+      "timestamp": 1792738259,
+      "stale": false
+    },
+    "account": {
+      "address": "0x9cc96683eee232f52c0968b4f4bc1a0f312c0306",
+      "styfiActive": "202187918907757591872",
+      "styfixActive": "0",
+      "externalActive": "87134006267052904958",
+      "totalActive": "289321925174810496830",
+      "isYbcMember": true,
+      "ybcMembership": {
+        "eligibleStakeYfi": "289321925174810496830",
+        "totalEligibleStakeYfi": "574032752925483277903",
+        "rewardShareBps": "5040",
+        "rewardBackingYfi": "109892293978136376620",
+        "annualRewardTokens": "43217529089",
+        "rewardsEnabled": true
+      },
+      "yourStyfiAprBps": null,
+      "portfolioAprBps": 3317.493796,
+      "baseAprBps": 564.848868,
+      "delegatedAprBps": 0,
+      "voteBoostAprBps": 1518.885542,
+      "ybcAprBps": 767.821097,
+      "externalAprBps": 465.938288,
+      "annualRewards": "186728243298",
+      "participation": {
+        "votes": "6",
+        "proposals": "6"
+      },
+      "voteBoostMultiplier": 2.5,
+      "rewardParticipation": {
+        "votes": "2",
+        "proposals": "2"
+      },
+      "appliedVoteBoostMultiplier": 2.5
+    }
+  },
+  "notes": [
+    "The entry for an epoch is selected inclusively: its epoch must be <= rewardEpoch, matching sync_total_weight.",
+    "Historical multiplier uses finalized scaled component weights divided by the corresponding historical unscaled weights, independent of current configuration.",
+    "Collective reward backing is an income allocation, not personal ownership or withdrawable capital; personal totalActive excludes it.",
+    "Oracle valuation uses the pinned block and the verified 24-hour heartbeat."
+  ]
+}

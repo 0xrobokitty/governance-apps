@@ -44,6 +44,10 @@ export function createMockStyfiAprSnapshot(
       staking: { numerator: 4n, denominator: 1n },
       voteBoost: { numerator: 6n, denominator: 1n },
     },
+    rewardEpochScales: {
+      staking: { numerator: 4n, denominator: 1n },
+      voteBoost: { numerator: 6n, denominator: 1n },
+    },
     valuation: { yfiPriceCts: 200_000n, timestamp, stale: false },
     rewardDecimals: 6, rewardAssetDecimals: 6, rewardAssetsPerShare: REWARD_UNIT,
     stakingEpochRewards: epochRewards(160_000n), stakingWeight: 1000n * UNIT,

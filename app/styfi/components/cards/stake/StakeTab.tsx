@@ -17,8 +17,6 @@ import { useTokenAllowance } from "@/lib/hooks/useTokenAllowance";
 import { YFI_ADDRESS, SPENDER_STYFI, SPENDER_STYFIX } from "@/lib/constants";
 import { StyfiAsset, modeLabel } from "../../types";
 import { styfiCopy as copy } from "../../../messages";
-import { useStyfiApr } from "@/lib/hooks/useStyfiApr";
-import { StakingAprEstimate } from "../../StakingAprEstimate";
 
 type Props = {
   asset: StyfiAsset;
@@ -33,7 +31,6 @@ export function StakeTab({ asset }: Props) {
     isLoading: isIdentityLoading,
   } = useIdentity();
   const { data: styfiData, isLoading: isStyfiLoading } = useStyfiAccount();
-  const { data: apr, isLoading: isAprLoading } = useStyfiApr();
 
   const { write: stake, state: stakeState } = useStyfiStake();
   const { write: approve, isLoading: approveLoading } = useTokenApprove();
@@ -121,8 +118,6 @@ export function StakeTab({ asset }: Props) {
         placeholder="0.00"
         disabled={isLoading || approveLoading || isSubmitting}
       />
-
-      <StakingAprEstimate asset={asset} snapshot={apr} isLoading={isAprLoading} compact />
 
       <div className="flex flex-col items-end gap-2 sm:flex-row sm:items-center sm:gap-3 sm:justify-end">
         {needsApproval ? (

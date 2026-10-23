@@ -12,7 +12,7 @@ const NOW = GENESIS + 18n * BigInt(EPOCH_LENGTH) + 123n;
 
 type Call = { address: Address; functionName: string; args?: readonly unknown[] };
 
-function fixture(options: { chain?: number; unfinalized?: boolean; reorg?: boolean; ve?: "early" | "expired"; installedLlRewards?: bigint; fail?: boolean } = {}) {
+function fixture(options: { chain?: number; unfinalized?: boolean; reorg?: boolean; ve?: "early" | "expired"; installedLlRewards?: bigint; fail?: boolean; oracleUnavailable?: boolean; scaleChange?: boolean; currentStakeChange?: boolean; ybcMember?: boolean } = {}) {
   const globalData = {
     meta: { timestamp: Number(NOW), version: 2, epoch: 18, blockNumber: 100 },
     global: { yfi: { priceCts: "100000" } },
@@ -21,9 +21,14 @@ function fixture(options: { chain?: number; unfinalized?: boolean; reorg?: boole
     if (options.fail) throw new Error("RPC unavailable");
     switch (functionName) {
       case "last_epoch": return options.unfinalized ? 17n : 18n;
-      case "total_weight_cursor": return { count: 1n, last: 0n };
-      case "total_weight_entries": return { epoch: 18n, weight: 1000n * UNIT };
-      case "decimals": return 6;
+      case "total_weight_cursor": return { count: 2n, last: 0n };
+      case "total_weight_entries": return { epoch: args[0] === 0n ? 17n : 18n, weight: (args[0] === 1n && options.currentStakeChange ? 1100n : 1000n) * UNIT };
+      case "decimals": return address.toLowerCase() === "0xa027702dbb89fbd58938e4324ac03b58d812b0e1" ? 8 : 6;
+      case "description": return "YFI / USD";
+      case "latestRoundData": {
+        if (options.oracleUnavailable) throw new Error("Oracle unavailable");
+        return [1n, 100000000000n, 0n, NOW, 1n];
+      }
       case "asset": return "0xA0b86991c6218b36c1d19D4a2e9Eb0cE3606eB48";
       case "convertToAssets": return 1_000_000n;
       case "distributor": return STYFI_GOVERNANCE.delegatedRewardClaimer;
@@ -31,7 +36,8 @@ function fixture(options: { chain?: number; unfinalized?: boolean; reorg?: boole
       case "claim_from": return REWARD_CLAIMER_ADDRESS;
       case "supply": return 500n * UNIT;
       case "rewards": return args[0] === STYFI_REWARD_DISTRIBUTOR_ADDRESS ? 1_000_000_000n : args[0] === STYFI_GOVERNANCE.voteBoost ? 1_500_000_000n : 100_000_000n;
-      case "components": return { next: USER, epoch: 18n, numerator: args[0] === STYFI_REWARD_DISTRIBUTOR_ADDRESS ? 4n : 6n, denominator: 1n };
+      case "components": return { next: USER, epoch: 18n, numerator: args[0] === STYFI_REWARD_DISTRIBUTOR_ADDRESS ? options.scaleChange ? 8n : 4n : 6n, denominator: 1n };
+      case "epoch_weights": return args[0] === STYFI_REWARD_DISTRIBUTOR_ADDRESS ? 4000n * UNIT : 6000n * UNIT;
       case "packed_total_weights": return (2000n * UNIT / 10n ** 10n) << 100n;
       case "num_proposals": return args[0] === 17n ? 2n : 6n;
       case "num_votes": return args[0] === 17n ? 2n : 6n;
@@ -57,8 +63,8 @@ function fixture(options: { chain?: number; unfinalized?: boolean; reorg?: boole
       case "last_claimed": return address === STYFI_GOVERNANCE.voteBoost || (args[0] === USER && options.ve) ? GENESIS + 17n * BigInt(EPOCH_LENGTH) : 0n;
       case "ve_migrated": return args[0] === USER && Boolean(options.ve);
       case "weight": return args[1] === USER ? 20n * UNIT : 200n * UNIT;
-      case "members": return false;
-      case "staked": return 0n;
+      case "members": return options.ybcMember ?? false;
+      case "staked": return options.ybcMember ? 10n * UNIT : 0n;
       default: throw new Error(`Unexpected read ${functionName}`);
     }
   };
@@ -81,6 +87,8 @@ describe("stYFI APR onchain snapshot", () => {
     expect(result.account?.yourStyfiAprBps).toBeCloseTo(651.785714, 5);
     expect(result.maxVoteBoostMultiplier).toBe(2.5);
     expect(result.account?.voteBoostMultiplier).toBe(2.5);
+    expect(result.account?.rewardParticipation).toEqual({ votes: 2n, proposals: 2n });
+    expect(result.account?.appliedVoteBoostMultiplier).toBe(2.5);
     expect(result.fullBoostStyfixEstimateAprBps).toBeCloseTo(651.785714, 5);
     expect(getBlock).toHaveBeenLastCalledWith({ blockNumber: 100n });
     for (const [call] of multicall.mock.calls) expect(call).toMatchObject({ blockNumber: 100n, allowFailure: false });
@@ -100,7 +108,7 @@ describe("stYFI APR onchain snapshot", () => {
   });
 
   it("preserves stale-price metadata even when feed publication is recent", async () => {
-    const { client, globalData } = fixture();
+    const { client, globalData } = fixture({ oracleUnavailable: true });
     globalData.global.yfi.priceStale = true;
     let result = await fetchStyfiAprSnapshot(client, globalData);
     expect(result.valuation.stale).toBe(true);
@@ -141,5 +149,22 @@ describe("stYFI APR onchain snapshot", () => {
     expect(result.status).toBe("unavailable");
     expect(result.baseAprBps).toBeNull();
     expect(result.account).toBeNull();
+  });
+
+  it("recovers applied scales from finalized weights after current balances and configuration change", async () => {
+    const { client, globalData } = fixture({ scaleChange: true, currentStakeChange: true });
+    const result = await fetchStyfiAprSnapshot(client, globalData, USER);
+    expect(result.appliedMaxVoteBoostMultiplier).toBe(2.5);
+    expect(result.account?.appliedVoteBoostMultiplier).toBe(2.5);
+    expect(result.account?.voteBoostMultiplier).toBe(1.75);
+    expect(result.baseAprBps).toBeCloseTo(237.01275, 5);
+  });
+
+  it("includes a verified member's current reward share without adding collective capital", async () => {
+    const { client, globalData } = fixture({ ybcMember: true });
+    const result = await fetchStyfiAprSnapshot(client, globalData, USER);
+    expect(result.account?.ybcMembership).toMatchObject({ eligibleStakeYfi: 10n * UNIT, rewardShareBps: 200n, rewardBackingYfi: 2n * UNIT });
+    expect(result.account?.totalActive).toBe(10n * UNIT);
+    expect(result.account?.ybcAprBps).toBeGreaterThan(0);
   });
 });

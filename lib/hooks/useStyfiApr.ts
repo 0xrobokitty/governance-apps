@@ -6,7 +6,7 @@ import { useIdentity } from "@/state/identity";
 import { useProtocol } from "@/state/protocol";
 import { useStyfiAccount } from "./useStyfi";
 import { useVeyfiAccount } from "./useVeyfi";
-import { useDocumentVisibility, useIsRouteActive } from "./usePollingGate";
+import { useDocumentVisibility } from "./usePollingGate";
 import { fetchStyfiAprSnapshot } from "@/lib/clients/styfi/apr-onchain";
 import { createMockStyfiAprSnapshot } from "@/lib/clients/styfi/apr-mock";
 import { getStyfiMockScenario, subscribeStyfiMockScenario } from "@/lib/clients/styfi/scenarios";
@@ -21,16 +21,16 @@ export function useStyfiApr() {
   const account = useStyfiAccount();
   const veyfiAccount = useVeyfiAccount();
   const isVisible = useDocumentVisibility();
-  const isActive = useIsRouteActive(["/styfi"]);
   const query = useQuery({
     queryKey: [...styfiAprKeys.all, accountAddress ?? null, globalData?.meta.timestamp ?? null],
     queryFn: () => {
       if (!mainnetPublicClient) throw new Error("APR data is unavailable.");
       return fetchStyfiAprSnapshot(mainnetPublicClient, globalData, accountAddress);
     },
-    enabled: !usesMockBackend && !!mainnetPublicClient && isActive,
+    // Mounted by stYFI surfaces only, including the stYFI subdomain's root path.
+    enabled: !usesMockBackend && !!mainnetPublicClient,
     staleTime: 30_000,
-    refetchInterval: isVisible && isActive ? 30_000 : false,
+    refetchInterval: isVisible ? 30_000 : false,
     refetchOnWindowFocus: true,
     retry: 1,
   });

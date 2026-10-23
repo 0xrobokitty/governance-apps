@@ -22,6 +22,17 @@ export type StyfiAprValuation = {
   stale: boolean;
 };
 
+export type StyfiYbcMembership = {
+  /** Existing personal active stake counted for YBC rewards; not additional capital. */
+  eligibleStakeYfi: bigint;
+  totalEligibleStakeYfi: bigint;
+  rewardShareBps: bigint;
+  /** Proportional collective reward backing, not an owned or withdrawable balance. */
+  rewardBackingYfi: bigint;
+  annualRewardTokens: bigint;
+  rewardsEnabled: boolean;
+};
+
 export type StyfiAccountApr = {
   address: Address;
   styfiActive: bigint;
@@ -29,6 +40,7 @@ export type StyfiAccountApr = {
   externalActive: bigint;
   totalActive: bigint;
   isYbcMember: boolean;
+  ybcMembership: StyfiYbcMembership | null;
   /** Only attributable to stYFI when the wallet has no external positions. */
   yourStyfiAprBps: number | null;
   portfolioAprBps: number | null;
@@ -43,6 +55,9 @@ export type StyfiAccountApr = {
   participation: StyfiParticipation;
   /** Current participation weight multiplier; current votes affect a later reward stream. */
   voteBoostMultiplier: number | null;
+  /** Participation and effective component scales that fund the current stream. */
+  rewardParticipation: StyfiParticipation;
+  appliedVoteBoostMultiplier: number | null;
 };
 
 export type StyfiAprSnapshot = {
@@ -56,6 +71,8 @@ export type StyfiAprSnapshot = {
   maxAprBps: number | null;
   /** Current configured maximum weight multiplier, independent of historical stream rates. */
   maxVoteBoostMultiplier: number | null;
+  /** Historical maximum; null when no historical boost weight reveals its scale. */
+  appliedMaxVoteBoostMultiplier: number | null;
   /** Full-participation estimate at the current base rate and current component scales. */
   fullBoostEstimateAprBps: number | null;
   /** The same estimate with the delegated pool's current backing and active capital. */
@@ -82,6 +99,8 @@ export type StyfiAprInputs = {
   currentEpoch: number;
   rewardEpoch: number;
   rewardScales: StyfiRewardScales;
+  /** Historical scales recovered from finalized scaled and unscaled weights. */
+  rewardEpochScales: StyfiRewardScales | null;
   valuation: StyfiAprValuation;
   rewardDecimals: number;
   rewardAssetDecimals: number;

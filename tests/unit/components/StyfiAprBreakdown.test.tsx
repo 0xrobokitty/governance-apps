@@ -16,6 +16,7 @@ function snapshot(): StyfiAprSnapshot {
     baseAprBps: 800,
     maxAprBps: 2000,
     maxVoteBoostMultiplier: 2.5,
+    appliedMaxVoteBoostMultiplier: 2.5,
     fullBoostEstimateAprBps: 2000,
     fullBoostStyfixEstimateAprBps: 2000,
     styfixAprBps: 2000,
@@ -28,6 +29,7 @@ function snapshot(): StyfiAprSnapshot {
       externalActive: 0n,
       totalActive: 25n * UNIT,
       isYbcMember: false,
+      ybcMembership: null,
       yourStyfiAprBps: 1400,
       portfolioAprBps: 1400,
       baseAprBps: 800,
@@ -38,6 +40,8 @@ function snapshot(): StyfiAprSnapshot {
       annualRewards: 7000n * 10n ** 6n,
       participation: { votes: 3n, proposals: 6n },
       voteBoostMultiplier: 1.75,
+      appliedVoteBoostMultiplier: 1.75,
+      rewardParticipation: { votes: 3n, proposals: 6n },
     },
   };
 }
@@ -50,7 +54,7 @@ describe("stYFI APR breakdown", () => {
   it("shows one total APR with the additive calculation in a hover tooltip", async () => {
     const user = userEvent.setup();
     render(<AprBreakdown snapshot={snapshot()} />);
-    const trigger = screen.getByRole("button", { name: "Your total APR" });
+    const trigger = screen.getByRole("button", { name: "Current APR" });
     const tooltip = tooltipFor(trigger);
     expect(screen.getAllByTestId("styfi-total-apr")).toHaveLength(1);
     expect(screen.getByTestId("styfi-total-apr")).toHaveTextContent("14%");
@@ -59,14 +63,14 @@ describe("stYFI APR breakdown", () => {
     await user.hover(trigger);
     expect(tooltip).toHaveClass("visible");
     expect(within(tooltip).getByText("stYFI base rewards").parentElement).toHaveTextContent("8%");
-    expect(within(tooltip).getByText("Your Vote Boost").parentElement).toHaveTextContent("6%");
+    expect(within(tooltip).getByText("Vote Boost rewards").parentElement).toHaveTextContent("6%");
     expect(within(tooltip).getByText("Total APR").parentElement).toHaveTextContent("14%");
   });
 
   it("opens by keyboard focus or tap and dismisses with Escape", async () => {
     const user = userEvent.setup();
     render(<AprBreakdown snapshot={snapshot()} />);
-    const trigger = screen.getByRole("button", { name: "Your total APR" });
+    const trigger = screen.getByRole("button", { name: "Current APR" });
     const tooltip = tooltipFor(trigger);
     await user.tab();
     expect(trigger).toHaveFocus();
@@ -78,10 +82,13 @@ describe("stYFI APR breakdown", () => {
     expect(tooltip).toHaveClass("visible");
   });
 
-  it("shows a compact multiplier and explains its formula and timing on focus", async () => {
+  it("separates the applied multiplier from participation affecting the next epoch", async () => {
     const user = userEvent.setup();
-    render(<AprBreakdown snapshot={snapshot()} />);
-    const trigger = screen.getByRole("button", { name: "Your vote boost: 1.75×" });
+    const data = snapshot();
+    data.account!.participation = { votes: 6n, proposals: 6n };
+    data.account!.voteBoostMultiplier = 2.5;
+    render(<AprBreakdown snapshot={data} />);
+    const trigger = screen.getByRole("button", { name: "Applied Vote Boost: 1.75×" });
     const tooltip = tooltipFor(trigger);
     expect(screen.getByTestId("styfi-vote-boost")).toHaveTextContent("1.75×");
     expect(tooltip).toHaveClass("invisible");
@@ -89,6 +96,9 @@ describe("stYFI APR breakdown", () => {
     expect(tooltip).toHaveClass("visible");
     expect(within(tooltip).getByText("3 of 6 proposals")).toBeInTheDocument();
     expect(within(tooltip).getByText("1 + (2.5 − 1) × 3 / 6")).toBeInTheDocument();
+    expect(within(tooltip).getByText("The boost for epoch 18 uses participation through epoch 17.")).toBeInTheDocument();
+    expect(within(tooltip).getByText("Next epoch participation").parentElement).toHaveTextContent("2.5×");
+    expect(within(tooltip).getByText("6 of 6 proposals")).toBeInTheDocument();
     expect(within(tooltip).getByText(/rewards from the next epoch/)).toBeInTheDocument();
     expect(within(tooltip).getByText(/does not multiply your total portfolio APR/)).toBeInTheDocument();
     expect(screen.getByTestId("styfi-total-apr")).toHaveTextContent("14%");
@@ -98,7 +108,7 @@ describe("stYFI APR breakdown", () => {
     const data = snapshot();
     Object.assign(data.account!, { isYbcMember: true, ybcAprBps: 500, portfolioAprBps: 1900 });
     render(<AprBreakdown snapshot={data} />);
-    const tooltip = tooltipFor(screen.getByRole("button", { name: "Your total APR" }));
+    const tooltip = tooltipFor(screen.getByRole("button", { name: "Current APR" }));
     const contributions = within(within(tooltip).getByTestId("styfi-apr-contributions"));
     expect(contributions.getAllByText("YBC income")).toHaveLength(1);
     expect(contributions.getByText("YBC income").parentElement).toHaveTextContent("5%");
@@ -109,7 +119,7 @@ describe("stYFI APR breakdown", () => {
     const data = snapshot();
     Object.assign(data.account!, { externalActive: 0n, yourStyfiAprBps: null, externalAprBps: 300 });
     render(<AprBreakdown snapshot={data} />);
-    const tooltip = tooltipFor(screen.getByRole("button", { name: "Your total APR" }));
+    const tooltip = tooltipFor(screen.getByRole("button", { name: "Current APR" }));
     expect(within(tooltip).getByText("veYFI & liquid lockers").parentElement).toHaveTextContent("3%");
     expect(within(tooltip).getByText(/including earlier holdings/)).toBeInTheDocument();
     expect(screen.queryByTestId("styfi-personal-apr")).not.toBeInTheDocument();
@@ -124,16 +134,19 @@ describe("stYFI APR breakdown", () => {
     expect(formatAprBps(Number.NaN)).toBe("Unavailable");
   });
 
-  it("marks stale valuation and explains a neutral boost with no proposals", () => {
+  it("keeps freshness detail inside the tooltip and explains an applied neutral boost", () => {
     const data = snapshot();
     data.valuation.stale = true;
     data.account!.participation = { votes: 0n, proposals: 0n };
     data.account!.voteBoostMultiplier = 1;
+    data.account!.appliedVoteBoostMultiplier = 1;
+    data.account!.rewardParticipation = { votes: 0n, proposals: 0n };
     render(<AprBreakdown snapshot={data} />);
-    expect(screen.getByTestId("styfi-total-apr")).toHaveTextContent("14%*");
-    const aprTooltip = tooltipFor(screen.getByRole("button", { name: "Your total APR" }));
-    expect(within(aprTooltip).getByText("Estimates use an older YFI price.")).toBeInTheDocument();
-    const boostTooltip = tooltipFor(screen.getByRole("button", { name: "Your vote boost: 1×" }));
+    expect(screen.getByTestId("styfi-total-apr")).toHaveTextContent(/^14%$/);
+    const aprTooltip = tooltipFor(screen.getByRole("button", { name: "Current APR" }));
+    expect(within(aprTooltip).getByText(/YFI price updated .*UTC\./)).toBeInTheDocument();
+    expect(screen.queryByText(/older YFI price/)).not.toBeInTheDocument();
+    const boostTooltip = tooltipFor(screen.getByRole("button", { name: "Applied Vote Boost: 1×" }));
     expect(within(boostTooltip).getByText(/No proposals count/)).toBeInTheDocument();
     expect(within(boostTooltip).queryByText(/× 0 \/ 0/)).not.toBeInTheDocument();
   });
@@ -147,7 +160,7 @@ describe("stYFI APR breakdown", () => {
     render(<AprBreakdown snapshot={data} />);
     expect(screen.queryByTestId("styfi-vote-boost")).not.toBeInTheDocument();
     expect(screen.getByTestId("styfi-total-apr")).toHaveTextContent("20%");
-    const tooltip = tooltipFor(screen.getByRole("button", { name: "Your total APR" }));
+    const tooltip = tooltipFor(screen.getByRole("button", { name: "Current APR" }));
     expect(within(tooltip).getByText("stYFIx rewards")).toBeInTheDocument();
   });
 });

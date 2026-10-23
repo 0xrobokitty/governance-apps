@@ -1,4 +1,18 @@
 export const styfiCopy = {
+  accountSummary: {
+    ybc: {
+      section: "Collective rewards",
+      title: "YBC member",
+      open: "View YBC membership",
+      backing: "Collective reward backing",
+      share: "Your reward share",
+      description: "Your share of YBC income is included in your current APR.",
+      disabled: "New YBC rewards are disabled. Previously earned rewards remain claimable.",
+      tooltip: (eligible: string, total: string) =>
+        `Your ${eligible} YFI of eligible active stake represents a share of ${total} YFI staked by members. The backing shown is your proportional share of the collective’s active reward-producing positions. It is not personal capital or a withdrawable balance.`,
+      queue: "Your existing stake determines this share. Starting a cooldown reduces it; collective withdrawals belong to YBC.",
+    },
+  },
   shared: {
     blacklistedTitle: "Blacklisted",
     blacklistedBody:
@@ -54,7 +68,7 @@ export const styfiCopy = {
         recommended: "Recommended",
         kicker: "For delegated governance",
         description:
-          "Delegate your vote to YBC. Full Vote Boost requires YBC to vote on every counted proposal.",
+          "Delegate your vote to YBC to earn maximum APR.",
       },
     },
   },
@@ -111,6 +125,10 @@ export const styfiCopy = {
   },
   stakeManage: {
     kicker: (modeLabel: string) => `Manage ${modeLabel.toUpperCase()}`,
+    description: {
+      styfi: "Manage stYFI and vote to boost your rewards.",
+      x: "Manage stYFIx with voting delegated to YBC.",
+    },
     tabs: {
       stake: "Stake",
       unstake: "Unstake",
@@ -128,9 +146,6 @@ export const styfiCopy = {
     unavailable: "Unavailable",
     loading: "…",
     range: (minimum: string, maximum: string) => `${minimum}–${maximum}`,
-    participation: (maximum: string) => `1×–${maximum}× Vote Boost`,
-    delegated: "At full YBC participation",
-    priceStale: "Uses an older YFI price.",
   },
   unstakeTab: {
     loading: "Loading unstake data…",
@@ -158,19 +173,19 @@ export const styfiCopy = {
   rewards: {
     title: "Yield & Rewards",
     apr: {
-      portfolioLabel: "Your total APR",
+      portfolioLabel: "Current APR",
       portfolioTooltip:
-        "Contributions use your total active balance in YFI. This estimate includes Vote Boost and any YBC income once.",
+        "Annualized rewards divided by your active balance in YFI.",
       calculationTitle: "APR calculation",
       totalLabel: "Total APR",
-      voteBoostLabel: "Your vote boost",
+      voteBoostLabel: "Applied Vote Boost",
       boostFormula: (maximum: string, votes: string, proposals: string) =>
         `1 + (${maximum} − 1) × ${votes} / ${proposals}`,
       boostScope: "This multiplies stYFI reward weight. It does not multiply your total portfolio APR.",
       delegatedLabel: "stYFIx APR",
       delegatedTooltip:
         "The current stYFIx rate includes its recorded Vote Boost rewards. YBC votes on behalf of stYFIx holders.",
-      personalBoostLabel: "Your Vote Boost",
+      personalBoostLabel: "Vote Boost rewards",
       ybcLabel: "YBC income",
       baseContributionLabel: "stYFI base rewards",
       delegatedContributionLabel: "stYFIx rewards",
@@ -179,14 +194,17 @@ export const styfiCopy = {
         "Vote Boost combines your eligible positions, including earlier holdings. Its contribution is shown across your total active balance.",
       unavailable: "Unavailable",
       unavailableBody: "Current APR data is unavailable. Your rewards can still be claimed.",
-      priceStale: "Estimates use an older YFI price.",
+      priceTimestamp: (timestamp: string) => `YFI price updated ${timestamp}.`,
       participation: (votes: string, proposals: string) =>
         `${votes} of ${proposals} proposals`,
-      noProposals: "No proposals count toward Vote Boost this epoch, so the multiplier is 1×.",
+      noProposals: "No proposals counted in this reward period, so the applied multiplier is 1×.",
+      appliedTiming: (rewardEpoch: number, currentEpoch: number) =>
+        `The boost for epoch ${currentEpoch} uses participation through epoch ${rewardEpoch}.`,
+      nextEpochLabel: "Next epoch participation",
       participationTiming:
-        "Participation covers the last six epochs. This multiplier affects rewards from the next epoch, not the APR currently streaming.",
+        "Current six-epoch participation. Updates affect rewards from the next epoch.",
       streamingEpoch: (rewardEpoch: number, currentEpoch: number) =>
-        `Epoch ${rewardEpoch} Vote Boost rewards are streaming in epoch ${currentEpoch}.`,
+        `Current rewards: epoch ${currentEpoch}. Vote Boost uses participation through epoch ${rewardEpoch}.`,
     },
     token: {
       label: "Reward Token",

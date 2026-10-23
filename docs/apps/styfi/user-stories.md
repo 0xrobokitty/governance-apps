@@ -142,15 +142,17 @@ We assume a technically literate DeFi user familiar with:
 ### Acceptance Criteria
 
 - The headline shows the actual stYFIx APR, including its recorded Vote Boost rewards.
-- The reward card shows one total portfolio APR. Without an active position, it shows the actual stYFIx APR.
+- The reward card labels the total portfolio rate **Current APR**. Without an active position, it shows the actual stYFIx APR.
 - Hover, keyboard focus, or a tap reveals the contribution breakdown in a tooltip.
 - Mixed or earlier external holdings use an account-wide Vote Boost contribution with an explanation in that tooltip.
 - A YBC member sees YBC income included once in the total portfolio APR.
 - Current reward rates use the completed reward epoch. The APR tooltip identifies the epoch in which those rewards stream.
-- A compact personal vote-boost multiplier replaces visible proposal counts. Its tooltip shows the counts, calculation, and six-epoch window.
-- The multiplier tooltip explains that new votes affect rewards from the next epoch and do not multiply the total portfolio APR.
+- A compact **Applied Vote Boost** multiplier uses the participation and component scales that fund the current stream.
+- Its tooltip separates that applied multiplier from current participation, which affects rewards from the next epoch.
+- The tooltip labels the percentage contribution **Vote Boost rewards** and explains that the multiplier does not apply to the total portfolio APR.
 - Missing reward or price data shows an unavailable state, not a zero APR.
 - A separate full-participation estimate assumes a vote on every counted proposal. It does not guarantee future YBC participation.
+- The selected mode's estimate stays beside the management controls in both the Stake and Unstake tabs.
 - Reward-token APY remains separate from staking APR.
 
 ---

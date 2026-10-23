@@ -10,6 +10,7 @@ function inputs(): StyfiAprInputs {
   return {
     blockNumber: 100n, timestamp: 1_800_000_000, currentEpoch: 18, rewardEpoch: 17,
     rewardScales: { staking: { numerator: 4n, denominator: 1n }, voteBoost: { numerator: 6n, denominator: 1n } },
+    rewardEpochScales: { staking: { numerator: 4n, denominator: 1n }, voteBoost: { numerator: 6n, denominator: 1n } },
     valuation: { yfiPriceCts: 100_000n, timestamp: 1_800_000_000, stale: false },
     rewardDecimals: 6, rewardAssetDecimals: 6, rewardAssetsPerShare: 1_000_000n,
     stakingEpochRewards: 1_000_000_000n, stakingWeight: 1000n * UNIT,
@@ -48,6 +49,8 @@ describe("stYFI current stream APR", () => {
     expect(result.account?.portfolioAprBps).toBe(result.baseAprBps);
     expect(result.account?.participation.votes).toBe(6n);
     expect(result.account?.voteBoostMultiplier).toBe(2.5);
+    expect(result.account?.appliedVoteBoostMultiplier).toBe(1);
+    expect(result.account?.rewardParticipation).toEqual({ votes: 0n, proposals: 2n });
   });
 
   it("uses the actual delegated pool snapshot instead of assuming full participation", () => {
@@ -169,5 +172,54 @@ describe("stYFI current stream APR", () => {
     expect(deriveVoteBoostMultiplier({ ...scales, voteBoost: { numerator: 6n, denominator: 0n } })).toBeNull();
     expect(deriveVoteBoostMultiplier(scales, { votes: 7n, proposals: 6n })).toBeNull();
     expect(deriveVoteBoostMultiplier(scales, { votes: -1n, proposals: 6n })).toBeNull();
+  });
+
+  it("uses historical component scales for the applied multiplier after configuration changes", () => {
+    const source = inputs();
+    source.rewardScales.staking = { numerator: 8n, denominator: 1n };
+    source.account!.rewardEpochVotes = 1n;
+    const result = deriveStyfiAprSnapshot(source);
+    expect(result.maxVoteBoostMultiplier).toBe(1.75);
+    expect(result.appliedMaxVoteBoostMultiplier).toBe(2.5);
+    expect(result.account?.appliedVoteBoostMultiplier).toBe(1.75);
+    expect(result.account?.rewardParticipation).toEqual({ votes: 1n, proposals: 2n });
+  });
+
+  it("does not invent a historical scale when the epoch had no boost weight", () => {
+    const source = inputs();
+    source.rewardEpochScales = null;
+    source.account!.rewardEpochVotes = 0n;
+    expect(deriveStyfiAprSnapshot(source).appliedMaxVoteBoostMultiplier).toBeNull();
+    expect(deriveStyfiAprSnapshot(source).account?.appliedVoteBoostMultiplier).toBe(1);
+    source.account!.rewardEpochVotes = 1n;
+    expect(deriveStyfiAprSnapshot(source).account?.appliedVoteBoostMultiplier).toBeNull();
+    source.account!.rewardEpochVotes = 0n;
+    source.rewardEpochProposals = 0n;
+    expect(deriveStyfiAprSnapshot(source).account?.appliedVoteBoostMultiplier).toBe(1);
+  });
+
+  it("shows YBC income backing without adding collective assets to personal capital", () => {
+    const source = inputs();
+    source.account!.isYbcMember = true;
+    source.ybcPosition.liquidLockers = [20n * UNIT, 0n, 0n];
+    source.ybcPosition.styfix = 30n * UNIT;
+    source.ybcPosition.veYfi = 50n * UNIT;
+    const result = deriveStyfiAprSnapshot(source).account!;
+    expect(result.ybcMembership).toMatchObject({
+      eligibleStakeYfi: 10n * UNIT,
+      totalEligibleStakeYfi: 500n * UNIT,
+      rewardShareBps: 200n,
+      rewardBackingYfi: 4n * UNIT,
+      rewardsEnabled: true,
+    });
+    expect(result.ybcMembership?.annualRewardTokens).toBeGreaterThan(0n);
+    expect(result.totalActive).toBe(10n * UNIT);
+    source.account!.ybcStake = 0n;
+    const afterExit = deriveStyfiAprSnapshot(source).account!;
+    expect(afterExit.ybcMembership?.rewardShareBps).toBe(0n);
+    expect(afterExit.ybcMembership?.rewardBackingYfi).toBe(0n);
+    expect(afterExit.ybcAprBps).toBe(0);
+    source.account!.isYbcMember = false;
+    expect(deriveStyfiAprSnapshot(source).account?.ybcMembership).toBeNull();
   });
 });

@@ -1,7 +1,8 @@
 import { describe, expect, it, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, within } from "@testing-library/react";
 import { AccountSummary } from "@/app/styfi/components/AccountSummary";
 import type { ExternalPosition } from "@/app/styfi/external-positions";
+import type { StyfiYbcMembership } from "@/lib/clients/styfi/apr-types";
 
 vi.mock("@/lib/hooks/useStyfiApr", () => ({
   useStyfiApr: () => ({ data: null, isLoading: false }),
@@ -83,7 +84,8 @@ function renderSummary(
     };
   },
   external: ExternalPosition[],
-  now = 1_799_999_999
+  now = 1_799_999_999,
+  ybcMembership?: StyfiYbcMembership,
 ) {
   return render(
     <AccountSummary
@@ -92,6 +94,7 @@ function renderSummary(
       onSelectAsset={vi.fn()}
       balances={balances}
       externalPositions={external}
+      ybcMembership={ybcMembership}
       isLoading={false}
       isConnected
       isWrongNetwork={false}
@@ -166,5 +169,35 @@ describe("AccountSummary", () => {
     expect(screen.getByText("4.7M")).toBeInTheDocument();
     expect(screen.getByText("1.2M")).toBeInTheDocument();
     expect(screen.getByText("300K")).toBeInTheDocument();
+  });
+
+  it("shows collective reward backing as a membership allocation, not a withdrawable position", () => {
+    renderSummary(activeBalances, [], undefined, {
+      eligibleStakeYfi: 25n * 10n ** 18n,
+      totalEligibleStakeYfi: 500n * 10n ** 18n,
+      rewardShareBps: 500n,
+      rewardBackingYfi: 5n * 10n ** 18n,
+      annualRewardTokens: 10_000_000n,
+      rewardsEnabled: true,
+    });
+    const row = within(screen.getByTestId("ybc-membership-row"));
+    expect(row.getByText("5 YFI")).toBeInTheDocument();
+    expect(row.getByText("5%", { exact: true })).toBeInTheDocument();
+    expect(row.getByRole("link", { name: "View YBC membership" })).toHaveAttribute("href", "/ybc");
+    expect(row.queryByText("Withdrawable")).not.toBeInTheDocument();
+    expect(screen.getAllByTestId("styfi-position-row")).toHaveLength(1);
+    fireEvent.focus(row.getByRole("button", { name: "Collective reward backing" }));
+    expect(row.getByRole("tooltip")).toHaveTextContent("It is not personal capital or a withdrawable balance.");
+    expect(row.getByRole("tooltip")).toHaveTextContent("Starting a cooldown reduces it");
+  });
+
+  it("explains disabled rewards while retaining a zero-stake membership", () => {
+    renderSummary(emptyBalances, [], undefined, {
+      eligibleStakeYfi: 0n, totalEligibleStakeYfi: 500n * 10n ** 18n,
+      rewardShareBps: 0n, rewardBackingYfi: 0n, annualRewardTokens: 0n, rewardsEnabled: false,
+    });
+    const row = within(screen.getByTestId("ybc-membership-row"));
+    expect(row.getByText("0 YFI")).toBeInTheDocument();
+    expect(row.getByText("New YBC rewards are disabled. Previously earned rewards remain claimable.")).toBeInTheDocument();
   });
 });

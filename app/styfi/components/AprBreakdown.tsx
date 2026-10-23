@@ -24,6 +24,9 @@ function dismissOnEscape(event: KeyboardEvent<HTMLButtonElement>) {
 
 const tooltipClass = "flex w-fit [&_[role=tooltip]]:max-w-[min(260px,calc(100vw-4rem))]";
 const underlineClass = "underline decoration-dotted decoration-neutral-400 underline-offset-4";
+const priceDateFormat = new Intl.DateTimeFormat("en-GB", {
+  day: "numeric", month: "short", year: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "UTC", timeZoneName: "short",
+});
 
 type Props = {
   snapshot?: StyfiAprSnapshot | null;
@@ -51,7 +54,6 @@ export function AprBreakdown({ snapshot, isLoading = false }: Props) {
           <span className={`text-xs font-bold text-neutral-500 ${underlineClass}`}>{label}</span>
           <span className={`font-number font-bold tabular-nums text-neutral-900 tracking-tight ${formatted === copy.rewards.apr.unavailable ? "text-lg" : "text-3xl md:text-4xl"}`} data-testid="styfi-total-apr">
             {formatted}
-            {snapshot?.valuation.stale && value != null && <span className="ml-0.5 align-top text-sm text-amber-700">*</span>}
           </span>
         </button>
       </Tooltip>
@@ -64,7 +66,7 @@ export function AprBreakdown({ snapshot, isLoading = false }: Props) {
             className="relative cursor-help rounded text-left text-xs leading-6 text-neutral-500 transition-colors after:absolute after:inset-x-0 after:-inset-y-2 hover:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
           >
             <span className={underlineClass}>{copy.rewards.apr.voteBoostLabel}:</span>{" "}
-            <span className="font-number font-semibold tabular-nums text-neutral-700" data-testid="styfi-vote-boost">{formatMultiplier(account.voteBoostMultiplier)}×</span>
+            <span className="font-number font-semibold tabular-nums text-neutral-700" data-testid="styfi-vote-boost">{formatMultiplier(account.appliedVoteBoostMultiplier)}×</span>
           </button>
         </Tooltip>
       )}
@@ -96,7 +98,9 @@ function AprCalculation({ snapshot }: Pick<Props, "snapshot">) {
       {total == null && <p role="status">{copy.rewards.apr.unavailableBody}</p>}
       {hasPosition && <p>{copy.rewards.apr.portfolioTooltip}</p>}
       {hasPosition && (account.externalActive > 0n || hasHistoricalAllocation) && <p>{copy.rewards.apr.mixedPositions}</p>}
-      {snapshot?.valuation.stale && <p className="text-amber-700">{copy.rewards.apr.priceStale}</p>}
+      {snapshot?.valuation.stale && snapshot.valuation.timestamp != null && (
+        <p>{copy.rewards.apr.priceTimestamp(priceDateFormat.format(snapshot.valuation.timestamp * 1000))}</p>
+      )}
       {snapshot?.rewardEpoch != null && snapshot.currentEpoch != null && <p>{copy.rewards.apr.streamingEpoch(snapshot.rewardEpoch, snapshot.currentEpoch)}</p>}
     </div>
   );
@@ -105,26 +109,36 @@ function AprCalculation({ snapshot }: Pick<Props, "snapshot">) {
 function VoteBoostCalculation({ snapshot }: Pick<Props, "snapshot">) {
   const account = snapshot?.account;
   if (!account) return null;
-  const { votes, proposals } = account.participation;
+  const { votes, proposals } = account.rewardParticipation;
   return (
     <div className="w-full min-w-[210px] space-y-2 text-xs leading-relaxed">
       <p className="font-bold text-neutral-900">{copy.rewards.apr.voteBoostLabel}</p>
       {proposals > 0n ? (
         <>
           <p>{copy.rewards.apr.participation(votes.toString(), proposals.toString())}</p>
-          {snapshot?.maxVoteBoostMultiplier != null && (
-            <p className="font-number tabular-nums text-neutral-700">{copy.rewards.apr.boostFormula(formatMultiplier(snapshot.maxVoteBoostMultiplier), votes.toString(), proposals.toString())}</p>
+          {snapshot?.appliedMaxVoteBoostMultiplier != null && (
+            <p className="font-number tabular-nums text-neutral-700">{copy.rewards.apr.boostFormula(formatMultiplier(snapshot.appliedMaxVoteBoostMultiplier), votes.toString(), proposals.toString())}</p>
           )}
         </>
       ) : <p>{copy.rewards.apr.noProposals}</p>}
       <dl className="border-t border-neutral-200 pt-2">
         <div className="flex items-baseline justify-between gap-3 font-bold text-neutral-900">
           <dt>{copy.rewards.apr.voteBoostLabel}</dt>
-          <dd className="font-number tabular-nums">{formatMultiplier(account.voteBoostMultiplier)}×</dd>
+          <dd className="font-number tabular-nums">{formatMultiplier(account.appliedVoteBoostMultiplier)}×</dd>
         </div>
       </dl>
+      {snapshot?.rewardEpoch != null && snapshot.currentEpoch != null && (
+        <p>{copy.rewards.apr.appliedTiming(snapshot.rewardEpoch, snapshot.currentEpoch)}</p>
+      )}
       <p>{copy.rewards.apr.boostScope}</p>
-      <p>{copy.rewards.apr.participationTiming}</p>
+      <div className="space-y-1 border-t border-neutral-200 pt-2">
+        <p className="flex items-baseline justify-between gap-3 font-semibold text-neutral-900">
+          <span>{copy.rewards.apr.nextEpochLabel}</span>
+          <span className="font-number tabular-nums">{formatMultiplier(account.voteBoostMultiplier)}×</span>
+        </p>
+        <p>{copy.rewards.apr.participation(account.participation.votes.toString(), account.participation.proposals.toString())}</p>
+        <p>{copy.rewards.apr.participationTiming}</p>
+      </div>
     </div>
   );
 }

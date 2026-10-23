@@ -268,6 +268,7 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
           onSelectAsset={handleHeroSelect}
           balances={balances}
           externalPositions={externalPositions}
+          ybcMembership={apr?.account?.ybcMembership}
           hostname={hostname}
           isLoading={isSummaryLoading}
           isConnected={isConnected}

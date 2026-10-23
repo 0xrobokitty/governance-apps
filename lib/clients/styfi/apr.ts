@@ -69,6 +69,7 @@ export function unavailableStyfiAprSnapshot(
     baseAprBps: null,
     maxAprBps: null,
     maxVoteBoostMultiplier: null,
+    appliedMaxVoteBoostMultiplier: null,
     fullBoostEstimateAprBps: null,
     fullBoostStyfixEstimateAprBps: null,
     styfixAprBps: null,
@@ -116,6 +117,7 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
     input.boostTotalWeight,
   );
   const maximumScale = fullBoostScale(input.rewardScales);
+  const appliedMaximum = input.rewardEpochScales ? deriveVoteBoostMultiplier(input.rewardEpochScales) : null;
   const snapshot: StyfiAprSnapshot = {
     status: "available",
     blockNumber: input.blockNumber,
@@ -125,6 +127,7 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
     baseAprBps: apr(oneYfiBaseIncome, YFI_UNIT),
     maxAprBps: apr(oneYfiBaseIncome + oneYfiFullBoostIncome, YFI_UNIT),
     maxVoteBoostMultiplier: deriveVoteBoostMultiplier(input.rewardScales),
+    appliedMaxVoteBoostMultiplier: appliedMaximum,
     fullBoostEstimateAprBps: maximumScale ? apr(oneYfiBaseIncome, YFI_UNIT, maximumScale) : null,
     fullBoostStyfixEstimateAprBps: maximumScale && input.styfixSupply >= 10n ** 12n
       ? apr(baseIncome(input.delegatedPosition), input.styfixSupply, maximumScale) : null,
@@ -146,6 +149,13 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
     const total = base + delegated + boost + external + ybc;
     const directSnapshotWeight = position.styfi * input.account.rewardEpochVotes / 10n ** 10n * 10n ** 10n;
     const canAttributeDirect = externalActive === 0n && external === 0n && position.boostWeight === directSnapshotWeight;
+    const rewardParticipation = { votes: input.account.rewardEpochVotes, proposals: input.rewardEpochProposals };
+    const validRewardParticipation = rewardParticipation.votes >= 0n && rewardParticipation.votes <= rewardParticipation.proposals;
+    const appliedVoteBoostMultiplier = !validRewardParticipation ? null
+      : rewardParticipation.votes === 0n ? 1
+        : input.rewardEpochScales ? deriveVoteBoostMultiplier(input.rewardEpochScales, rewardParticipation) : null;
+    const collectiveActive = input.ybcPosition.styfi + input.ybcPosition.styfix + input.ybcPosition.veYfi +
+      input.ybcPosition.liquidLockers.reduce((sum, amount) => sum + amount, 0n);
     snapshot.account = {
       address,
       styfiActive: position.styfi,
@@ -153,6 +163,14 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
       externalActive,
       totalActive,
       isYbcMember,
+      ybcMembership: isYbcMember ? {
+        eligibleStakeYfi: ybcStake,
+        totalEligibleStakeYfi: input.ybcSupply,
+        rewardShareBps: share(10_000n, ybcStake, input.ybcSupply),
+        rewardBackingYfi: share(collectiveActive, ybcStake, input.ybcSupply),
+        annualRewardTokens: annualize(ybc),
+        rewardsEnabled: input.ybcRewardsEnabled,
+      } : null,
       // The historical boost weight combines positions. It cannot be split by current token balance.
       yourStyfiAprBps: canAttributeDirect ? apr(base + boost + ybc, position.styfi) : null,
       portfolioAprBps: apr(total, totalActive),
@@ -164,6 +182,8 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
       annualRewards: annualize(total),
       participation,
       voteBoostMultiplier: deriveVoteBoostMultiplier(input.rewardScales, participation),
+      rewardParticipation,
+      appliedVoteBoostMultiplier,
     };
   }
   return snapshot;

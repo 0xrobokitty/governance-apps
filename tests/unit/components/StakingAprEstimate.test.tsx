@@ -9,7 +9,8 @@ describe("staking APR estimates", () => {
     render(<StakingAprEstimate asset="stYFI" snapshot={createMockStyfiAprSnapshot()} />);
 
     expect(screen.getByText("8%–20%")).toBeVisible();
-    expect(screen.getByText("1×–2.5× Vote Boost")).toBeVisible();
+    expect(screen.getByText("Estimated APR")).toBeVisible();
+    expect(screen.queryByText(/Vote Boost/)).not.toBeInTheDocument();
   });
 
   it("uses the delegated full-participation estimate instead of its realized stream rate", () => {
@@ -19,7 +20,8 @@ describe("staking APR estimates", () => {
     render(<StakingAprEstimate asset="stYFIx" snapshot={snapshot} compact />);
 
     expect(screen.getByText("21%")).toBeVisible();
-    expect(screen.getByText("At full YBC participation")).toBeVisible();
+    expect(screen.getByText("Estimated APR")).toBeVisible();
+    expect(screen.queryByText(/full YBC participation/)).not.toBeInTheDocument();
     expect(screen.queryByText("18%")).not.toBeInTheDocument();
   });
 
@@ -30,11 +32,12 @@ describe("staking APR estimates", () => {
     expect(screen.queryByText(/Vote Boost/)).not.toBeInTheDocument();
   });
 
-  it("keeps the older-price qualification beside estimates", () => {
+  it("keeps the estimate concise when valuation freshness is qualified in the reward tooltip", () => {
     const snapshot = createMockStyfiAprSnapshot();
     snapshot.valuation.stale = true;
     render(<StakingAprEstimate asset="stYFIx" snapshot={snapshot} />);
 
-    expect(screen.getByText("Uses an older YFI price.")).toBeVisible();
+    expect(screen.getByText("20%")).toBeVisible();
+    expect(screen.queryByText(/older YFI price/)).not.toBeInTheDocument();
   });
 });

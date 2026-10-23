@@ -15,13 +15,15 @@ import {
 } from "@/lib/constants";
 import type { GlobalData } from "@/lib/schemas/global";
 import { deriveStyfiAprSnapshot, unavailableStyfiAprSnapshot, unpackVoteBoostWeight } from "./apr";
-import type { StyfiAprPosition, StyfiAprSnapshot, StyfiAprValuation, StyfiRewardScale } from "./apr-types";
+import type { StyfiAprPosition, StyfiAprSnapshot, StyfiRewardScale } from "./apr-types";
 import { STYFI_GOVERNANCE } from "./deployment";
+import { readStyfiAprValuation, styfiFeedValuation } from "./apr-price";
 
 const rewardAbi = parseAbi([
   "function last_epoch() view returns (uint256)",
   "function rewards(address,uint256) view returns (uint256)",
   "function components(address) view returns ((address next,uint256 epoch,uint256 numerator,uint256 denominator))",
+  "function epoch_weights(address,uint256) view returns (uint256)",
 ]);
 const stakingAbi = parseAbi([
   "function total_weight_cursor() view returns ((uint256 count,uint256 last))",
@@ -66,7 +68,6 @@ const YBC_WEIGHTS = deployment.YBC.WEIGHT_AGGREGATOR as Address;
 const YBC_REWARDS = deployment.YBC.REWARD_DISTRIBUTOR as Address;
 // The configured reward vault holds USDC. Another asset needs a separate price source.
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
-const PRICE_MAX_AGE_SECONDS = 24 * 60 * 60;
 
 function registeredScale(value: unknown): StyfiRewardScale | null {
   const component = value as { next: Address; numerator: bigint; denominator: bigint };
@@ -77,31 +78,19 @@ function registeredScale(value: unknown): StyfiRewardScale | null {
 type Read = { address: Address; abi: Abi; functionName: string; args?: readonly unknown[] };
 const call = (address: Address, abi: Abi, functionName: string, args?: readonly unknown[]): Read => ({ address, abi, functionName, args });
 
-function valuation(globalData: GlobalData | null, now: number): StyfiAprValuation {
-  const timestamp = globalData?.global.yfi.priceUpdatedAt ?? globalData?.meta.timestamp ?? null;
-  const price = globalData?.global.yfi.priceCts;
-  return {
-    yfiPriceCts: price && BigInt(price) > 0n ? BigInt(price) : null,
-    timestamp,
-    stale: globalData?.global.yfi.priceStale === true ||
-      ["stale", "unavailable", "error"].includes(globalData?.global.yfi.priceStatus?.toLowerCase() ?? "") ||
-      timestamp === null || timestamp > now + 300 || now - timestamp > PRICE_MAX_AGE_SECONDS,
-  };
-}
-
 /** All contract reads use one block. No transactions or wallet signatures are required. */
 export async function fetchStyfiAprSnapshot(
   client: PublicClient,
   globalData: GlobalData | null,
   address?: Address,
 ): Promise<StyfiAprSnapshot> {
-  let price = valuation(globalData, Math.floor(Date.now() / 1000));
+  let price = styfiFeedValuation(globalData, Math.floor(Date.now() / 1000));
   try {
     if (await client.getChainId() !== 1) return unavailableStyfiAprSnapshot(price);
     const block = await client.getBlock({ blockTag: "latest" });
     if (block.number === null || block.hash === null) return unavailableStyfiAprSnapshot(price);
     const timestamp = Number(block.timestamp);
-    price = valuation(globalData, timestamp);
+    price = await readStyfiAprValuation(client, block.number, timestamp, globalData);
     const currentEpoch = Number((block.timestamp - GENESIS) / BigInt(EPOCH_LENGTH));
     if (currentEpoch <= 0) return unavailableStyfiAprSnapshot(price);
     const rewardEpoch = currentEpoch - 1;
@@ -156,6 +145,8 @@ export async function fetchStyfiAprSnapshot(
         call(locker.depositor, erc20Abi, "totalSupply"),
         call(LL_REWARDS, llAbi, "current_rewards", [BigInt(locker.index)]),
       ]),
+      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "epoch_weights", [STYFI_REWARD_DISTRIBUTOR_ADDRESS, epoch]),
+      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "epoch_weights", [STYFI_GOVERNANCE.voteBoost, epoch]),
     ]);
     const [stakingEntry, stakingRewards, boostRewards, llRewards, veRewards, packedTotal, rewardProposals, currentProposals, delegatedVotes, styfixSupply, assetsPerShare, assetDecimalsValue, veTotal] = common;
     const rewardAssetDecimals = Number(assetDecimalsValue);
@@ -170,6 +161,21 @@ export async function fetchStyfiAprSnapshot(
         : (llRewards as bigint) * (common[13 + i * 3] as bigint) / 10n ** 18n;
     });
     const liquidLockerSupplies = LIQUID_LOCKERS.map((_, i) => common[14 + i * 3] as bigint);
+    const latestStakingEntry = stakingEntry as { epoch: bigint; weight: bigint };
+    // Entries are appended at most once per epoch. The previous entry is the
+    // completed epoch's final weight when stake changed in the current epoch.
+    const historicalStakingEntry = latestStakingEntry.epoch <= epoch ? latestStakingEntry
+      : cursor.count > 1n ? (await read([
+        call(STYFI_REWARD_DISTRIBUTOR_ADDRESS, stakingAbi, "total_weight_entries", [cursor.count - 2n]),
+      ]))[0] as { epoch: bigint; weight: bigint } : null;
+    const historicalWeights = common.slice(13 + LIQUID_LOCKERS.length * 3) as bigint[];
+    const boostTotalWeight = unpackVoteBoostWeight(packedTotal as bigint, rewardEpoch);
+    const normalizedBoostWeight = (rewardProposals as bigint) > 0n ? boostTotalWeight / (rewardProposals as bigint) : 0n;
+    const rewardEpochScales = historicalStakingEntry && historicalStakingEntry.epoch <= epoch &&
+      historicalStakingEntry.weight > 0n && historicalWeights[0] > 0n && normalizedBoostWeight > 0n ? {
+        staking: { numerator: historicalWeights[0], denominator: historicalStakingEntry.weight },
+        voteBoost: { numerator: historicalWeights[1], denominator: normalizedBoostWeight },
+      } : null;
     const accounts = [STYFIX_ADDRESS, YBC, ...(address ? [address] : [])];
     const positionValues = await read(accounts.flatMap((account) => [
       call(STYFI_ADDRESS, erc20Abi, "balanceOf", [account]),
@@ -236,6 +242,7 @@ export async function fetchStyfiAprSnapshot(
       currentEpoch,
       rewardEpoch,
       rewardScales: { staking: registeredScale(stakingComponent), voteBoost: registeredScale(boostComponent) },
+      rewardEpochScales,
       valuation: price,
       rewardDecimals,
       rewardAssetDecimals,
@@ -245,7 +252,7 @@ export async function fetchStyfiAprSnapshot(
       styfixSupply: styfixSupply as bigint,
       delegatedPosition: positions[0],
       boostEpochRewards: boostRewards as bigint,
-      boostTotalWeight: unpackVoteBoostWeight(packedTotal as bigint, rewardEpoch),
+      boostTotalWeight,
       rewardEpochProposals: rewardProposals as bigint,
       delegatedParticipation: { votes: delegatedVotes as bigint, proposals: currentProposals as bigint },
       liquidLockerEpochRewards,

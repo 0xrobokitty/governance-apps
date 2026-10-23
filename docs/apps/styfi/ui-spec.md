@@ -100,18 +100,17 @@ Personal voting power appears on the DAO front page, beside the proposal board.
 - **Layout:** Grid (2 columns desktop, stacked mobile).
 - **stYFI card:**
   - Badge: "Vote-dependent APR"
-  - Description: "Retain voting rights and earn Vote Boost through governance participation."
+  - Description: "Keep your vote. Your participation determines your Vote Boost."
   - Estimated APR range: current base rate through the full configured Vote Boost rate.
-  - The caption shows the configured multiplier range, currently `1×–2.5×`.
 - **stYFIx card:**
   - Badge: "Delegated voting" + "Recommended" (brand blue)
-  - Description: "YBC votes on behalf of stYFIx holders. Full Vote Boost requires participation in every counted proposal."
+  - Description: "Delegate your vote to YBC to earn maximum APR."
   - Estimated APR at full YBC participation, adjusted for the delegated pool's backing and active supply.
 - **Interaction:** Cards function as buttons to call `onSelectAsset`.
 
-The onboarding cards and compare modal use the same estimates.
+The onboarding cards and compare modal use the same estimates, with adjacent labels and values.
 The full-participation estimates are not next-epoch forecasts or guaranteed returns.
-Unavailable valuation produces an unavailable value. An older YFI price retains a visible note.
+Unavailable valuation produces an unavailable value. The cards omit repeated multiplier captions and freshness notices.
 
 ---
 
@@ -124,28 +123,31 @@ Always visible and owns all write interactions.
 - **Compare modes:** Text link opens a modal with `<ModeComparison />`.
 
 ### 6.2 Context Banner
-- **stYFI:** "You are managing standard stYFI. You must vote manually."
-- **stYFIx:** "You are managing stYFIx. Voting is delegated for passive yield."
+- The selected mode's **Estimated APR** appears beside its value at the top of the banner.
+- The estimate uses the same range or rate as the comparison cards. It stays visible in both tabs.
+- **stYFI:** "Manage stYFI and vote to boost your rewards."
+- **stYFIx:** "Manage stYFIx with voting delegated to YBC."
 
 ### 6.3 Tabs
 - **Variant:** Line tabs (text + underline) to differentiate action from scope.
 - **Stake:** Approve → Stake flow. Input unit: YFI.
-  The selected mode's estimated APR appears below the amount input, with the same range or rate as the comparison cards.
 - **Unstake:** Refactored flow (below).
 
 ### 6.4 Rewards Card (Yield & Rewards)
 
-The card shows one rate: **Your total APR** for an active portfolio, or **stYFIx APR** when no position is active.
+The card shows one rate: **Current APR** for an active portfolio, or **stYFIx APR** when no position is active.
 The total includes base rewards, delegated rewards, external positions, Vote Boost, and YBC income.
 
 Hover, keyboard focus, or a tap on the APR opens its calculation tooltip.
 Each income source appears once, followed by the total. All contributions use the same active-capital denominator.
-The tooltip explains historical reward attribution, stale valuation, and the completed reward epoch when applicable.
+The tooltip explains historical reward attribution and the completed reward epoch when applicable.
+It labels the percentage contribution as **Vote Boost rewards**.
 It retains external income that still streams after a position closes.
 
-Eligible personal positions show a compact **Your vote boost: 2.5×** line below the APR.
-Its tooltip shows counted votes, proposals, and the multiplier calculation over the rolling six-epoch window.
-It explains that current participation affects rewards from the next epoch.
+Eligible personal positions show a compact **Applied Vote Boost: 2.5×** line below the APR.
+This multiplier uses the completed reward epoch's participation and effective component scales.
+Its tooltip shows the applied calculation and identifies the reward period.
+A separate section shows current six-epoch participation, which affects rewards from the next epoch.
 This multiplier applies to stYFI reward weight, not to the total portfolio APR.
 
 Tooltip labels use dotted text underlines. Escape dismisses a focused tooltip.
@@ -158,7 +160,7 @@ The payout section retains the claimable USD value, token amount, and **Claim Re
 | Disconnected | Current stYFIx APR and a wallet connection prompt |
 | Loading | Skeleton for account data and a dash for pending rates |
 | Unavailable APR | Explicit unavailable values; existing rewards remain claimable |
-| Stale YFI price | An asterisk beside the APR and a valuation note in its tooltip |
+| Stale YFI price | Precise available price timestamp inside the APR tooltip; no repeated notice or asterisk |
 | Blacklisted | Existing restriction banner and disabled claim action |
 
 See [Vote Boost APR derivation](vote-boost-apr.md) for contract sources and calculation rules.

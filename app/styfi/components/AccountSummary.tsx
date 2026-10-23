@@ -6,6 +6,7 @@ import { formatUnits } from "viem";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
+import { Tooltip } from "@/components/ui/Tooltip";
 import { LogoStyfi } from "@/components/icons/LogoStyfi";
 import { LogoStyfix } from "@/components/icons/LogoStyfix";
 import { IconLinkOut } from "@/components/icons/IconLinkOut";
@@ -17,6 +18,8 @@ import { getLlyfiDisplaySymbol } from "@/lib/clients/veyfi/display";
 import { ModeComparison } from "./ModeComparison";
 import type { StyfiAsset } from "./types";
 import type { ExternalPosition } from "../external-positions";
+import type { StyfiYbcMembership } from "@/lib/clients/styfi/apr-types";
+import { styfiCopy } from "../messages";
 
 const EXTERNAL_TOKEN_LOGOS: Record<string, string> = {
   veyfi: "/tokens/veyfi.png",
@@ -75,6 +78,7 @@ type AccountSummaryProps = {
   onSelectAsset: (asset: StyfiAsset) => void;
   balances?: AccountBalances | null;
   externalPositions: ExternalPosition[];
+  ybcMembership?: StyfiYbcMembership | null;
   hostname?: string | null;
   isLoading: boolean;
   isConnected: boolean;
@@ -91,6 +95,7 @@ export function AccountSummary({
   onSelectAsset,
   balances,
   externalPositions,
+  ybcMembership,
   hostname,
   isLoading,
   isConnected,
@@ -229,9 +234,47 @@ export function AccountSummary({
               />
             </>
           )}
+          {isConnected && !isWrongNetwork && ybcMembership && (
+            <>
+              <SummarySectionTitle title={styfiCopy.accountSummary.ybc.section} />
+              <YbcMembershipRow membership={ybcMembership} href={resolveGovernanceAppHref("ybc", hostname)} />
+            </>
+          )}
         </div>
       </div>
     </Card>
+  );
+}
+
+function YbcMembershipRow({ membership, href }: { membership: StyfiYbcMembership; href: string }) {
+  const copy = styfiCopy.accountSummary.ybc;
+  const share = membership.rewardShareBps === 0n && membership.eligibleStakeYfi > 0n ? "<0.01"
+    : formatTokenAmount(membership.rewardShareBps, 2, 2);
+  return (
+    <div className="space-y-3 rounded-lg border border-border bg-surface/50 p-4" data-testid="ybc-membership-row">
+      <div className="flex flex-wrap items-center justify-between gap-4">
+        <a href={href} aria-label={copy.open} className="inline-flex items-center gap-2 rounded text-sm font-bold text-neutral-900 hover:text-neutral-600 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900">
+          {copy.title}<IconLinkOut className="size-3.5" />
+        </a>
+        <dl className="flex flex-wrap gap-x-6 gap-y-3 text-right">
+          <div>
+            <dt className="text-xs text-neutral-500">
+              <Tooltip side="top" content={<span>{copy.tooltip(formatTokenAmount(membership.eligibleStakeYfi), formatTokenAmount(membership.totalEligibleStakeYfi))} {copy.queue}</span>}>
+                <button type="button" className="cursor-help rounded underline decoration-dotted underline-offset-4 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900" onClick={event => event.currentTarget.focus()} onKeyDown={event => { if (event.key === "Escape") event.currentTarget.blur(); }}>
+                  {copy.backing}
+                </button>
+              </Tooltip>
+            </dt>
+            <dd className="mt-1 font-number text-lg font-bold tabular-nums text-neutral-900">{formatTokenAmount(membership.rewardBackingYfi)} YFI</dd>
+          </div>
+          <div>
+            <dt className="text-xs text-neutral-500">{copy.share}</dt>
+            <dd className="mt-1 font-number text-lg font-bold tabular-nums text-neutral-900">{share}%</dd>
+          </div>
+        </dl>
+      </div>
+      <p className="text-xs text-neutral-500">{membership.rewardsEnabled ? copy.description : copy.disabled}</p>
+    </div>
   );
 }
 

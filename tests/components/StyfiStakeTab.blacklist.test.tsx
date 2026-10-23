@@ -41,10 +41,6 @@ vi.mock("@/lib/hooks/useTokenAllowance", () => ({
   useTokenAllowance: () => mockUseTokenAllowance(),
 }));
 
-vi.mock("@/lib/hooks/useStyfiApr", () => ({
-  useStyfiApr: () => ({ data: null, isLoading: false }),
-}));
-
 const ONE = 10n ** 18n;
 
 describe("stYFI StakeTab blacklist behavior", () => {
