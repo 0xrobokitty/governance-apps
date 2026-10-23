@@ -39,3 +39,9 @@ The published review remains locked against edits.
 This change extends the shared content parser and updates the shared Markdown renderer.
 The optional Summary heading is omitted with its paragraph when the detail header already shows the summary.
 No transaction pipeline, hosting configuration, or deployment flag changes are required.
+
+## Browser checks
+
+Authoring setup can repeat once if a development reload destroys the page during fixture setup.
+Other errors fail immediately. Review, publication, and transaction actions never repeat automatically.
+Progress-state checks pause the browser clock before publication and advance each step explicitly.

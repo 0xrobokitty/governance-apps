@@ -3,16 +3,19 @@ import {
   DAO_CREATED_PROPOSALS_STORAGE_KEY,
   DAO_EXECUTOR_VALID_SCRIPT_VECTORS,
 } from "@/lib/clients/dao";
-import { resetBridge, waitForTestBridge } from "../utils";
+import { prepareTestBridge, resetBridge, waitForTestBridge } from "../utils";
 
 test.beforeEach(async ({ page }) => {
   await page.goto("/dao/propose");
-  await waitForTestBridge(page);
-  await resetBridge(page);
-  await page.evaluate(async () => {
-    await window.__TEST__?.setDaoProposerState?.("eligible");
-    await window.__TEST__?.setDaoAuthoringState?.("valid-signal");
-  });
+  await prepareTestBridge(page, () => page.evaluate(async () => {
+    const bridge = window.__TEST__;
+    if (!bridge?.setDaoProposerState || !bridge.setDaoAuthoringState) {
+      throw new Error("DAO authoring test controls are unavailable.");
+    }
+    await bridge.reset();
+    await bridge.setDaoProposerState("eligible");
+    await bridge.setDaoAuthoringState("valid-signal");
+  }));
 });
 
 for (const body of ["Approve research funding.", "## Summary\n\nApprove research funding."]) {
@@ -245,7 +248,11 @@ test("keeps the exact review locked and announces asynchronous progress", async 
   await expect(forumLink).toHaveAttribute("target", "_blank");
   await expectMinimumHitArea(forumLink);
 
-  await page.clock.install();
+  const clockStart = new Date("2024-08-01T00:00:00.000Z");
+  await page.clock.install({ time: clockStart });
+  // Installation alone still advances with wall time. Pause before publication
+  // so each progress state survives until the assertions explicitly advance it.
+  await page.clock.pauseAt(new Date(clockStart.getTime() + 1_000));
   await page
     .getByRole("checkbox", { name: /I reviewed the exact immutable content/i })
     .check();
