@@ -9,7 +9,7 @@ import { useVeyfiAccount } from "@/lib/hooks/useVeyfi";
 import { useYbcData } from "@/lib/hooks/useYbcData";
 import { useDocumentVisibility, useIsRouteActive } from "@/lib/hooks/usePollingGate";
 import { getStyfiMockScenario, subscribeStyfiMockScenario } from "@/lib/clients/styfi/scenarios";
-import { createMockStyfiVotingPower, readStyfiVotingPower } from "@/lib/clients/styfi/voting-power";
+import { createMockStyfiVotingPowerFromAccounts, readStyfiVotingPower } from "@/lib/clients/styfi/voting-power";
 import { nowSeconds } from "@/lib/mocks/time";
 
 export function useStyfiVotingPower() {
@@ -34,13 +34,8 @@ export function useStyfiVotingPower() {
     retry: 1,
   });
   const mock = usesMockBackend && address && account && veyfiAccount
-    ? createMockStyfiVotingPower({
-      address,
-      stakedPower: account.styfiActive + veyfiAccount.llyfiTokens.reduce(
-        (total, token) => total + token.stakedBalance / (token.symbol === "upYFI" ? 69420n : 1n), 0n),
-      migratedVePower: veyfiAccount.veYfi?.migrated && veyfiAccount.veYfi.unlockTime > nowSeconds()
-        ? veyfiAccount.veYfi.lockedAmount : 0n,
-      delegatedBalance: account.styfiX.assetsActive,
+    ? createMockStyfiVotingPowerFromAccounts({
+      address, account, veyfiAccount, timestamp: nowSeconds(),
       isYbcMember: scenario === "ybc",
     })
     : null;

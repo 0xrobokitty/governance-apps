@@ -3,6 +3,9 @@ import type { DaoDeployment } from "@/lib/clients/dao/deployment";
 import { assertYbcMainnetDeployment } from "@/lib/clients/ybc/deployment";
 import type { YbcFeed } from "@/lib/schemas/ybc-feed";
 import { STYFI_GOVERNANCE } from "./deployment";
+import { LIQUID_LOCKERS } from "@/lib/constants";
+import type { StyfiAccountState } from "./types";
+import type { VeyfiAccountState } from "@/lib/clients/veyfi/types";
 
 const votingAbi = parseAbi([
   "function weight_measure() view returns (address)",
@@ -187,6 +190,27 @@ export async function readStyfiVotingPower({
     address: account, blockNumber, blockHash: block.hash, timestamp: Number(block.timestamp),
     stakedPower, migratedVePower: directPower - stakedPower, directPower, delegatedBalance,
     isYbcMember, memberWeight, ybcInfluence,
+  };
+}
+
+export function createMockStyfiVotingPowerFromAccounts(input: {
+  address: Address;
+  account: StyfiAccountState;
+  veyfiAccount: VeyfiAccountState;
+  isYbcMember: boolean;
+  timestamp: number;
+}): StyfiVotingPower {
+  const { address, account, veyfiAccount, isYbcMember, timestamp } = input;
+  const stakedPower = account.styfiActive + LIQUID_LOCKERS.reduce((total, locker) =>
+    total + (veyfiAccount.llyfiTokens.find((token) => token.symbol === locker.symbol)?.stakedBalance ?? 0n) / locker.scale, 0n);
+  const migratedVePower = veyfiAccount.veYfi?.migrated && veyfiAccount.veYfi.unlockTime > timestamp
+    ? veyfiAccount.veYfi.lockedAmount : 0n;
+  return {
+    ...createMockStyfiVotingPower({
+      address, stakedPower, migratedVePower,
+      delegatedBalance: account.styfiX.assetsActive, isYbcMember,
+    }),
+    timestamp,
   };
 }
 
