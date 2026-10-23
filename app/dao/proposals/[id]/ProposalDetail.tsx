@@ -37,6 +37,7 @@ import { daoCopy } from "../../messages";
 import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
 import { getDaoSummaryNodeIndex } from "@/lib/clients/dao/content";
+import { ProposalVoters } from "../../components/ProposalVoters";
 import {
   createDaoBoardGroupHref,
   createDaoRootHref,
@@ -46,6 +47,7 @@ import {
 export function ProposalDetail({
   snapshotNotice = null,
   actionPanel = null,
+  voterPanel,
   envelope,
   hostname,
   now: runtimeNow,
@@ -53,6 +55,7 @@ export function ProposalDetail({
 }: {
   snapshotNotice?: React.ReactNode;
   actionPanel?: React.ReactNode;
+  voterPanel?: React.ReactNode;
   envelope: DaoProposalReadEnvelope;
   hostname?: string;
   now?: number;
@@ -175,6 +178,7 @@ export function ProposalDetail({
             proposal={proposal}
           />
           <ProposalLifecycle now={now} proposal={proposal} />
+          {voterPanel ?? <ProposalVoters proposal={proposal} />}
           <ExecutionAnalysis proposal={proposal} />
           <TechnicalDetails feed={feed} proposal={proposal} />
         </div>

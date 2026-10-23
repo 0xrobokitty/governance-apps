@@ -11,6 +11,21 @@ export const daoCopy = {
     source: "View public title corrections",
     unchanged: "The published proposal text is unchanged.",
   },
+  voters: {
+    title: "Votes", latest: "Latest vote per address · snapshot data", table: "Proposal votes",
+    voter: "Voter", choice: "Choice", date: "Last voted (UTC)", power: "Voting power",
+    search: "Search name or address", sort: "Sort votes", newest: "Newest first", oldest: "Oldest first", highestPower: "Most voting power",
+    yea: "For", nay: "Against", unknownChoice: "Choice unavailable", unknownDate: "Time unavailable", unknownPower: "Weight unavailable",
+    transaction: "Transaction", share: (value: string) => `${value} of votes`,
+    empty: "No votes recorded yet.", noMatches: "No voters match your search.",
+    previous: "Previous", next: "Next", page: (page: number, total: number) => `Page ${page} of ${total}`,
+    alias: {
+      edit: "Edit name", fieldLabel: "Local voter name", save: "Save", cancel: "Cancel", reset: "Reset", you: "You",
+      browserOnly: "Shared with YBC in this browser. Names are never sent with a transaction; the Ethereum address remains canonical.",
+      invalid: "Enter a name from 1 to 40 characters without invisible or directional control characters.",
+      storageError: "This browser could not save the name. Check its storage settings and try again.",
+    },
+  },
   publicationErrors: {
     disabled: "Publication is disabled. Keep your draft and try again later.",
     unavailable: "Publication is temporarily unavailable. Keep your reviewed content and try again later.",

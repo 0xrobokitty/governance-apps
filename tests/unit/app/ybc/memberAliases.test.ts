@@ -156,37 +156,15 @@ describe("YBC member aliases", () => {
     ).toMatchObject({ source: "generated" });
   });
 
-  it("assigns stable ordinals when generated pseudonyms collide", () => {
-    const addressesByPseudonym = new Map<string, string[]>();
-    let collision: [string, string] | null = null;
-
-    for (const address of createSharedTagAddresses(145)) {
-      const pseudonym = getYbcMemberPseudonym(address);
-      const matching = addressesByPseudonym.get(pseudonym) ?? [];
-      matching.push(address);
-      addressesByPseudonym.set(pseudonym, matching);
-      if (matching.length === 2) {
-        collision = [matching[0]!, matching[1]!];
-        break;
-      }
+  it("keeps generated names identical across different app rosters", () => {
+    const addresses = createSharedTagAddresses(145);
+    const labels = buildYbcGeneratedLabels(addresses);
+    expect(new Set(Object.values(labels)).size).toBe(addresses.length);
+    for (const address of addresses) {
+      expect(labels[address]).toBe(getYbcMemberPseudonym(address));
+      expect(buildYbcGeneratedLabels([address])[address]).toBe(labels[address]);
+      expect(labels[address]).not.toMatch(/0x[0-9a-f]{40}/i);
     }
-
-    expect(collision).not.toBeNull();
-    const [firstAddress, secondAddress] = collision!;
-    const labels = buildYbcGeneratedLabels([
-      secondAddress,
-      firstAddress,
-    ]);
-    const [firstSortedAddress, secondSortedAddress] = [
-      firstAddress,
-      secondAddress,
-    ].sort();
-    const pseudonym = getYbcMemberPseudonym(firstSortedAddress);
-
-    expect(labels[firstSortedAddress]).toBe(pseudonym);
-    expect(labels[secondSortedAddress]).toBe(`${pseudonym} 2`);
-    expect(labels[firstSortedAddress]).not.toContain("0x");
-    expect(labels[secondSortedAddress]).not.toContain("0x");
   });
 });
 
