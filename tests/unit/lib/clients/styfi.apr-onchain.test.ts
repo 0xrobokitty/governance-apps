@@ -31,6 +31,7 @@ function fixture(options: { chain?: number; unfinalized?: boolean; reorg?: boole
       case "claim_from": return REWARD_CLAIMER_ADDRESS;
       case "supply": return 500n * UNIT;
       case "rewards": return args[0] === STYFI_REWARD_DISTRIBUTOR_ADDRESS ? 1_000_000_000n : args[0] === STYFI_GOVERNANCE.voteBoost ? 1_500_000_000n : 100_000_000n;
+      case "components": return { next: USER, epoch: 18n, numerator: args[0] === STYFI_REWARD_DISTRIBUTOR_ADDRESS ? 4n : 6n, denominator: 1n };
       case "packed_total_weights": return (2000n * UNIT / 10n ** 10n) << 100n;
       case "num_proposals": return args[0] === 17n ? 2n : 6n;
       case "num_votes": return args[0] === 17n ? 2n : 6n;
@@ -78,6 +79,9 @@ describe("stYFI APR onchain snapshot", () => {
     expect(result.styfixAprBps).toBeCloseTo(651.785714, 5);
     expect(result.account?.participation).toEqual({ votes: 6n, proposals: 6n });
     expect(result.account?.yourStyfiAprBps).toBeCloseTo(651.785714, 5);
+    expect(result.maxVoteBoostMultiplier).toBe(2.5);
+    expect(result.account?.voteBoostMultiplier).toBe(2.5);
+    expect(result.fullBoostStyfixEstimateAprBps).toBeCloseTo(651.785714, 5);
     expect(getBlock).toHaveBeenLastCalledWith({ blockNumber: 100n });
     for (const [call] of multicall.mock.calls) expect(call).toMatchObject({ blockNumber: 100n, allowFailure: false });
   });

@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { deriveStyfiAprSnapshot, unpackVoteBoostWeight } from "@/lib/clients/styfi/apr";
+import { deriveStyfiAprSnapshot, deriveVoteBoostMultiplier, unpackVoteBoostWeight } from "@/lib/clients/styfi/apr";
 import type { StyfiAprInputs, StyfiAprPosition } from "@/lib/clients/styfi/apr-types";
 
 const UNIT = 10n ** 18n;
@@ -9,6 +9,7 @@ const empty: StyfiAprPosition = { styfi: 0n, styfix: 0n, liquidLockers: [0n, 0n,
 function inputs(): StyfiAprInputs {
   return {
     blockNumber: 100n, timestamp: 1_800_000_000, currentEpoch: 18, rewardEpoch: 17,
+    rewardScales: { staking: { numerator: 4n, denominator: 1n }, voteBoost: { numerator: 6n, denominator: 1n } },
     valuation: { yfiPriceCts: 100_000n, timestamp: 1_800_000_000, stale: false },
     rewardDecimals: 6, rewardAssetDecimals: 6, rewardAssetsPerShare: 1_000_000n,
     stakingEpochRewards: 1_000_000_000n, stakingWeight: 1000n * UNIT,
@@ -46,6 +47,7 @@ describe("stYFI current stream APR", () => {
     expect(result.account?.voteBoostAprBps).toBe(0);
     expect(result.account?.portfolioAprBps).toBe(result.baseAprBps);
     expect(result.account?.participation.votes).toBe(6n);
+    expect(result.account?.voteBoostMultiplier).toBe(2.5);
   });
 
   it("uses the actual delegated pool snapshot instead of assuming full participation", () => {
@@ -54,6 +56,7 @@ describe("stYFI current stream APR", () => {
     const result = deriveStyfiAprSnapshot(source);
     expect(result.styfixAprBps).toBeCloseTo(456.25, 5);
     expect(result.styfixAprBps).toBeLessThan(result.maxAprBps!);
+    expect(result.fullBoostStyfixEstimateAprBps).toBeCloseTo(651.785714, 5);
   });
 
   it("adds YBC income by member stake, without requiring the member to have voted", () => {
@@ -127,5 +130,44 @@ describe("stYFI current stream APR", () => {
     expect(unpackVoteBoostWeight(packed, 15)).toBe(3n * 10n ** 10n);
     expect(unpackVoteBoostWeight(packed, 16)).toBe(7n * 10n ** 10n);
     expect(unpackVoteBoostWeight(packed, 19)).toBe(9n * 10n ** 10n);
+  });
+
+  it("uses component scales for the nominal multiplier independently of historical APR ratios", () => {
+    const source = inputs();
+    source.stakingWeight = 1100n * UNIT;
+    const result = deriveStyfiAprSnapshot(source);
+    expect(result.maxVoteBoostMultiplier).toBe(2.5);
+    expect(result.fullBoostEstimateAprBps).toBeCloseTo(result.baseAprBps! * 2.5, 4);
+    expect(result.maxAprBps! / result.baseAprBps!).not.toBeCloseTo(2.5, 2);
+  });
+
+  it("uses delegated backing and active capital for its full-participation estimate", () => {
+    const source = inputs();
+    source.delegatedPosition.styfi = 80n * UNIT;
+    const result = deriveStyfiAprSnapshot(source);
+    expect(result.fullBoostStyfixEstimateAprBps).toBeCloseTo(result.fullBoostEstimateAprBps! * 0.8, 4);
+  });
+
+  it("supports fractional scale configurations and participation without assuming a 2.5 cap", () => {
+    const scales = { staking: { numerator: 2n, denominator: 3n }, voteBoost: { numerator: 3n, denominator: 4n } };
+    expect(deriveVoteBoostMultiplier(scales)).toBe(2.125);
+    expect(deriveVoteBoostMultiplier(scales, { votes: 1n, proposals: 3n })).toBe(1.375);
+  });
+
+  it("shows 1× for no proposals or no votes, and exact intermediate participation", () => {
+    const scales = inputs().rewardScales;
+    expect(deriveVoteBoostMultiplier(scales, { votes: 0n, proposals: 0n })).toBe(1);
+    expect(deriveVoteBoostMultiplier(scales, { votes: 0n, proposals: 6n })).toBe(1);
+    expect(deriveVoteBoostMultiplier(scales, { votes: 3n, proposals: 6n })).toBe(1.75);
+    expect(deriveVoteBoostMultiplier(scales, { votes: 6n, proposals: 6n })).toBe(2.5);
+  });
+
+  it("handles removed components and refuses invalid scales or participation", () => {
+    const scales = inputs().rewardScales;
+    expect(deriveVoteBoostMultiplier({ ...scales, voteBoost: null })).toBe(1);
+    expect(deriveVoteBoostMultiplier({ ...scales, staking: null })).toBeNull();
+    expect(deriveVoteBoostMultiplier({ ...scales, voteBoost: { numerator: 6n, denominator: 0n } })).toBeNull();
+    expect(deriveVoteBoostMultiplier(scales, { votes: 7n, proposals: 6n })).toBeNull();
+    expect(deriveVoteBoostMultiplier(scales, { votes: -1n, proposals: 6n })).toBeNull();
   });
 });

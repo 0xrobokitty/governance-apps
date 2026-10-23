@@ -3,12 +3,47 @@ import type {
   StyfiAprPosition,
   StyfiAprSnapshot,
   StyfiAprValuation,
+  StyfiParticipation,
+  StyfiRewardScale,
+  StyfiRewardScales,
 } from "./apr-types";
 
 const YFI_UNIT = 10n ** 18n;
 const EPOCH_SECONDS = 14n * 24n * 60n * 60n;
 const YEAR_SECONDS = 365n * 24n * 60n * 60n;
 const PRECISION = 1_000_000n;
+
+function fullBoostScale(scales: StyfiRewardScales): StyfiRewardScale | null {
+  const { staking, voteBoost } = scales;
+  if (!staking || staking.numerator <= 0n || staking.denominator <= 0n) return null;
+  if (!voteBoost) return { numerator: 1n, denominator: 1n };
+  if (voteBoost.numerator < 0n || voteBoost.denominator <= 0n) return null;
+  const denominator = staking.numerator * voteBoost.denominator;
+  return {
+    numerator: denominator + voteBoost.numerator * staking.denominator,
+    denominator,
+  };
+}
+
+/** Reward-weight multiplier, not the ratio of historical APRs or a future APR forecast. */
+export function deriveVoteBoostMultiplier(
+  scales: StyfiRewardScales,
+  participation?: StyfiParticipation,
+): number | null {
+  const full = fullBoostScale(scales);
+  if (!full) return null;
+  let numerator = full.numerator;
+  let denominator = full.denominator;
+  if (participation) {
+    if (participation.proposals < 0n || participation.votes < 0n || participation.votes > participation.proposals) return null;
+    // sync_total_weight returns zero when the rolling window has no proposals.
+    if (participation.proposals === 0n) return 1;
+    numerator = denominator * participation.proposals + (numerator - denominator) * participation.votes;
+    denominator *= participation.proposals;
+  }
+  const multiplier = Number(numerator * PRECISION / denominator) / Number(PRECISION);
+  return Number.isFinite(multiplier) ? multiplier : null;
+}
 
 export function unpackVoteBoostWeight(packed: bigint, epoch: number): bigint {
   return ((packed >> (BigInt(epoch % 5) * 50n)) & ((1n << 50n) - 1n)) * 10n ** 10n;
@@ -33,6 +68,9 @@ export function unavailableStyfiAprSnapshot(
     rewardEpoch: null,
     baseAprBps: null,
     maxAprBps: null,
+    maxVoteBoostMultiplier: null,
+    fullBoostEstimateAprBps: null,
+    fullBoostStyfixEstimateAprBps: null,
     styfixAprBps: null,
     delegatedParticipation: null,
     valuation,
@@ -42,13 +80,13 @@ export function unavailableStyfiAprSnapshot(
 
 /** Current reward streams, annualized at unchanged balances and token prices. */
 export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot {
-  function apr(epochRewards: bigint, capital: bigint): number | null {
+  function apr(epochRewards: bigint, capital: bigint, scale: StyfiRewardScale = { numerator: 1n, denominator: 1n }): number | null {
     const price = input.valuation.yfiPriceCts;
     if (capital <= 0n || price === null || price <= 0n || input.rewardAssetsPerShare <= 0n) {
       return null;
     }
-    const numerator = epochRewards * input.rewardAssetsPerShare * YFI_UNIT * 100n * 10_000n * YEAR_SECONDS;
-    const denominator = 10n ** BigInt(input.rewardDecimals) * 10n ** BigInt(input.rewardAssetDecimals) * capital * price * EPOCH_SECONDS;
+    const numerator = epochRewards * input.rewardAssetsPerShare * YFI_UNIT * 100n * 10_000n * YEAR_SECONDS * scale.numerator;
+    const denominator = 10n ** BigInt(input.rewardDecimals) * 10n ** BigInt(input.rewardAssetDecimals) * capital * price * EPOCH_SECONDS * scale.denominator;
     const result = Number((numerator * PRECISION) / denominator) / Number(PRECISION);
     return Number.isFinite(result) ? result : null;
   }
@@ -77,6 +115,7 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
     YFI_UNIT * input.rewardEpochProposals,
     input.boostTotalWeight,
   );
+  const maximumScale = fullBoostScale(input.rewardScales);
   const snapshot: StyfiAprSnapshot = {
     status: "available",
     blockNumber: input.blockNumber,
@@ -85,6 +124,10 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
     rewardEpoch: input.rewardEpoch,
     baseAprBps: apr(oneYfiBaseIncome, YFI_UNIT),
     maxAprBps: apr(oneYfiBaseIncome + oneYfiFullBoostIncome, YFI_UNIT),
+    maxVoteBoostMultiplier: deriveVoteBoostMultiplier(input.rewardScales),
+    fullBoostEstimateAprBps: maximumScale ? apr(oneYfiBaseIncome, YFI_UNIT, maximumScale) : null,
+    fullBoostStyfixEstimateAprBps: maximumScale && input.styfixSupply >= 10n ** 12n
+      ? apr(baseIncome(input.delegatedPosition), input.styfixSupply, maximumScale) : null,
     styfixAprBps: input.styfixSupply >= 10n ** 12n ? apr(delegatedPoolIncome, input.styfixSupply) : null,
     delegatedParticipation: input.delegatedParticipation,
     valuation: input.valuation,
@@ -120,6 +163,7 @@ export function deriveStyfiAprSnapshot(input: StyfiAprInputs): StyfiAprSnapshot 
       externalAprBps: apr(external, totalActive),
       annualRewards: annualize(total),
       participation,
+      voteBoostMultiplier: deriveVoteBoostMultiplier(input.rewardScales, participation),
     };
   }
   return snapshot;

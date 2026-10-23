@@ -15,12 +15,13 @@ import {
 } from "@/lib/constants";
 import type { GlobalData } from "@/lib/schemas/global";
 import { deriveStyfiAprSnapshot, unavailableStyfiAprSnapshot, unpackVoteBoostWeight } from "./apr";
-import type { StyfiAprPosition, StyfiAprSnapshot, StyfiAprValuation } from "./apr-types";
+import type { StyfiAprPosition, StyfiAprSnapshot, StyfiAprValuation, StyfiRewardScale } from "./apr-types";
 import { STYFI_GOVERNANCE } from "./deployment";
 
 const rewardAbi = parseAbi([
   "function last_epoch() view returns (uint256)",
   "function rewards(address,uint256) view returns (uint256)",
+  "function components(address) view returns ((address next,uint256 epoch,uint256 numerator,uint256 denominator))",
 ]);
 const stakingAbi = parseAbi([
   "function total_weight_cursor() view returns ((uint256 count,uint256 last))",
@@ -67,6 +68,12 @@ const YBC_REWARDS = deployment.YBC.REWARD_DISTRIBUTOR as Address;
 const USDC = "0xa0b86991c6218b36c1d19d4a2e9eb0ce3606eb48";
 const PRICE_MAX_AGE_SECONDS = 24 * 60 * 60;
 
+function registeredScale(value: unknown): StyfiRewardScale | null {
+  const component = value as { next: Address; numerator: bigint; denominator: bigint };
+  return component.next === "0x0000000000000000000000000000000000000000"
+    ? null : { numerator: component.numerator, denominator: component.denominator };
+}
+
 type Read = { address: Address; abi: Abi; functionName: string; args?: readonly unknown[] };
 const call = (address: Address, abi: Abi, functionName: string, args?: readonly unknown[]): Read => ({ address, abi, functionName, args });
 
@@ -105,7 +112,7 @@ export async function fetchStyfiAprSnapshot(
       allowFailure: false,
     });
 
-    const [lastEpoch, cursorValue, rewardDecimalsValue, assetValue, delegatedSource, ybcKilled, ybcClaimFrom, ybcSupplyValue] = await read([
+    const [lastEpoch, cursorValue, rewardDecimalsValue, assetValue, delegatedSource, ybcKilled, ybcClaimFrom, ybcSupplyValue, stakingComponent, boostComponent] = await read([
       call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "last_epoch"),
       call(STYFI_REWARD_DISTRIBUTOR_ADDRESS, stakingAbi, "total_weight_cursor"),
       call(REWARD_TOKEN_CONFIG.address, erc20Abi, "decimals"),
@@ -114,6 +121,8 @@ export async function fetchStyfiAprSnapshot(
       call(YBC_REWARDS, ybcAbi, "killed"),
       call(YBC_REWARDS, addressAbi, "claim_from"),
       call(YBC_WEIGHTS, ybcAbi, "supply"),
+      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "components", [STYFI_REWARD_DISTRIBUTOR_ADDRESS]),
+      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "components", [STYFI_GOVERNANCE.voteBoost]),
     ]);
     // rewards() reports zero before finalization. Do not misrepresent that as a zero APR.
     if ((lastEpoch as bigint) <= epoch || (assetValue as string).toLowerCase() !== USDC ||
@@ -226,6 +235,7 @@ export async function fetchStyfiAprSnapshot(
       timestamp,
       currentEpoch,
       rewardEpoch,
+      rewardScales: { staking: registeredScale(stakingComponent), voteBoost: registeredScale(boostComponent) },
       valuation: price,
       rewardDecimals,
       rewardAssetDecimals,

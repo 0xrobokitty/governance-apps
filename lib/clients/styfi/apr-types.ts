@@ -5,6 +5,17 @@ export type StyfiParticipation = {
   proposals: bigint;
 };
 
+export type StyfiRewardScale = {
+  numerator: bigint;
+  denominator: bigint;
+};
+
+export type StyfiRewardScales = {
+  /** Null means that this component is no longer registered. */
+  staking: StyfiRewardScale | null;
+  voteBoost: StyfiRewardScale | null;
+};
+
 export type StyfiAprValuation = {
   yfiPriceCts: bigint | null;
   timestamp: number | null;
@@ -30,6 +41,8 @@ export type StyfiAccountApr = {
   /** Current stream annualized, in native reward-token units. */
   annualRewards: bigint;
   participation: StyfiParticipation;
+  /** Current participation weight multiplier; current votes affect a later reward stream. */
+  voteBoostMultiplier: number | null;
 };
 
 export type StyfiAprSnapshot = {
@@ -41,6 +54,12 @@ export type StyfiAprSnapshot = {
   baseAprBps: number | null;
   /** Hypothetical fully participating stYFI rate at the observed pool rates. */
   maxAprBps: number | null;
+  /** Current configured maximum weight multiplier, independent of historical stream rates. */
+  maxVoteBoostMultiplier: number | null;
+  /** Full-participation estimate at the current base rate and current component scales. */
+  fullBoostEstimateAprBps: number | null;
+  /** The same estimate with the delegated pool's current backing and active capital. */
+  fullBoostStyfixEstimateAprBps: number | null;
   /** Actual current rate of the delegated pool, including its historical boost. */
   styfixAprBps: number | null;
   delegatedParticipation: StyfiParticipation | null;
@@ -62,6 +81,7 @@ export type StyfiAprInputs = {
   timestamp: number;
   currentEpoch: number;
   rewardEpoch: number;
+  rewardScales: StyfiRewardScales;
   valuation: StyfiAprValuation;
   rewardDecimals: number;
   rewardAssetDecimals: number;

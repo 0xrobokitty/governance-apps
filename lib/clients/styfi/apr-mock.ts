@@ -40,6 +40,10 @@ export function createMockStyfiAprSnapshot(
   const epochRewards = (annualUsd: bigint) => annualUsd * REWARD_UNIT * BigInt(EPOCH_LENGTH) / YEAR;
   const inputs: StyfiAprInputs = {
     blockNumber: 26_000_000n, timestamp, currentEpoch, rewardEpoch: currentEpoch - 1,
+    rewardScales: {
+      staking: { numerator: 4n, denominator: 1n },
+      voteBoost: { numerator: 6n, denominator: 1n },
+    },
     valuation: { yfiPriceCts: 200_000n, timestamp, stale: false },
     rewardDecimals: 6, rewardAssetDecimals: 6, rewardAssetsPerShare: REWARD_UNIT,
     stakingEpochRewards: epochRewards(160_000n), stakingWeight: 1000n * UNIT,
