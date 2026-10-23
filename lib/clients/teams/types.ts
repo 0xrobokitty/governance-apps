@@ -260,9 +260,8 @@ export type BonusPeriod = {
   finalized: boolean;
   claimed: boolean;
   profitUsd: UsdDecimalString;
-  spotPriceUsd: UsdDecimalString;
   adjustedPriceUsd: UsdDecimalString;
-  growthFactorBps: BasisPoints;
+  bonusFactorBps: BasisPoints;
   ybcSplitBps: BasisPoints;
   claimableYfiRaw: RawTokenAmountString;
   claimableYfi: DecimalString;

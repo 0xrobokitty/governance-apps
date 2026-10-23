@@ -1,4 +1,5 @@
 import { describe, expect, it } from "vitest";
+import { formatUnits, parseUnits } from "viem";
 import mockData from "@/docs/apps/teams/examples/mock-data.example.json";
 import type {
   BonusPeriodStatus,
@@ -328,9 +329,8 @@ function assertBonusPeriod(value: unknown): void {
   assertBoolean(value.finalized);
   assertBoolean(value.claimed);
   assertDecimalString(value.profitUsd);
-  assertDecimalString(value.spotPriceUsd);
   assertDecimalString(value.adjustedPriceUsd);
-  assertNumber(value.growthFactorBps);
+  assertNumber(value.bonusFactorBps);
   assertNumber(value.ybcSplitBps);
   assertRawAmountString(value.claimableYfiRaw);
   assertDecimalString(value.claimableYfi);
@@ -634,6 +634,18 @@ describe("Team Finances mock data contract", () => {
         for (const period of team.bonus.periods) {
           if (period.status === "pending-finalization") {
             expect(period.claimableYfi).toBe("0");
+          }
+          if (period.status === "finalized-claimable") {
+            const adjustedPrice = parseUnits(period.adjustedPriceUsd, 18);
+            expect(adjustedPrice).toBeGreaterThan(0n);
+            const grossYfi =
+              (parseUnits(period.profitUsd, 18) *
+                BigInt(period.bonusFactorBps) *
+                10n ** 18n) /
+              adjustedPrice /
+              10_000n;
+            expect(period.claimableYfiRaw).toBe(grossYfi.toString());
+            expect(period.claimableYfi).toBe(formatUnits(grossYfi, 18));
           }
         }
       }

@@ -215,14 +215,6 @@ function BonusMathTooltip({
         }
       />
       <MathRow
-        label={teamsCopy.bonus.math.spotPrice}
-        value={
-          financialDataAvailable
-            ? formatTeamsUsd(period.spotPriceUsd, 2)
-            : teamsCopy.financialData.unavailableValue
-        }
-      />
-      <MathRow
         label={teamsCopy.bonus.math.adjustedPrice}
         value={
           financialDataAvailable
@@ -231,8 +223,8 @@ function BonusMathTooltip({
         }
       />
       <MathRow
-        label={teamsCopy.bonus.math.growthFactor}
-        value={formatTeamsPercentFromBps(period.growthFactorBps)}
+        label={teamsCopy.bonus.math.bonusFactor}
+        value={formatTeamsPercentFromBps(period.bonusFactorBps)}
       />
       <MathRow
         label={teamsCopy.bonus.math.ybcSplit}
