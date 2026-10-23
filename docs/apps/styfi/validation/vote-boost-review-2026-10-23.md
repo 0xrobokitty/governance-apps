@@ -7,7 +7,7 @@ Contract source revision: `001dda500be30e16d0837f8e7e05a75c8fe9710f` in the sibl
 The contract, APR, and voting-power reviews were checked independently before integration.
 The branch contains no production deployment.
 
-## Changes
+## Initial implementation
 
 | Before | After |
 | --- | --- |
@@ -24,7 +24,7 @@ The branch contains no production deployment.
 | The staking middleware binding was outdated | The client uses the current address and checks the canonical `blacklist` getter first |
 | The local Next.js shim omitted generated route types | The shim now includes the exact pinned `Prefetch` and `EnsureStatic` unions |
 
-## Validation
+## Initial implementation validation
 
 | Check | Result |
 | --- | --- |
@@ -51,12 +51,63 @@ No DAO theme changes are included in this branch.
 The build still emits framework warnings about the middleware convention and an Edge Runtime import.
 Type checks remain enabled.
 
+## Feedback revision
+
+The follow-up starts from `efe955f` on the same review branch and worktree.
+
+| Before | After |
+| --- | --- |
+| APR tooltip borders sat below padded buttons | Text decoration places the dotted underline beneath the glyphs; extra hit area does not affect layout |
+| The rewards card showed several APR figures and permanent explanations | One total APR opens an additive calculation tooltip, using the veYFI pattern |
+| Participation appeared as a proposal-count row | A compact vote-boost multiplier opens its formula, six-epoch count, and reward-timing explanation |
+| YBC income and attribution notes occupied the main card | The calculation tooltip retains these details and counts each source once |
+| Tooltip triggers relied on hover | Hover, keyboard focus, and tap open the details; Escape closes them |
+| Reward-token content could crowd a narrow column | The token and APY badge wrap; the vote-boost line stays below the headline |
+| Mode cards described returns without numbers | Onboarding and comparison cards show the stYFI range and full-participation stYFIx estimate |
+| The stake form had no APR estimate | The selected mode shows the same estimate below the amount input |
+| A historical APR ratio could imply the wrong multiplier | Live distributor scales determine the nominal multiplier; recorded streams still determine current APR |
+| Voting power occupied a separate stYFI card | A compact DAO summary contains one amount and a tooltip breakdown |
+| YBC influence lacked a percentage | The tooltip identifies the member's share of YBC weight; it does not claim a share of all DAO voting power |
+| DAO review could use the staking mock wallet | DAO wallet and voting-weight fixtures drive the summary, with a YBC-member review control |
+| Voting-power polling depended on the stYFI path | The mounted DAO component and document visibility control polling, including the subdomain root |
+
+The scale-based estimate is not a prediction of next-epoch APR.
+The statistics feed lacks the projected Vote Boost and account data required for that prediction, so no forecast is shown.
+Voting contracts also lack a comparable global matured-weight total. A global governance percentage is therefore omitted.
+
+The independent review checked stream attribution, component scales, delegated backing, epoch timing, and YBC denominators.
+Current mainnet preview values are 20.23% actual stYFIx APR and an 8.08%–20.21% direct staking estimate.
+The full-participation stYFIx estimate is 20.21%. The feed still marks its YFI price as stale.
+
+### Feedback validation
+
+| Check | Result |
+| --- | --- |
+| `npm run typecheck` | Passed |
+| `npm run lint` | Passed |
+| `npm run test` | 199 files and 2,219 tests passed |
+| `npm run test:e2e` and focused reruns | 67 distinct checks passed; one skipped |
+| `npm run test:e2e:full` and focused reruns | 45 distinct checks passed; the existing DAO theme check failed |
+| `npm run build` with production runtime and live data | Passed |
+| Independent review | APR, multiplier, delegated backing, and DAO percentage semantics passed |
+| Visual review | Desktop rewards, live mode comparison, and DAO summary checked; new mobile tooltip checks pass |
+
+The first smoke run had 65 passes, one skip, and two failures.
+The interrupted authoring check and the veYFI timeout both passed on the focused rerun.
+These browser results combine the full run and reruns.
+The full suite first had 37 passes and nine failures. Eight page-navigation interruptions passed on the focused rerun.
+The remaining failure is the same `dao-proposal-read.spec.ts:241` theme check described in the initial validation section.
+It still stops at line 254, waiting for `Switch to Light Mode`; that failure was reproduced on the unchanged starting revision.
+
 ## Local review
 
 - Live data: <http://127.0.0.1:3108/styfi>
 - Mock scenarios: <http://127.0.0.1:3107/styfi>
+- DAO voting summary: <http://127.0.0.1:3107/dao>
 - Open **Debug** in the mock preview, then select **All votes**, **Some votes**, **No votes**, or **YBC member**.
 - Screenshots are saved locally in `outputs/styfi-vote-boost-review-2026-10-23/`.
+- Feedback screenshots are in `outputs/styfi-feedback-review-2026-10-23/`.
+- The DAO debug panel has a **YBC member** control for the combined influence estimate.
 
 The previews are local processes and remain available while those processes run.
 Production values use the public mainnet RPC and production statistics/YBC feeds.
