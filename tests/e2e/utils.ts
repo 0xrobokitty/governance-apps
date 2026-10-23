@@ -18,6 +18,26 @@ export async function waitForTestBridge(page: Page) {
   await page.waitForFunction(() => !!window.__TEST__);
 }
 
+/** Replay only idempotent fixture setup when a dev reload destroys its document. */
+export async function prepareTestBridge(page: Page, setup: () => Promise<void>) {
+  for (let attempt = 0; attempt < 2; attempt += 1) {
+    await waitForTestBridge(page);
+    try {
+      await setup();
+      return;
+    } catch (error) {
+      if (
+        attempt !== 0 ||
+        !(error instanceof Error) ||
+        !error.message.includes("Execution context was destroyed")
+      ) {
+        throw error;
+      }
+      await page.waitForLoadState("domcontentloaded");
+    }
+  }
+}
+
 export async function resetBridge(page: Page) {
   await page.evaluate(async () => {
     await window.__TEST__?.reset();
