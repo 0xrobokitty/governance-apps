@@ -1,17 +1,19 @@
 # Wallet participation and the YBC vote
 
 The proposal board preserves the existing lifecycle groups and proposal order.
-A connected wallet gets a separate action area on each proposal: right on desktop and below the result on mobile.
+A connected wallet gets a compact action control to the left of results on desktop and above results on mobile.
+Results remain in the rightmost desktop column when no wallet control is shown.
 The area uses the latest snapshot and local receipt state, not a live eligibility check.
 
 - `Vote`: an unvoted wallet can open the proposal's action section while the voting window is open.
-- `Voted Yea` or `Voted Nay`: the wallet's latest contribution has positive weight and a known choice.
+- `✓ Voted Yea` or `× Voted Nay`: the wallet's latest contribution has positive weight and a known choice.
 - `Voted split` or `Vote registered`: a recorded vote has a split choice or an unavailable choice.
-- `No vote recorded`: the wallet has no positive contribution and voting is not open.
 - `Vote pending`: a locally submitted vote still awaits confirmation or indexing.
 - `Vote unavailable`: the contribution cannot be interpreted.
 
 Recorded and pending states are disabled controls. The Vote link opens review; it does not promise eligibility or submit a transaction.
+Recorded controls use neutral gray styling; Vote remains a compact black link. All controls retain a 40-pixel hit target.
+The wallet area has no heading. Unvoted wallets outside the voting window leave the area blank, with no absence label.
 Flags and retractions block the link. A non-retracted veto still allows participation review during the voting window.
 Disconnected wallets have no wallet action area. Address comparisons ignore case.
 Proposal identity includes the chain, Voting contract, and proposal ID.

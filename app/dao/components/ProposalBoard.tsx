@@ -177,7 +177,7 @@ function ProposalBoardRow({
       className="relative min-w-0 cursor-pointer p-4 transition-[background-color] duration-150 ease-out hover:bg-surface-secondary/40 motion-reduce:transition-none md:p-5"
     >
       <div className={cn("grid min-w-0 gap-5 lg:items-center", participation
-        ? "lg:grid-cols-[minmax(0,1fr)_minmax(14rem,18rem)_10rem]"
+        ? "lg:grid-cols-[minmax(0,1fr)_8rem_minmax(14rem,18rem)]"
         : "lg:grid-cols-[minmax(0,1fr)_minmax(15rem,21rem)]")}>
         <div className="min-w-0 space-y-3">
           <div className="flex flex-wrap items-center gap-2">
@@ -218,7 +218,8 @@ function ProposalBoardRow({
           <ProposalWarnings proposal={proposal} />
         </div>
 
-        <div className="min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0">
+        <DaoWalletAction participation={participation} votingOpen={isDaoVoteReviewOpen(proposal, now)} href={`${proposalHref}#dao-proposal-actions`} />
+        <div data-testid="dao-proposal-results" className={cn("min-w-0 space-y-3 border-t border-border pt-4 lg:border-l lg:border-t-0 lg:pl-5 lg:pt-0", participation && "lg:col-start-3")}>
           <ProposalTiming now={now} proposal={proposal} />
           <ProposalVoteSummary compact proposal={proposal} />
           {proposal.type === "signal" &&
@@ -228,7 +229,6 @@ function ProposalBoardRow({
             </p>
           ) : null}
         </div>
-        <DaoWalletAction participation={participation} votingOpen={isDaoVoteReviewOpen(proposal, now)} href={`${proposalHref}#dao-proposal-actions`} />
       </div>
     </article>
   );

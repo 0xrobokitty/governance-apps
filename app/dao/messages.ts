@@ -28,13 +28,11 @@ export const daoCopy = {
     },
   },
   participation: {
-    yourVote: "Your vote",
     vote: "Vote",
     reviewDescription: "Review proposal and wallet eligibility before voting",
     choices: { yea: "Voted Yea", nay: "Voted Nay", split: "Voted split", unknown: "Vote registered" },
     unknownChoice: "Your wallet has a recorded vote, but its choice is unavailable in this snapshot.",
     voted: { label: "Voted", description: "Your wallet has a recorded vote in this snapshot." },
-    "not-voted": { label: "No vote recorded", description: "No vote is recorded for your wallet in this snapshot. Recent votes may still be indexing." },
     pending: { label: "Vote pending", description: "Your vote was submitted and is awaiting confirmation or indexing." },
     unknown: { label: "Vote unavailable", description: "Your wallet's vote could not be determined from this snapshot." },
   },

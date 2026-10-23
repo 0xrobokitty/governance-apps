@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Button, getButtonClassName } from "@/components/ui/Button";
 import { IconCheck } from "@/components/icons/IconCheck";
+import { IconClose } from "@/components/icons/IconClose";
 import type { DaoWalletParticipation } from "@/lib/clients/dao/participation";
 import { daoCopy } from "../messages";
 
@@ -9,31 +10,28 @@ export function DaoWalletAction({ participation, votingOpen, href }: {
   votingOpen: boolean;
   href: string;
 }) {
-  if (!participation) return null;
+  if (!participation || (participation.status === "not-voted" && !votingOpen)) return null;
   const { status, choice } = participation;
   const copy = daoCopy.participation;
   const canReview = status === "not-voted" && votingOpen;
-  const label = status === "voted" ? copy.choices[choice ?? "unknown"] : copy[status].label;
-  const description = status === "voted" && choice === "unknown" ? copy.unknownChoice : copy[status].description;
+  const label = canReview ? copy.vote : status === "voted" ? copy.choices[choice ?? "unknown"] :
+    status === "pending" ? copy.pending.label : copy.unknown.label;
+  const description = canReview ? copy.reviewDescription : status === "voted"
+    ? choice === "unknown" || choice === null ? copy.unknownChoice : copy.voted.description
+    : status === "pending" ? copy.pending.description : copy.unknown.description;
   return (
-    <div className="pointer-events-none relative z-10 flex min-w-0 items-center justify-between gap-3 border-t border-border pt-4 lg:flex-col lg:items-stretch lg:gap-2 lg:border-t-0 lg:pt-0" data-testid="dao-wallet-action">
-      <span className="text-xs text-text-tertiary lg:text-center">{copy.yourVote}</span>
+    <div className="pointer-events-none relative z-10 flex min-w-0 items-center lg:justify-end" data-testid="dao-wallet-action">
       {canReview ? (
-        <Link href={href} className={getButtonClassName({ size: "sm", className: "pointer-events-auto min-w-32 cursor-pointer font-bold lg:w-full" })}
+        <Link href={href} className={getButtonClassName({ size: "sm", className: "pointer-events-auto min-w-16 cursor-pointer font-medium" })}
           aria-label={`${copy.vote}. ${copy.reviewDescription}`}>
           {copy.vote}
         </Link>
-      ) : status === "not-voted" ? (
-        <span className="text-sm text-text-secondary lg:text-center" title={description}>{label}</span>
       ) : (
         <Button disabled static size="sm" variant="secondary"
-          className={status === "voted"
-            ? "pointer-events-auto min-w-32 gap-1.5 border-green-200 bg-green-50 font-bold text-green-800 disabled:cursor-default disabled:opacity-100 dark:border-green-900 dark:bg-green-950 dark:text-green-200"
-            : status === "pending"
-              ? "pointer-events-auto min-w-32 border-amber-200 bg-amber-50 font-bold text-amber-800 disabled:cursor-default disabled:opacity-100 dark:border-amber-900 dark:bg-amber-950 dark:text-amber-200"
-              : "pointer-events-auto min-w-32 font-bold disabled:cursor-default disabled:opacity-100"}
+          className="pointer-events-auto gap-1.5 border-transparent bg-surface-secondary/60 px-2.5 font-medium text-text-secondary disabled:cursor-default disabled:opacity-100"
           title={description} aria-label={`${label}. ${description}`}>
-          {status === "voted" ? <IconCheck className="size-3.5" aria-hidden /> : null}{label}
+          {status === "voted" && choice === "yea" ? <IconCheck className="size-3.5" aria-hidden /> : null}
+          {status === "voted" && choice === "nay" ? <IconClose className="size-3.5" aria-hidden /> : null}{label}
         </Button>
       )}
     </div>

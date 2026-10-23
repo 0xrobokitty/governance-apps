@@ -28,19 +28,29 @@ for (const width of [390, 1280]) {
     await recorded.scrollIntoViewIfNeeded();
     const recordedBox = await recorded.boundingBox();
     expect(recordedBox).not.toBeNull();
+    expect(recordedBox!.height).toBeGreaterThanOrEqual(40);
+    expect(recordedBox!.width).toBeLessThan(128);
     await page.mouse.click(recordedBox!.x + recordedBox!.width / 2, recordedBox!.y + recordedBox!.height / 2);
     await expect(page).toHaveURL(/\/dao$/);
     await expect(page.getByRole("article", { name: /Renew security operations/ }).getByRole("button", { name: /Voted Yea/ })).toBeDisabled();
     const row = page.getByRole("article", { name: /Fund protocol research/ });
     const action = row.getByTestId("dao-wallet-action");
-    const resultsBox = await row.locator(":scope > div > div").nth(1).boundingBox();
+    const resultsBox = await row.getByTestId("dao-proposal-results").boundingBox();
     const actionBox = await action.boundingBox();
     expect(resultsBox).not.toBeNull();
     expect(actionBox).not.toBeNull();
-    if (width >= 1024) expect(actionBox!.x).toBeGreaterThanOrEqual(resultsBox!.x + resultsBox!.width);
-    else expect(actionBox!.y).toBeGreaterThanOrEqual(resultsBox!.y + resultsBox!.height);
+    if (width >= 1024) {
+      expect(actionBox!.x + actionBox!.width).toBeLessThanOrEqual(resultsBox!.x);
+      const ended = page.getByRole("article", { name: /Proposal with a partially decoded script/ });
+      const endedResults = await ended.getByTestId("dao-proposal-results").boundingBox();
+      expect(endedResults!.x).toBe(resultsBox!.x);
+      expect(endedResults!.width).toBe(resultsBox!.width);
+    } else expect(actionBox!.y + actionBox!.height).toBeLessThanOrEqual(resultsBox!.y);
     expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
     const review = action.getByRole("link", { name: /Vote. Review proposal and wallet eligibility/ });
+    expect((await review.boundingBox())!.height).toBeGreaterThanOrEqual(40);
+    await expect(page.getByText("Your vote", { exact: true })).toHaveCount(0);
+    await expect(page.getByText("No vote recorded", { exact: true })).toHaveCount(0);
     await review.focus();
     await expect(review).toBeFocused();
     await page.keyboard.press("Enter");
@@ -54,8 +64,7 @@ for (const width of [390, 1280]) {
 
 test("does not offer voting for upcoming or ended proposals", async ({ page }) => {
   const ended = page.getByRole("article", { name: /Proposal with a partially decoded script/ });
-  await expect(ended.getByTestId("dao-wallet-action").getByText("No vote recorded")).toBeVisible();
-  await expect(ended.getByTestId("dao-wallet-action").getByRole("link")).toHaveCount(0);
+  await expect(ended.getByTestId("dao-wallet-action")).toHaveCount(0);
   await page.getByRole("tab", { name: /Upcoming/ }).click();
-  await expect(page.getByTestId("dao-wallet-action").getByRole("link")).toHaveCount(0);
+  await expect(page.getByTestId("dao-wallet-action")).toHaveCount(0);
 });
