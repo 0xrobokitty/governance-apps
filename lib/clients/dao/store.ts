@@ -27,7 +27,10 @@ import {
   deriveDaoMockBlockHash,
   deriveDaoMockExpectedVotingEpoch,
   getDaoMockFixture,
+  seedDaoMockWalletVoteExamples,
+  setDaoMockWalletVoteExample,
 } from "./fixtures";
+import { getLatestDaoVoteEvents } from "./votes";
 import {
   DAO_EXECUTOR_SCRIPT_ERROR_VECTORS,
   DAO_EXECUTOR_VALID_SCRIPT_VECTORS,
@@ -141,6 +144,7 @@ function createStoreState(
 ): DaoMockStoreState {
   const fixture = getDaoMockFixture(fixtureId);
   const feed = createRuntimeFeed(now);
+  if (fixtureId === DEFAULT_FIXTURE_ID) seedDaoMockWalletVoteExamples(feed);
   const createdRecords = readDaoCreatedProposals();
   feed.proposals = mergeCreatedProposals(feed.proposals, createdRecords);
   for (const record of createdRecords) {
@@ -416,12 +420,15 @@ function readVoteFacts(
   address: Address
 ): Pick<DaoAccountProposalFacts, "hasVoted" | "voteDirection"> {
   const identity = daoVoteIdentity(ref, address);
+  const proposal = getProposalRuntimeByRef(current, ref)?.proposal;
+  const recorded = proposal ? getLatestDaoVoteEvents(proposal).find((event) =>
+    event.actor?.toLowerCase() === address.toLowerCase() && event.weight !== null && event.weight > 0n) : null;
   const direction =
     current.submittedVotes[identity] ??
     current.baselineVotes[identity] ??
-    null;
+    (recorded?.yeaBps === 10_000 ? "yea" : recorded?.yeaBps === 0 ? "nay" : null);
   return {
-    hasVoted: direction !== null,
+    hasVoted: direction !== null || Boolean(recorded),
     voteDirection: direction,
   };
 }
@@ -438,6 +445,15 @@ function setBaselineVote(
   } else {
     delete current.baselineVotes[identity];
   }
+}
+
+function setExplicitMockVote(current: DaoMockStoreState, hasVoted: boolean, direction: DaoVoteDirection | null) {
+  const proposal = getSelectedProposalRuntime(current).proposal;
+  const identity = daoVoteIdentity(proposal.ref, current.account.address);
+  if (!current.submittedVotes[identity]) {
+    setDaoMockWalletVoteExample(proposal, current.account.address, hasVoted ? direction ?? "yea" : null);
+  }
+  setBaselineVote(current, hasVoted, direction);
 }
 
 function replaceSelectedProposal(
@@ -743,11 +759,8 @@ export function setDaoMockAccountState(accountState: DaoMockAccountState) {
   return updateStore((current) => {
     current.account.connected = accountState !== "disconnected";
     current.account.correctChain = accountState !== "wrong-network";
-    setBaselineVote(
-      current,
-      accountState === "already-voted",
-      accountState === "already-voted" ? "yea" : null
-    );
+    if (accountState === "already-voted") setExplicitMockVote(current, true, "yea");
+    else setBaselineVote(current, false, null);
     current.account.votingWeight =
       accountState === "no-weight" || accountState === "disconnected"
         ? 0n
@@ -774,7 +787,7 @@ export function setDaoMockAlreadyVoted(
   direction: "yea" | "nay" | null = hasVoted ? "yea" : null
 ) {
   return updateStore((current) => {
-    setBaselineVote(current, hasVoted, direction);
+    setExplicitMockVote(current, hasVoted, direction);
   });
 }
 
