@@ -3,7 +3,7 @@ import type { Address, PublicClient } from "viem";
 import feedExample from "@/docs/apps/ybc/onchain-integration-plan/examples/ybc-feed.example.json";
 import { YbcFeedSchema } from "@/lib/schemas/ybc-feed";
 import { STYFI_GOVERNANCE } from "@/lib/clients/styfi/deployment";
-import { createMockStyfiVotingPower, deriveYbcVotingInfluence, readStyfiVotingPower } from "@/lib/clients/styfi/voting-power";
+import { createMockDaoVotingPower, createMockStyfiVotingPower, deriveYbcVotingInfluence, readStyfiVotingPower } from "@/lib/clients/styfi/voting-power";
 
 const ACCOUNT = "0x1111111111111111111111111111111111111111" as Address;
 const OTHER = "0x2222222222222222222222222222222222222222" as Address;
@@ -73,6 +73,7 @@ describe("stYFI governance voting power", () => {
     expect(result.directPower).toBe(result.stakedPower + result.migratedVePower);
     for (const [request] of multicall.mock.calls) expect(request).toMatchObject({ blockNumber: 123n, allowFailure: false });
     expect(getBlock).toHaveBeenLastCalledWith({ blockNumber: 123n });
+    expect(multicall.mock.calls.flatMap(([request]) => request.contracts).some(({ functionName }) => functionName === "supply" || functionName === "totalSupply")).toBe(false);
   });
 
   it("does not treat a stYFIx holder's balance as direct or member voting power", async () => {
@@ -112,6 +113,20 @@ describe("stYFI governance voting power", () => {
   it("rejects a block replacement during the snapshot", async () => {
     const { client } = makeClient({ reorg: true });
     await expect(readStyfiVotingPower({ publicClient: client, account: ACCOUNT })).rejects.toThrow("snapshot changed");
+  });
+});
+
+describe("DAO mock voting summary", () => {
+  const account = { address: ACCOUNT, connected: true, correctChain: true, votingWeight: 100n * ETHER };
+
+  it("uses the DAO fixture's base weight and observation time", () => {
+    const result = createMockDaoVotingPower({ account, timestamp: 1_700_000_000, isYbcMember: true });
+    expect(result).toMatchObject({ address: ACCOUNT, timestamp: 1_700_000_000, directPower: 100n * ETHER, migratedVePower: 0n });
+    expect(result?.ybcInfluence?.totalPower).toBe(310n * ETHER);
+  });
+
+  it.each(["connected", "correctChain"] as const)("does not expose another wallet's power when %s is false", (field) => {
+    expect(createMockDaoVotingPower({ account: { ...account, [field]: false }, timestamp: 1_700_000_000, isYbcMember: true })).toBeNull();
   });
 });
 

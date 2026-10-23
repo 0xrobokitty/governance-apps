@@ -3,6 +3,10 @@ import { render, screen } from "@testing-library/react";
 import { AccountSummary } from "@/app/styfi/components/AccountSummary";
 import type { ExternalPosition } from "@/app/styfi/external-positions";
 
+vi.mock("@/lib/hooks/useStyfiApr", () => ({
+  useStyfiApr: () => ({ data: null, isLoading: false }),
+}));
+
 const emptyBalances = {
   styfi: {
     active: 0n,

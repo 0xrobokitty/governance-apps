@@ -1,5 +1,7 @@
 "use client";
 
+import type { KeyboardEvent } from "react";
+import { Tooltip } from "@/components/ui/Tooltip";
 import type { StyfiAprSnapshot } from "@/lib/clients/styfi/apr-types";
 import { formatPercent } from "@/lib/format";
 import { styfiCopy as copy } from "../messages";
@@ -10,6 +12,19 @@ export function formatAprBps(value: number | null | undefined): string {
     : formatPercent(value / 10000, 2);
 }
 
+function formatMultiplier(value: number | null | undefined): string {
+  return value == null || !Number.isFinite(value)
+    ? "—"
+    : value.toLocaleString("en-US", { maximumFractionDigits: 2 });
+}
+
+function dismissOnEscape(event: KeyboardEvent<HTMLButtonElement>) {
+  if (event.key === "Escape") event.currentTarget.blur();
+}
+
+const tooltipClass = "flex w-fit [&_[role=tooltip]]:max-w-[min(260px,calc(100vw-4rem))]";
+const underlineClass = "underline decoration-dotted decoration-neutral-400 underline-offset-4";
+
 type Props = {
   snapshot?: StyfiAprSnapshot | null;
   isLoading?: boolean;
@@ -18,96 +33,107 @@ type Props = {
 export function AprBreakdown({ snapshot, isLoading = false }: Props) {
   const account = snapshot?.account;
   const hasPosition = !!account && account.totalActive > 0n;
-  const unavailable = !isLoading && (!snapshot || snapshot.status === "unavailable" || snapshot.baseAprBps === null);
+  const label = hasPosition ? copy.rewards.apr.portfolioLabel : copy.rewards.apr.delegatedLabel;
+  const value = hasPosition ? account.portfolioAprBps : snapshot?.styfixAprBps;
+  const formatted = isLoading ? "—" : formatAprBps(value);
+  const hasPersonalBoost = !!account && (account.styfiActive > 0n || account.externalActive > 0n || (account.voteBoostAprBps ?? 0) > 0);
+
+  return (
+    <div className="space-y-2" data-testid="styfi-apr-breakdown" aria-busy={isLoading}>
+      <Tooltip content={<AprCalculation snapshot={snapshot} />} side="top" align="start" className={tooltipClass}>
+        <button
+          type="button"
+          aria-label={label}
+          onClick={event => event.currentTarget.focus()}
+          onKeyDown={dismissOnEscape}
+          className="flex min-h-12 cursor-help flex-col items-start gap-2 rounded text-left transition-colors hover:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-4"
+        >
+          <span className={`text-xs font-bold text-neutral-500 ${underlineClass}`}>{label}</span>
+          <span className={`font-number font-bold tabular-nums text-neutral-900 tracking-tight ${formatted === copy.rewards.apr.unavailable ? "text-lg" : "text-3xl md:text-4xl"}`} data-testid="styfi-total-apr">
+            {formatted}
+            {snapshot?.valuation.stale && value != null && <span className="ml-0.5 align-top text-sm text-amber-700">*</span>}
+          </span>
+        </button>
+      </Tooltip>
+      {hasPersonalBoost && (
+        <Tooltip content={<VoteBoostCalculation snapshot={snapshot} />} side="top" align="start" className={tooltipClass}>
+          <button
+            type="button"
+            onClick={event => event.currentTarget.focus()}
+            onKeyDown={dismissOnEscape}
+            className="relative cursor-help rounded text-left text-xs leading-6 text-neutral-500 transition-colors after:absolute after:inset-x-0 after:-inset-y-2 hover:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400 focus-visible:ring-offset-2"
+          >
+            <span className={underlineClass}>{copy.rewards.apr.voteBoostLabel}:</span>{" "}
+            <span className="font-number font-semibold tabular-nums text-neutral-700" data-testid="styfi-vote-boost">{formatMultiplier(account.voteBoostMultiplier)}×</span>
+          </button>
+        </Tooltip>
+      )}
+    </div>
+  );
+}
+
+function AprCalculation({ snapshot }: Pick<Props, "snapshot">) {
+  const account = snapshot?.account;
+  const hasPosition = !!account && account.totalActive > 0n;
+  const total = hasPosition ? account.portfolioAprBps : snapshot?.styfixAprBps;
   const hasHistoricalAllocation = !!account && account.styfiActive > 0n && account.yourStyfiAprBps === null && account.portfolioAprBps !== null;
 
   return (
-    <div className="space-y-4" data-testid="styfi-apr-breakdown" aria-busy={isLoading}>
-      <dl className="grid grid-cols-2 gap-3">
-        <Rate label={copy.rewards.apr.baseLabel} value={snapshot?.baseAprBps} loading={isLoading} />
-        <Rate label={copy.rewards.apr.delegatedLabel} value={snapshot?.styfixAprBps} loading={isLoading} />
-      </dl>
-      <p className="text-xs leading-relaxed text-neutral-500">{copy.rewards.apr.delegatedNote}</p>
-
-      <div className="space-y-1.5">
-        <dl className="flex items-center justify-between gap-4 text-sm">
-          <dt className="font-medium text-neutral-600">{copy.rewards.apr.maxLabel}</dt>
-          <dd className="font-number font-bold tabular-nums text-neutral-900">{isLoading ? "—" : formatAprBps(snapshot?.maxAprBps)}</dd>
+    <div className="w-full min-w-[210px] space-y-2 text-xs leading-relaxed" data-testid="styfi-apr-calculation">
+      <p className="font-bold text-neutral-900">{copy.rewards.apr.calculationTitle}</p>
+      {hasPosition ? (
+        <dl className="space-y-1" data-testid="styfi-apr-contributions">
+          {account.styfiActive > 0n && <Contribution label={copy.rewards.apr.baseContributionLabel} value={account.baseAprBps} />}
+          {account.styfixActive > 0n && <Contribution label={copy.rewards.apr.delegatedContributionLabel} value={account.delegatedAprBps} />}
+          {(account.externalActive > 0n || (account.externalAprBps ?? 0) > 0) && <Contribution label={copy.rewards.apr.externalContributionLabel} value={account.externalAprBps} />}
+          {(account.styfiActive > 0n || account.externalActive > 0n || (account.voteBoostAprBps ?? 0) > 0) && <Contribution label={copy.rewards.apr.personalBoostLabel} value={account.voteBoostAprBps} />}
+          {account.isYbcMember && <Contribution label={copy.rewards.apr.ybcLabel} value={account.ybcAprBps} />}
         </dl>
-        <p className="text-xs leading-relaxed text-neutral-500">{copy.rewards.apr.maxTooltip}</p>
-      </div>
-
-      {account && account.styfiActive > 0n && account.yourStyfiAprBps !== null && (
-        <div className="space-y-1.5">
-          <dl className="flex items-center justify-between gap-4 text-sm">
-            <dt className="font-medium text-neutral-600">{copy.rewards.apr.personalLabel}</dt>
-            <dd className="font-number font-bold tabular-nums text-neutral-900" data-testid="styfi-personal-apr">
-              {formatAprBps(account.yourStyfiAprBps)}
-            </dd>
-          </dl>
-          <p className="text-xs leading-relaxed text-neutral-500">{copy.rewards.apr.personalNote}</p>
-        </div>
-      )}
-
-      {hasPosition && (
-        <div className="space-y-2 border-t border-border pt-4">
-          <p className="text-xs font-bold text-neutral-500">{copy.rewards.apr.contributionsTitle}</p>
-          <dl className="space-y-1.5 text-sm" data-testid="styfi-apr-contributions">
-            {account.styfiActive > 0n && <Contribution label={copy.rewards.apr.baseContributionLabel} value={account.baseAprBps} />}
-            {account.styfixActive > 0n && <Contribution label={copy.rewards.apr.delegatedContributionLabel} value={account.delegatedAprBps} />}
-            {(account.externalActive > 0n || (account.externalAprBps ?? 0) > 0) && <Contribution label={copy.rewards.apr.externalContributionLabel} value={account.externalAprBps} />}
-            {(account.styfiActive > 0n || account.externalActive > 0n || (account.voteBoostAprBps ?? 0) > 0) && (
-              <Contribution label={copy.rewards.apr.personalBoostLabel} value={account.voteBoostAprBps} />
-            )}
-            {account.isYbcMember && <Contribution label={copy.rewards.apr.ybcLabel} value={account.ybcAprBps} />}
-          </dl>
-          {(account.externalActive > 0n || hasHistoricalAllocation) && <p className="text-xs leading-relaxed text-neutral-500">{copy.rewards.apr.mixedPositions}</p>}
-          {account.isYbcMember && <p className="text-xs text-neutral-500">{copy.rewards.apr.ybcIncluded}</p>}
-        </div>
-      )}
-
-      {account && (account.styfiActive > 0n || account.externalActive > 0n) && (
-        <div className="space-y-1.5 rounded-lg bg-surface-secondary/50 p-3">
-          <div className="flex flex-wrap items-baseline justify-between gap-2 text-xs">
-            <p className="font-bold text-neutral-600">{copy.rewards.apr.participationLabel}</p>
-            <p className="font-number font-bold tabular-nums text-neutral-900" data-testid="styfi-participation">
-              {account.participation.proposals > 0n
-                ? copy.rewards.apr.participation(account.participation.votes.toString(), account.participation.proposals.toString())
-                : copy.rewards.apr.noProposals}
-            </p>
-          </div>
-          <p className="text-xs leading-relaxed text-neutral-500">{copy.rewards.apr.participationTiming}</p>
-        </div>
-      )}
-
-      <div className="space-y-1 text-xs leading-relaxed text-neutral-500">
-        {unavailable && <p role="status">{copy.rewards.apr.unavailableBody}</p>}
-        {snapshot?.valuation.stale && <p className="text-amber-700">{copy.rewards.apr.priceStale}</p>}
-        {snapshot?.rewardEpoch != null && snapshot.currentEpoch != null && (
-          <p>{copy.rewards.apr.streamingEpoch(snapshot.rewardEpoch, snapshot.currentEpoch)}</p>
-        )}
-        <p>{copy.rewards.apr.ratesEstimate}</p>
-      </div>
+      ) : <p>{copy.rewards.apr.delegatedTooltip}</p>}
+      <dl className="border-t border-neutral-200 pt-2">
+        <Contribution label={copy.rewards.apr.totalLabel} value={total} total />
+      </dl>
+      {total == null && <p role="status">{copy.rewards.apr.unavailableBody}</p>}
+      {hasPosition && <p>{copy.rewards.apr.portfolioTooltip}</p>}
+      {hasPosition && (account.externalActive > 0n || hasHistoricalAllocation) && <p>{copy.rewards.apr.mixedPositions}</p>}
+      {snapshot?.valuation.stale && <p className="text-amber-700">{copy.rewards.apr.priceStale}</p>}
+      {snapshot?.rewardEpoch != null && snapshot.currentEpoch != null && <p>{copy.rewards.apr.streamingEpoch(snapshot.rewardEpoch, snapshot.currentEpoch)}</p>}
     </div>
   );
 }
 
-function Rate({ label, value, loading }: { label: string; value?: number | null; loading: boolean }) {
+function VoteBoostCalculation({ snapshot }: Pick<Props, "snapshot">) {
+  const account = snapshot?.account;
+  if (!account) return null;
+  const { votes, proposals } = account.participation;
   return (
-    <div className="space-y-1 rounded-lg bg-surface-secondary/50 p-3">
-      <dt className="text-xs font-medium text-neutral-500">{label}</dt>
-      <dd className={`font-number font-bold tabular-nums text-neutral-900 ${value == null ? "text-sm" : "text-xl"}`}>
-        {loading ? "—" : formatAprBps(value)}
-      </dd>
+    <div className="w-full min-w-[210px] space-y-2 text-xs leading-relaxed">
+      <p className="font-bold text-neutral-900">{copy.rewards.apr.voteBoostLabel}</p>
+      {proposals > 0n ? (
+        <>
+          <p>{copy.rewards.apr.participation(votes.toString(), proposals.toString())}</p>
+          {snapshot?.maxVoteBoostMultiplier != null && (
+            <p className="font-number tabular-nums text-neutral-700">{copy.rewards.apr.boostFormula(formatMultiplier(snapshot.maxVoteBoostMultiplier), votes.toString(), proposals.toString())}</p>
+          )}
+        </>
+      ) : <p>{copy.rewards.apr.noProposals}</p>}
+      <dl className="border-t border-neutral-200 pt-2">
+        <div className="flex items-baseline justify-between gap-3 font-bold text-neutral-900">
+          <dt>{copy.rewards.apr.voteBoostLabel}</dt>
+          <dd className="font-number tabular-nums">{formatMultiplier(account.voteBoostMultiplier)}×</dd>
+        </div>
+      </dl>
+      <p>{copy.rewards.apr.boostScope}</p>
+      <p>{copy.rewards.apr.participationTiming}</p>
     </div>
   );
 }
 
-function Contribution({ label, value }: { label: string; value: number | null }) {
+function Contribution({ label, value, total = false }: { label: string; value: number | null | undefined; total?: boolean }) {
   return (
-    <div className="flex items-baseline justify-between gap-3">
-      <dt className="text-neutral-600">{label}</dt>
-      <dd className="font-number font-medium tabular-nums text-neutral-900">{formatAprBps(value)}</dd>
+    <div className={`flex items-baseline justify-between gap-3 ${total ? "font-bold text-neutral-900" : "text-neutral-600"}`}>
+      <dt>{label}</dt>
+      <dd className="shrink-0 font-number tabular-nums">{formatAprBps(value)}</dd>
     </div>
   );
 }

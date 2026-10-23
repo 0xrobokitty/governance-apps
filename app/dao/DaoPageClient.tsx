@@ -20,6 +20,7 @@ import { daoCopy } from "./messages";
 import { DaoSnapshotNotice } from "./components/DaoSnapshotNotice";
 import { MockControls } from "./components/MockControls";
 import { ProposalBoard } from "./components/ProposalBoard";
+import { DaoVotingPower } from "./components/DaoVotingPower";
 import type { DaoProposal } from "@/lib/clients/dao";
 import type { DaoDisplayGroup } from "@/lib/clients/dao";
 import {
@@ -60,10 +61,7 @@ export function DaoPageClient({
   const hostname = browserHostname ?? initialHostname;
   const { isConnected } = useAccount();
   const runtime = useDaoMockRuntime();
-  const hasConnectedAccount =
-    process.env.NEXT_PUBLIC_E2E === "true" && runtime
-      ? runtime.account.connected
-      : isConnected;
+  const hasConnectedAccount = runtime ? runtime.account.connected : isConnected;
   const feedQuery = useDaoFeed();
   const proposalCount = feedQuery.data?.proposals.length ?? 0;
   const proposals = feedQuery.data?.proposals ?? EMPTY_PROPOSALS;
@@ -113,6 +111,7 @@ export function DaoPageClient({
   return (
     <>
       <DaoBoardView
+        votingPower={<DaoVotingPower />}
         snapshotNotice={!runtime ? <DaoSnapshotNotice snapshot={feedQuery.data} error={feedQuery.error} onRetry={() => { void feedQuery.refetch(); }} /> : null}
         isConnected={hasConnectedAccount}
         isStale={!!runtime && isStale}
@@ -136,6 +135,7 @@ export function DaoPageClient({
 
 export function DaoBoardView({
   snapshotNotice = null,
+  votingPower = null,
   isConnected,
   isStale = false,
   lastGoodSnapshotTimestamp = null,
@@ -148,6 +148,7 @@ export function DaoBoardView({
   state,
 }: {
   snapshotNotice?: ReactNode;
+  votingPower?: ReactNode;
   isConnected: boolean;
   isStale?: boolean;
   lastGoodSnapshotTimestamp?: number | null;
@@ -167,7 +168,7 @@ export function DaoBoardView({
         showCount={state === "ready"}
       />
 
-      {!isConnected ? <DaoWalletNotice /> : null}
+      {isConnected ? votingPower : <DaoWalletNotice />}
 
       {isStale && lastGoodSnapshotTimestamp !== null ? (
         <StaleFeedNotice

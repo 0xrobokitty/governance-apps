@@ -18,7 +18,7 @@ import { IconCheck } from "@/components/icons/IconCheck";
 import { IconWallet } from "@/components/icons/IconWallet";
 import { useEpochClock } from "@/lib/hooks/useEpochClock";
 import { useStyfiApr } from "@/lib/hooks/useStyfiApr";
-import { AprBreakdown, formatAprBps } from "../AprBreakdown";
+import { AprBreakdown } from "../AprBreakdown";
 
 export function RewardsCard() {
   const { data, isLoading } = useStyfiAccount();
@@ -27,10 +27,6 @@ export function RewardsCard() {
   const { apy: rewardApy, convertBalanceToUsd } = useRewardTokenInfo();
   const { epochInfo } = useEpochClock({ tickMs: 60_000 });
   const isEpochZero = epochInfo?.currentEpoch === 0;
-  const hasActivePositions = !!apr?.account && apr.account.totalActive > 0n;
-  const titleLabel = hasActivePositions ? copy.rewards.apr.portfolioLabel : copy.rewards.apr.maxLabel;
-  const displayAprLabel = isAprLoading ? "—" : formatAprBps(hasActivePositions ? apr?.account?.portfolioAprBps : apr?.maxAprBps);
-  const aprTooltipContent = hasActivePositions ? copy.rewards.apr.portfolioTooltip : copy.rewards.apr.maxTooltip;
 
   const claimable = useMemo(() => {
     if (!data) return 0n;
@@ -113,32 +109,25 @@ export function RewardsCard() {
         )}
 
         <div className="grid grid-cols-2 gap-4">
-          <div className="space-y-1">
-            <Tooltip content={aprTooltipContent} side="top">
-              <button
-                type="button"
-                className="min-h-10 text-xs font-bold text-neutral-500 cursor-help border-b border-dotted border-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none focus-visible:text-neutral-700"
-              >
-                {titleLabel}
-              </button>
-            </Tooltip>
-            <p className={`font-number font-bold tabular-nums text-neutral-900 tracking-tight ${displayAprLabel === copy.rewards.apr.unavailable ? "text-lg" : "text-2xl md:text-3xl"}`} data-testid="styfi-total-apr">
-              {displayAprLabel}
-            </p>
-          </div>
+          <AprBreakdown snapshot={apr} isLoading={isAprLoading} />
 
-          <div className="space-y-1">
+          <div className="space-y-2">
             <Tooltip
               content={copy.rewards.token.tooltip(data.rewardToken.symbol)}
               side="top"
             >
-              <span className="inline-flex min-h-10 items-center text-xs font-bold text-neutral-500 cursor-help border-b border-dotted border-neutral-400 hover:text-neutral-700 transition-colors">
+              <button
+                type="button"
+                onClick={event => event.currentTarget.focus()}
+                onKeyDown={event => { if (event.key === "Escape") event.currentTarget.blur(); }}
+                className="relative cursor-help text-xs font-bold text-neutral-500 underline decoration-dotted decoration-neutral-400 underline-offset-4 transition-colors after:absolute after:inset-x-0 after:-inset-y-2 hover:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-400"
+              >
                 {copy.rewards.token.label}
-              </span>
+              </button>
             </Tooltip>
 
             <div className="flex flex-col items-start gap-1.5">
-              <div className="flex items-center gap-2">
+              <div className="flex flex-wrap items-center gap-2">
                 <a
                   href={data.rewardToken.vaultUrl}
                   target="_blank"
@@ -163,8 +152,6 @@ export function RewardsCard() {
             </div>
           </div>
         </div>
-
-        <AprBreakdown snapshot={apr} isLoading={isAprLoading} />
 
         {isEpochZero && (
           <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">

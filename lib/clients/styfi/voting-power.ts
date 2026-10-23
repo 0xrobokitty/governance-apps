@@ -1,5 +1,6 @@
 import { erc20Abi, parseAbi, type Address, type Hash, type PublicClient } from "viem";
 import type { DaoDeployment } from "@/lib/clients/dao/deployment";
+import type { DaoAccountProposalFacts } from "@/lib/clients/dao/types";
 import { assertYbcMainnetDeployment } from "@/lib/clients/ybc/deployment";
 import type { YbcFeed } from "@/lib/schemas/ybc-feed";
 import { STYFI_GOVERNANCE } from "./deployment";
@@ -238,5 +239,25 @@ export function createMockStyfiVotingPower(input: {
       delegatedPoolPower: 2_000n * 10n ** 18n,
       collectivePoolPower: 100n * 10n ** 18n,
     }),
+  };
+}
+
+/** DAO fixtures own their wallet and weight independently of the staking mocks.
+ * Their base voting weight is modeled as matured stake, before proposal decay. */
+export function createMockDaoVotingPower(input: {
+  account: Pick<DaoAccountProposalFacts, "address" | "connected" | "correctChain" | "votingWeight">;
+  isYbcMember: boolean;
+  timestamp: number;
+}): StyfiVotingPower | null {
+  if (!input.account.connected || !input.account.correctChain) return null;
+  return {
+    ...createMockStyfiVotingPower({
+      address: input.account.address,
+      stakedPower: input.account.votingWeight,
+      migratedVePower: 0n,
+      delegatedBalance: 0n,
+      isYbcMember: input.isYbcMember,
+    }),
+    timestamp: input.timestamp,
   };
 }

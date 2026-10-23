@@ -136,18 +136,19 @@ We assume a technically literate DeFi user familiar with:
 ## Story ST-04A — Understand Vote Boost and YBC Income
 
 **As a** governance participant
-**I want** separate base, Vote Boost, delegated, and YBC reward rates
+**I want** one total reward rate with an accessible calculation
 **So that** I can understand the rewards from my positions and votes
 
 ### Acceptance Criteria
 
 - The headline shows the actual stYFIx APR, including its recorded Vote Boost rewards.
-- The reward card shows the stYFI base APR and the actual stYFIx APR separately.
-- An active stYFI position shows its personal APR when historical rewards can be attributed to that position.
-- Mixed or earlier external holdings use an account-wide Vote Boost contribution with an explanation.
+- The reward card shows one total portfolio APR. Without an active position, it shows the actual stYFIx APR.
+- Hover, keyboard focus, or a tap reveals the contribution breakdown in a tooltip.
+- Mixed or earlier external holdings use an account-wide Vote Boost contribution with an explanation in that tooltip.
 - A YBC member sees YBC income included once in the total portfolio APR.
-- Current reward rates use the completed reward epoch. The card identifies the epoch in which those rewards stream.
-- Current voting participation covers the rolling six-epoch window. The card explains that new votes affect rewards from the next epoch.
+- Current reward rates use the completed reward epoch. The APR tooltip identifies the epoch in which those rewards stream.
+- A compact personal vote-boost multiplier replaces visible proposal counts. Its tooltip shows the counts, calculation, and six-epoch window.
+- The multiplier tooltip explains that new votes affect rewards from the next epoch and do not multiply the total portfolio APR.
 - Missing reward or price data shows an unavailable state, not a zero APR.
 - A separate full-participation estimate assumes a vote on every counted proposal. It does not guarantee future YBC participation.
 - Reward-token APY remains separate from staking APR.

@@ -1,7 +1,7 @@
 # Vote Boost APR and YBC income
 
 The stYFI page shows the actual stYFIx APR in its headline.
-The reward card separates base rewards, personal Vote Boost, delegated rewards, and YBC income.
+The reward card shows one total APR. Its tooltip separates base rewards, personal Vote Boost, delegated rewards, and YBC income.
 All APRs annualize the current reward stream at unchanged balances and prices.
 
 ## Contract findings
@@ -32,8 +32,8 @@ A single vote in the epoch does not satisfy this condition if that epoch contain
 ## Epoch and rate calculation
 
 For current epoch `E`, the current Vote Boost stream uses the completed reward epoch `E - 1`.
-The current participation count is shown separately because votes in `E` affect the stream from `E + 1`.
-The rolling count covers six epochs.
+The compact Vote Boost multiplier uses participation in `E`. Votes in `E` affect the stream from `E + 1`.
+The rolling count covers six epochs. The multiplier tooltip explains this timing and shows the proposal counts.
 
 Let `R` be a component's reward allocation for the completed epoch.
 Let `w` and `W` be the account weight and total weight for that component.
@@ -46,10 +46,26 @@ It does not divide the account weight by proposal count a second time.
 
 The stYFIx rate includes the staking and Vote Boost income received by the delegated pool.
 That income is divided by the current stYFIx supply.
-Historical weights and current balances can make this rate differ slightly from the full-participation stYFI estimate.
+Historical weights and current balances can make this rate differ from the full-participation estimate.
 
-The full-participation estimate applies the completed epoch's proposal count to one YFI at the observed pool rates.
-It describes a hypothetical position. It is not a guaranteed rate or an upper bound on existing reward streams.
+The reader also obtains each component's current numerator and denominator from `RewardDistributor.components`.
+Let `S` be the staking component scale and `B` be the Vote Boost component scale.
+The maximum stYFI reward-weight multiplier is `M = 1 + B / S`.
+For current rolling votes `v` and counted proposals `p`, the personal multiplier is `1 + (M - 1) × v / p`.
+With scales `S = 4` and `B = 6`, full participation gives `2.5×`. Half participation gives `1.75×`, and no votes gives `1×`.
+If no proposals count in the rolling window, the personal multiplier is `1×`. The contract reports zero Vote Boost component weight.
+This multiplier applies to stYFI reward weight. It does not multiply the total portfolio APR, which also includes legacy and YBC income.
+
+The mode comparison and stake form show estimates at the current base rate and configured component scales.
+The stYFI range extends from base APR to `base APR × M`.
+The stYFIx full-participation estimate also applies the ratio of its current stYFI backing to its active share supply.
+This separate denominator prevents the stYFI estimate from silently replacing the delegated estimate.
+Full stYFIx participation requires an eligible YBC member to vote on every counted proposal.
+These estimates do not guarantee returns or set an upper bound on existing reward streams.
+
+The interface omits a next-epoch APR prediction.
+The feed lacks projected Vote Boost allocations, complete participation weights, and account snapshots needed for that prediction.
+Its projected legacy APR fields cannot supply those missing inputs.
 
 APR converts reward shares through the reward vault's `convertToAssets` value and annualizes over a 365-day year.
 The calculation uses the actual reward-token and underlying-token decimals.
@@ -60,22 +76,24 @@ The old `styfi.current.aprBps` and `styfix.current.aprBps` fields do not determi
 
 The portfolio total includes direct staking income, delegated income, liquid-locker income, migrated veYFI income, Vote Boost, and eligible YBC income.
 Each contribution uses the same current active balance in YFI equivalents as its denominator.
-The contribution list therefore explains the total without adding YBC income twice.
+The APR tooltip lists each contribution and explains the total without adding YBC income twice.
 
 YBC reward shares use eligible staked balances. YBC voting influence uses matured voting weights.
 The app keeps these denominators separate.
 
 The historical Vote Boost weight combines stYFI, liquid lockers, and eligible migrated veYFI.
 Current token balances cannot always divide that historical weight between assets.
-The card shows a personal stYFI position APR only when the domain can attribute that reward weight to stYFI.
-Otherwise, it shows the account-wide Vote Boost contribution and an explanation.
-Historical external income remains visible even if its current position is closed.
+The card uses the total portfolio APR instead of a separate rate for each position.
+Its tooltip shows the account-wide Vote Boost contribution and explains historical attribution when needed.
+Historical external income remains in the calculation even if its current position is closed.
 
 ## Read failures and local review
 
 The chain reads use one pinned block per snapshot.
 Unavailable reward or price data does not become a zero APR.
 APR read failures do not disable the existing reward claim flow.
+An asterisk marks a stale YFI valuation. The APR tooltip explains the stale price.
+The calculation tooltips open on hover, keyboard focus, or tap. Escape dismisses a focused tooltip.
 
 Mock controls provide **All votes**, **Some votes**, **No votes**, and **YBC member** scenarios.
 These deterministic scenarios use the same calculation functions as the live reader.

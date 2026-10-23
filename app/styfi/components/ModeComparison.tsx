@@ -7,6 +7,8 @@ import { cn } from "@/lib/cn";
 import type { StyfiAsset } from "./types";
 import type { ReactNode } from "react";
 import { styfiCopy as copy } from "../messages";
+import { useStyfiApr } from "@/lib/hooks/useStyfiApr";
+import { StakingAprEstimate } from "./StakingAprEstimate";
 
 type ModeComparisonProps = {
   selectedAsset?: StyfiAsset;
@@ -19,6 +21,7 @@ export function ModeComparison({
   onSelectAsset,
   className,
 }: ModeComparisonProps) {
+  const { data: apr, isLoading } = useStyfiApr();
   return (
     <div className={cn("grid gap-4 md:grid-cols-2", className)}>
       <ModeCard
@@ -27,6 +30,7 @@ export function ModeComparison({
         onSelectAsset={onSelectAsset}
         title={copy.modeSelector.cards.styfi.title}
         description={copy.modeSelector.cards.styfi.description}
+        estimate={<StakingAprEstimate asset="stYFI" snapshot={apr} isLoading={isLoading} />}
         badges={<Badge>{copy.modeSelector.cards.styfi.badge}</Badge>}
       />
       <ModeCard
@@ -35,6 +39,7 @@ export function ModeComparison({
         onSelectAsset={onSelectAsset}
         title={copy.modeSelector.cards.x.title}
         description={copy.modeSelector.cards.x.description}
+        estimate={<StakingAprEstimate asset="stYFIx" snapshot={apr} isLoading={isLoading} />}
         badges={
           <div className="flex flex-wrap items-center gap-2">
             <Badge variant="brand">{copy.modeSelector.cards.x.badge}</Badge>
@@ -53,6 +58,7 @@ function ModeCard({
   title,
   description,
   badges,
+  estimate,
 }: {
   asset: StyfiAsset;
   selectedAsset?: StyfiAsset;
@@ -60,6 +66,7 @@ function ModeCard({
   title: string;
   description: string;
   badges: ReactNode;
+  estimate: ReactNode;
 }) {
   const isActive = selectedAsset === asset;
   const isStyfi = asset === "stYFI";
@@ -75,7 +82,7 @@ function ModeCard({
       onClick={() => onSelectAsset(asset)}
       aria-pressed={isActive}
       className={cn(
-        "h-full w-full rounded-box border bg-surface p-5 text-left transition-[border-color,box-shadow,transform] duration-150 ease-out",
+        "flex h-full w-full flex-col rounded-box border bg-surface p-5 text-left transition-[border-color,box-shadow,transform] duration-150 ease-out",
         "hover:-translate-y-0.5 hover:shadow-md focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900 focus-visible:ring-offset-2",
         isActive ? activeClasses : "border-neutral-200"
       )}
@@ -89,9 +96,10 @@ function ModeCard({
           </div>
         </div>
       </div>
-      <p className="mt-4 text-sm text-neutral-600 leading-relaxed">
+      <p className="mt-4 flex-1 text-sm text-neutral-600 leading-relaxed">
         {description}
       </p>
+      <div className="mt-4 w-full">{estimate}</div>
     </button>
   );
 }

@@ -45,9 +45,10 @@ It specifically addresses:
 2. **Protocol Stats Bar** (Total Supply, Staked, stYFIx APR). The APR includes the delegated pool's recorded Vote Boost rewards. **Staked** uses `styfi.staked` and excludes cooldown balances.
 3. **Shared DAO Voting Notice** below the header when a decision vote is open.
 4. **AccountSummary** (Hero for new users, positions list for returning users)
-5. **Voting Power** with direct voting weight and, for YBC members, estimated collective influence.
-6. **Cockpit** (StakeManageCard + Rewards)
-7. **Contracts Footer** (`<details>` disclosure with Etherscan links for YFI, stYFI, stYFIx, Reward Claimer, and reward token)
+5. **Cockpit** (StakeManageCard + Rewards)
+6. **Contracts Footer** (`<details>` disclosure with Etherscan links for YFI, stYFI, stYFIx, Reward Claimer, and reward token)
+
+Personal voting power appears on the DAO front page, beside the proposal board.
 
 ---
 
@@ -100,10 +101,17 @@ It specifically addresses:
 - **stYFI card:**
   - Badge: "Vote-dependent APR"
   - Description: "Retain voting rights and earn Vote Boost through governance participation."
+  - Estimated APR range: current base rate through the full configured Vote Boost rate.
+  - The caption shows the configured multiplier range, currently `1×–2.5×`.
 - **stYFIx card:**
   - Badge: "Delegated voting" + "Recommended" (brand blue)
   - Description: "YBC votes on behalf of stYFIx holders. Full Vote Boost requires participation in every counted proposal."
+  - Estimated APR at full YBC participation, adjusted for the delegated pool's backing and active supply.
 - **Interaction:** Cards function as buttons to call `onSelectAsset`.
+
+The onboarding cards and compare modal use the same estimates.
+The full-participation estimates are not next-epoch forecasts or guaranteed returns.
+Unavailable valuation produces an unavailable value. An older YFI price retains a visible note.
 
 ---
 
@@ -122,32 +130,35 @@ Always visible and owns all write interactions.
 ### 6.3 Tabs
 - **Variant:** Line tabs (text + underline) to differentiate action from scope.
 - **Stake:** Approve → Stake flow. Input unit: YFI.
+  The selected mode's estimated APR appears below the amount input, with the same range or rate as the comparison cards.
 - **Unstake:** Refactored flow (below).
 
 ### 6.4 Rewards Card (Yield & Rewards)
 
-The card shows **Your total APR** for an active portfolio. This rate includes base rewards, delegated rewards, external positions, Vote Boost, and YBC income.
-Each source appears once in the contribution list. All contributions use the same active-capital denominator.
+The card shows one rate: **Your total APR** for an active portfolio, or **stYFIx APR** when no position is active.
+The total includes base rewards, delegated rewards, external positions, Vote Boost, and YBC income.
 
-The rate comparison shows **stYFI base APR**, **stYFIx APR**, and **Full participation APR**.
-Full participation is a hypothetical stYFI estimate at the current pool rates. It is not an upper bound on all historical reward streams.
+Hover, keyboard focus, or a tap on the APR opens its calculation tooltip.
+Each income source appears once, followed by the total. All contributions use the same active-capital denominator.
+The tooltip explains historical reward attribution, stale valuation, and the completed reward epoch when applicable.
+It retains external income that still streams after a position closes.
 
-The card shows **Your stYFI position APR** only when the domain can attribute the historical reward weight to stYFI.
-For mixed or earlier external holdings, the card shows the account-wide Vote Boost contribution and an explanation.
-YBC members see **YBC income** included in their total APR.
+Eligible personal positions show a compact **Your vote boost: 2.5×** line below the APR.
+Its tooltip shows counted votes, proposals, and the multiplier calculation over the rolling six-epoch window.
+It explains that current participation affects rewards from the next epoch.
+This multiplier applies to stYFI reward weight, not to the total portfolio APR.
 
-The participation row shows votes and proposals in the current rolling six-epoch window.
-The timing note identifies the completed reward epoch and the current stream epoch. Votes this epoch affect rewards from the next epoch.
+Tooltip labels use dotted text underlines. Escape dismisses a focused tooltip.
 
 The reward-token symbol links to its Yearn vault. Its APY badge stays separate from the staking APR.
 The payout section retains the claimable USD value, token amount, and **Claim Rewards** button.
 
 | State | Display |
 | --- | --- |
-| Disconnected | Public rate comparison and a wallet connection prompt |
+| Disconnected | Current stYFIx APR and a wallet connection prompt |
 | Loading | Skeleton for account data and a dash for pending rates |
 | Unavailable APR | Explicit unavailable values; existing rewards remain claimable |
-| Stale YFI price | A visible valuation note beside the estimates |
+| Stale YFI price | An asterisk beside the APR and a valuation note in its tooltip |
 | Blacklisted | Existing restriction banner and disabled claim action |
 
 See [Vote Boost APR derivation](vote-boost-apr.md) for contract sources and calculation rules.

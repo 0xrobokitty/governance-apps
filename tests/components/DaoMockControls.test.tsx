@@ -9,6 +9,7 @@ import {
 } from "@/lib/clients/dao";
 import { daoKeys } from "@/lib/hooks/daoKeys";
 import { setFixedNow } from "@/lib/mocks/time";
+import { getStyfiMockScenario, resetStyfiMockScenario } from "@/lib/clients/styfi/scenarios";
 
 const { disconnectAsync, useHostnameMock } = vi.hoisted(() => ({
   disconnectAsync: vi.fn(),
@@ -38,6 +39,7 @@ describe("DAO MockControls", () => {
     process.env.NEXT_PUBLIC_RUNTIME_MODE = "development";
     setFixedNow(DAO_MOCK_NOW);
     resetDaoMockStore();
+    resetStyfiMockScenario();
     vi.clearAllMocks();
     useHostnameMock.mockReturnValue("localhost");
   });
@@ -101,6 +103,19 @@ describe("DAO MockControls", () => {
       queryKey: daoKeys.all,
       refetchType: "all",
     });
+  });
+
+  it("toggles the YBC membership scenario without changing DAO wallet weight", () => {
+    renderControls(new QueryClient());
+    const weight = getDaoMockSnapshot().account.votingWeight;
+    fireEvent.click(screen.getByRole("button", { name: /debug/i }));
+    const control = screen.getByRole("checkbox", { name: "YBC member" });
+    fireEvent.click(control);
+    expect(getStyfiMockScenario()).toBe("ybc");
+    expect(control).toBeChecked();
+    expect(getDaoMockSnapshot().account.votingWeight).toBe(weight);
+    fireEvent.click(control);
+    expect(getStyfiMockScenario()).toBe("partial");
   });
 
   it("syncs the DAO clock before invalidating on shared time travel", async () => {

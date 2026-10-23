@@ -4,6 +4,25 @@ import type {
 } from "@/lib/clients/dao";
 
 export const daoCopy = {
+  votingPower: {
+    title: "Your voting power",
+    breakdown: "Voting power breakdown",
+    direct: "Direct voting power",
+    estimated: "Including YBC · estimate",
+    directOnly: "Direct · YBC unavailable",
+    staked: "stYFI + liquid lockers",
+    migrated: "Migrated veYFI",
+    delegated: "stYFIx via YBC",
+    collective: "YBC stake",
+    memberShare: "Share of YBC member weight",
+    estimate: "Assumes all YBC members vote. Your influence changes with participation.",
+    beforeDecay: "Current matured weight. Late votes can have less direct power.",
+    delegatedNotice: "Your stYFIx votes through YBC; holding it does not add direct voting power.",
+    influenceUnavailable: "The complete YBC roster is unavailable. Only your direct power is shown.",
+    unavailable: "Voting power is unavailable. Try again shortly.",
+    unit: "YFI",
+    mockMember: "YBC member",
+  },
   publicationErrors: {
     disabled: "Publication is disabled. Keep your draft and try again later.",
     unavailable: "Publication is temporarily unavailable. Keep your reviewed content and try again later.",

@@ -14,7 +14,6 @@ import { useStyfiApr } from "@/lib/hooks/useStyfiApr";
 import { useVeyfiAccount, useVeyfiStats } from "@/lib/hooks/useVeyfi";
 import { StyfiCockpit } from "./components/StyfiCockpit";
 import { AccountSummary } from "./components/AccountSummary";
-import { VotingPowerBreakdown } from "./components/VotingPowerBreakdown";
 import type { StyfiAsset } from "./components/types";
 import { styfiCopy as copy } from "./messages";
 import { MockControls } from "./components/MockControls";
@@ -247,7 +246,9 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
                 <button
                   type="button"
                   aria-label={copy.page.stats.apr.label}
-                  className="min-h-10 cursor-help border-b border-dotted border-neutral-400 tabular-nums transition-colors hover:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
+                  onClick={event => event.currentTarget.focus()}
+                  onKeyDown={event => { if (event.key === "Escape") event.currentTarget.blur(); }}
+                  className="relative cursor-help tabular-nums underline decoration-dotted decoration-neutral-400 underline-offset-4 transition-colors after:absolute after:inset-x-0 after:-inset-y-3 hover:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
                 >
                   {formattedApy}
                 </button>
@@ -277,7 +278,6 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
           wrongNetworkBody={copy.page.connectBanner.wrongNetwork}
         />
 
-        <VotingPowerBreakdown />
 
         <div id="stake-manage" ref={cockpitRef} className="scroll-mt-8">
           <StyfiCockpit
