@@ -1,6 +1,6 @@
 import { expect, test, type Locator, type Page } from "@playwright/test";
 import {
-  DAO_MOCK_ACCOUNT_ADDRESS,
+  DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS,
   DAO_MOCK_STYFIX_AGGREGATE_ADDRESS,
   DAO_MOCK_YBC_AGGREGATE_ADDRESS,
 } from "@/lib/clients/dao/fixtures";
@@ -34,7 +34,7 @@ for (const viewport of VIEWPORTS) {
 
     const sort = page.getByRole("combobox", { name: "Sort votes" });
     await sort.selectOption("oldest");
-    await expectAddress(rows.first(), DAO_MOCK_ACCOUNT_ADDRESS);
+    await expectAddress(rows.first(), DAO_MOCK_HISTORICAL_YEA_VOTER_ADDRESS);
     await sort.selectOption("power");
     await expectAddress(rows.first(), DAO_MOCK_STYFIX_AGGREGATE_ADDRESS);
     await expect(rows.first().getByText("36.36% of votes", { exact: true })).toBeVisible();
