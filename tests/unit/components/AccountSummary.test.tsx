@@ -107,8 +107,8 @@ describe("AccountSummary", () => {
     renderSummary(emptyBalances, []);
 
     expect(screen.getByText("Compare stYFI and stYFIx")).toBeInTheDocument();
-    expect(screen.getByText("Variable APY")).toBeInTheDocument();
-    expect(screen.getByText("Maximized APY")).toBeInTheDocument();
+    expect(screen.getByText("Vote-dependent APR")).toBeInTheDocument();
+    expect(screen.getByText("Delegated voting")).toBeInTheDocument();
     expect(screen.queryByTestId("styfi-position-row")).not.toBeInTheDocument();
     expect(screen.queryByTestId("external-position-row")).not.toBeInTheDocument();
   });
@@ -123,8 +123,8 @@ describe("AccountSummary", () => {
     expect(screen.getByText("Status")).toBeInTheDocument();
     expect(screen.getByText("Locked")).toBeInTheDocument();
     expect(screen.getByText("Choose How to Stake")).toBeInTheDocument();
-    expect(screen.getByText("Variable APY")).toBeInTheDocument();
-    expect(screen.getByText("Maximized APY")).toBeInTheDocument();
+    expect(screen.getByText("Vote-dependent APR")).toBeInTheDocument();
+    expect(screen.getByText("Delegated voting")).toBeInTheDocument();
     expect(screen.queryByTestId("styfi-position-row")).not.toBeInTheDocument();
   });
 

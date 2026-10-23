@@ -1,8 +1,8 @@
-# stYFI UI Spec v3.2
+# stYFI UI Spec v3.3
 
 **Status:** Final
 **Applies to:** `styfi.yearn.fi` (and `/styfi` route)
-**Last updated:** 2026-07-14
+**Last updated:** 2026-10-23
 
 ---
 
@@ -34,18 +34,20 @@ It specifically addresses:
 - `StyfiPageClient` derives `selectedAsset` and `isNewUser`.
 - `StyfiPageClient` also reads `VeyfiAccountState` and derives normalized `externalPositions` (veYFI + staked LLYFI totals in YFI units).
 - `AccountSummary` receives balances + external positions and applies the Active/Hybrid/Newbie matrix.
-- `StyfiCockpit` receives `selectedAsset`, `onSelectAsset`, and `isNewUser`.
+- `StyfiCockpit` receives `selectedAsset` and `onSelectAsset`.
+- `useStyfiApr` supplies the reward rates and portfolio contributions. Page components only format these values.
 
 ---
 
 ## 3. Page Structure
 
 1. **Global Header** (standard Yearn header) with a stYFI-only **Voting & Proposals** link to the DAO app on desktop and mobile.
-2. **Protocol Stats Bar** (Total Supply, Staked, APR). Show **"Epoch 1 APR"** when current epoch == 0 from the canonical clock. **Staked** should use `styfi.staked` (excludes cooldown balances; `styfi.unstaking` is the cooldown amount).
+2. **Protocol Stats Bar** (Total Supply, Staked, stYFIx APR). The APR includes the delegated pool's recorded Vote Boost rewards. **Staked** uses `styfi.staked` and excludes cooldown balances.
 3. **Shared DAO Voting Notice** below the header when a decision vote is open.
 4. **AccountSummary** (Hero for new users, positions list for returning users)
-5. **Cockpit** (StakeManageCard + Rewards)
-6. **Contracts Footer** (`<details>` disclosure with Etherscan links for YFI, stYFI, stYFIx, Reward Claimer, and reward token)
+5. **Voting Power** with direct voting weight and, for YBC members, estimated collective influence.
+6. **Cockpit** (StakeManageCard + Rewards)
+7. **Contracts Footer** (`<details>` disclosure with Etherscan links for YFI, stYFI, stYFIx, Reward Claimer, and reward token)
 
 ---
 
@@ -96,11 +98,11 @@ It specifically addresses:
 
 - **Layout:** Grid (2 columns desktop, stacked mobile).
 - **stYFI card:**
-  - Badge: "Variable APY"
-  - Description: "Standard staking. You retain voting rights. Governance participation required for max yield."
+  - Badge: "Vote-dependent APR"
+  - Description: "Retain voting rights and earn Vote Boost through governance participation."
 - **stYFIx card:**
-  - Badge: "Maximized APY" + "Recommended" (brand blue)
-  - Description: "Auto-delegated vault. Voting power is assigned to YBC to maximize rewards automatically."
+  - Badge: "Delegated voting" + "Recommended" (brand blue)
+  - Description: "YBC votes on behalf of stYFIx holders. Full Vote Boost requires participation in every counted proposal."
 - **Interaction:** Cards function as buttons to call `onSelectAsset`.
 
 ---
@@ -123,22 +125,32 @@ Always visible and owns all write interactions.
 - **Unstake:** Refactored flow (below).
 
 ### 6.4 Rewards Card (Yield & Rewards)
-- **Title:** "Yield & Rewards".
-- **Layout:** Two stacked sections for clarity on small screens.
-  - **Top (Context):**
-    - **Current APR** (or **Next Epoch APR** when `epoch == 0`) with tooltip aligned to the label.
-    - When `epoch == 0`, use `styfi.projected.aprBps` for the displayed value.
-    - **Reward Token** label with tooltip: "Rewards are paid in {symbol}, which earns its own yield automatically."
-    - Show reward token symbol (`yvUSDC-1`) as a subtle external link to the Yearn vault, plus an APY badge (success variant) when available.
-    - Optional sublabel: "Auto-compounding vault".
-  - **Bottom (Payout Zone):**
-    - **Available to claim** label.
-    - Large claimable amount (USD) with a smaller token value beneath (include symbol).
-    - Primary CTA: **Claim Rewards**.
-- **States:**
-  - **Disconnected:** Centered empty state with icon + "Connect wallet to view rewards."
-  - **Loading:** Two-tier skeleton (context section + payout section).
-  - **Blacklisted:** Error banner above stats; CTA disabled.
+
+The card shows **Your total APR** for an active portfolio. This rate includes base rewards, delegated rewards, external positions, Vote Boost, and YBC income.
+Each source appears once in the contribution list. All contributions use the same active-capital denominator.
+
+The rate comparison shows **stYFI base APR**, **stYFIx APR**, and **Full participation APR**.
+Full participation is a hypothetical stYFI estimate at the current pool rates. It is not an upper bound on all historical reward streams.
+
+The card shows **Your stYFI position APR** only when the domain can attribute the historical reward weight to stYFI.
+For mixed or earlier external holdings, the card shows the account-wide Vote Boost contribution and an explanation.
+YBC members see **YBC income** included in their total APR.
+
+The participation row shows votes and proposals in the current rolling six-epoch window.
+The timing note identifies the completed reward epoch and the current stream epoch. Votes this epoch affect rewards from the next epoch.
+
+The reward-token symbol links to its Yearn vault. Its APY badge stays separate from the staking APR.
+The payout section retains the claimable USD value, token amount, and **Claim Rewards** button.
+
+| State | Display |
+| --- | --- |
+| Disconnected | Public rate comparison and a wallet connection prompt |
+| Loading | Skeleton for account data and a dash for pending rates |
+| Unavailable APR | Explicit unavailable values; existing rewards remain claimable |
+| Stale YFI price | A visible valuation note beside the estimates |
+| Blacklisted | Existing restriction banner and disabled claim action |
+
+See [Vote Boost APR derivation](vote-boost-apr.md) for contract sources and calculation rules.
 
 ---
 
@@ -157,7 +169,7 @@ Always visible and owns all write interactions.
 
 ## 8. Copy & Tone
 
-- **APY Badges:** "Variable APY" vs "Maximized APY".
+- **Mode Badges:** "Vote-dependent APR" vs "Delegated voting".
 - **Status Labels:** Active, Unstaking, Withdrawable.
 - **Avoid green** for withdrawable values; use brand accents.
 

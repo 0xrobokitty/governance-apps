@@ -6,6 +6,7 @@ import { LogoStyfix } from "@/components/icons/LogoStyfix";
 import { cn } from "@/lib/cn";
 import type { StyfiAsset } from "./types";
 import type { ReactNode } from "react";
+import { styfiCopy as copy } from "../messages";
 
 type ModeComparisonProps = {
   selectedAsset?: StyfiAsset;
@@ -24,20 +25,20 @@ export function ModeComparison({
         asset="stYFI"
         selectedAsset={selectedAsset}
         onSelectAsset={onSelectAsset}
-        title="stYFI"
-        description="Standard staking. You retain voting rights. Governance participation required for max yield."
-        badges={<Badge>Variable APY</Badge>}
+        title={copy.modeSelector.cards.styfi.title}
+        description={copy.modeSelector.cards.styfi.description}
+        badges={<Badge>{copy.modeSelector.cards.styfi.badge}</Badge>}
       />
       <ModeCard
         asset="stYFIx"
         selectedAsset={selectedAsset}
         onSelectAsset={onSelectAsset}
-        title="stYFIx"
-        description="Auto-delegated vault. Voting power is assigned to YBC to maximize rewards automatically."
+        title={copy.modeSelector.cards.x.title}
+        description={copy.modeSelector.cards.x.description}
         badges={
           <div className="flex flex-wrap items-center gap-2">
-            <Badge variant="brand">Maximized APY</Badge>
-            <Badge variant="brand">Recommended</Badge>
+            <Badge variant="brand">{copy.modeSelector.cards.x.badge}</Badge>
+            <Badge variant="brand">{copy.modeSelector.cards.x.recommended}</Badge>
           </div>
         }
       />

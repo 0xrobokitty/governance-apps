@@ -8,12 +8,13 @@ import { Tooltip } from "@/components/ui/Tooltip";
 import { formatPercent, formatTokenAmount } from "@/lib/format";
 import {
   useStyfiAccount,
-  useStyfiApy,
   useStyfiStats,
 } from "@/lib/hooks/useStyfi";
+import { useStyfiApr } from "@/lib/hooks/useStyfiApr";
 import { useVeyfiAccount, useVeyfiStats } from "@/lib/hooks/useVeyfi";
 import { StyfiCockpit } from "./components/StyfiCockpit";
 import { AccountSummary } from "./components/AccountSummary";
+import { VotingPowerBreakdown } from "./components/VotingPowerBreakdown";
 import type { StyfiAsset } from "./components/types";
 import { styfiCopy as copy } from "./messages";
 import { MockControls } from "./components/MockControls";
@@ -89,7 +90,7 @@ export function StyfiPageClient({ hostname }: StyfiPageClientProps) {
 function StyfiPageShell({ hostname }: StyfiPageClientProps) {
   const { isConnected, isWrongNetwork } = useIdentity();
   const { openConnectModal } = useConnectModal();
-  const { data: apy } = useStyfiApy();
+  const { data: apr } = useStyfiApr();
   const { data: stats } = useStyfiStats();
   const { data: account, isLoading: isAccountLoading } = useStyfiAccount();
   const { data: veyfiAccount, isLoading: isVeyfiLoading } = useVeyfiAccount();
@@ -148,19 +149,10 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
     ? formatTokenAmount(stats.totalSupply, 18, 0) + " YFI"
     : "-- YFI";
 
-  const projectedApyBps = globalData?.styfi?.projected?.aprBps;
-  const isEpochZero = epochInfo?.currentEpoch === 0;
-  const showProjectedApy = isEpochZero && projectedApyBps !== undefined;
-  const statsApyBps = showProjectedApy
-    ? Number(projectedApyBps)
-    : apy !== undefined
-      ? Number(apy)
-      : undefined;
-  const formattedApy =
-    statsApyBps !== undefined ? formatPercent(statsApyBps / 10000) : "--%";
-  const aprLabel = showProjectedApy
-    ? copy.page.stats.aprEpoch1.label
-    : copy.page.stats.apr.label;
+  const statsApyBps = apr?.baseAprBps ?? undefined;
+  const formattedApy = apr?.styfixAprBps == null
+    ? "--%"
+    : formatPercent(Number(apr.styfixAprBps) / 10000, 2);
   const activeAsset = selectedAsset ?? "stYFIx";
   const balances = account ? deriveBalances(account) : null;
   const externalPositions = deriveExternalPositions(
@@ -249,8 +241,18 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
             value: stakedValue,
           },
           {
-            label: aprLabel,
-            value: formattedApy,
+            label: copy.page.stats.apr.label,
+            value: (
+              <Tooltip content={copy.rewards.apr.delegatedTooltip} side="bottom">
+                <button
+                  type="button"
+                  aria-label={copy.page.stats.apr.label}
+                  className="min-h-10 cursor-help border-b border-dotted border-neutral-400 tabular-nums transition-colors hover:text-neutral-700 focus:outline-none focus-visible:ring-2 focus-visible:ring-neutral-900"
+                >
+                  {formattedApy}
+                </button>
+              </Tooltip>
+            ),
           },
         ]}
       />
@@ -275,12 +277,12 @@ function StyfiPageShell({ hostname }: StyfiPageClientProps) {
           wrongNetworkBody={copy.page.connectBanner.wrongNetwork}
         />
 
+        <VotingPowerBreakdown />
+
         <div id="stake-manage" ref={cockpitRef} className="scroll-mt-8">
           <StyfiCockpit
             selectedAsset={activeAsset}
             onSelectAsset={handleSelectAsset}
-            balances={balances}
-            externalPositions={externalPositions}
           />
         </div>
 

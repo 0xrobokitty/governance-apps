@@ -1,75 +1,36 @@
 "use client";
 
-import { useMemo, type ReactNode } from "react";
+import { useMemo } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Skeleton } from "@/components/ui/Skeleton";
 import { Banner } from "@/components/ui/Banner";
 import { Badge } from "@/components/ui/Badge";
 import { Tooltip } from "@/components/ui/Tooltip";
-import { formatPercent, formatTokenAmount, formatUsd } from "@/lib/format";
+import { formatTokenAmount, formatUsd } from "@/lib/format";
 import {
   useStyfiAccount,
   useStyfiClaimRewards,
-  useStyfiApy,
   useRewardTokenInfo,
 } from "@/lib/hooks/useStyfi";
 import { styfiCopy as copy } from "../../messages";
 import { IconCheck } from "@/components/icons/IconCheck";
 import { IconWallet } from "@/components/icons/IconWallet";
-import { useProtocol } from "@/state/protocol";
 import { useEpochClock } from "@/lib/hooks/useEpochClock";
-import { getLlyfiDisplaySymbol } from "@/lib/clients/veyfi/display";
-import {
-  deriveWeightedApr,
-  resolveStyfiBaseAprBps,
-  resolveStyfixAprBps,
-} from "@/lib/portfolio/governance";
-import type { AccountBalances } from "../AccountSummary";
-import type { ExternalPosition } from "../../external-positions";
+import { useStyfiApr } from "@/lib/hooks/useStyfiApr";
+import { AprBreakdown, formatAprBps } from "../AprBreakdown";
 
-type RewardsCardProps = {
-  balances?: AccountBalances | null;
-  externalPositions?: ExternalPosition[];
-};
-
-type ActiveHolding = {
-  label: string;
-  yfiWeight: bigint;
-  apr: number;
-};
-
-export function RewardsCard({
-  balances,
-  externalPositions,
-}: RewardsCardProps) {
+export function RewardsCard() {
   const { data, isLoading } = useStyfiAccount();
   const { write, state } = useStyfiClaimRewards();
-  const { data: styfiAprBps } = useStyfiApy();
+  const { data: apr, isLoading: isAprLoading } = useStyfiApr();
   const { apy: rewardApy, convertBalanceToUsd } = useRewardTokenInfo();
-  const { globalData } = useProtocol();
   const { epochInfo } = useEpochClock({ tickMs: 60_000 });
-
   const isEpochZero = epochInfo?.currentEpoch === 0;
-  const fallbackAprBps = styfiAprBps !== undefined ? Number(styfiAprBps) : null;
-  const styfiBaseAprBps = resolveStyfiBaseAprBps({
-    globalData,
-    isEpochZero,
-    fallbackAprBps,
-  });
-  const styfixAprBps = resolveStyfixAprBps({
-    globalData,
-    isEpochZero,
-    fallbackAprBps,
-  });
-  const styfiBaseApr = styfiBaseAprBps === null ? null : styfiBaseAprBps / 10000;
-  const styfixApr = styfixAprBps === null ? styfiBaseApr : styfixAprBps / 10000;
-  const defaultAprLabel = isEpochZero
-    ? copy.rewards.apr.labelEpoch1
-    : copy.rewards.apr.label;
-  const defaultAprTooltip = isEpochZero
-    ? copy.rewards.apr.tooltipEpoch1
-    : copy.rewards.apr.tooltip;
+  const hasActivePositions = !!apr?.account && apr.account.totalActive > 0n;
+  const titleLabel = hasActivePositions ? copy.rewards.apr.portfolioLabel : copy.rewards.apr.maxLabel;
+  const displayAprLabel = isAprLoading ? "—" : formatAprBps(hasActivePositions ? apr?.account?.portfolioAprBps : apr?.maxAprBps);
+  const aprTooltipContent = hasActivePositions ? copy.rewards.apr.portfolioTooltip : copy.rewards.apr.maxTooltip;
 
   const claimable = useMemo(() => {
     if (!data) return 0n;
@@ -82,97 +43,6 @@ export function RewardsCard({
     if (value === null) return null;
     return formatUsd(value, data.rewardToken.decimals, 2);
   }, [claimable, convertBalanceToUsd, data]);
-
-  const activeHoldings = useMemo(() => {
-    const holdings: ActiveHolding[] = [];
-
-    if (balances?.styfi.active && balances.styfi.active > 0n) {
-      holdings.push({
-        label: "stYFI",
-        yfiWeight: balances.styfi.active,
-        apr: styfiBaseApr ?? 0,
-      });
-    }
-
-    if (balances?.styfix.active && balances.styfix.active > 0n) {
-      holdings.push({
-        label: "stYFIx",
-        yfiWeight: balances.styfix.active,
-        apr: styfixApr ?? styfiBaseApr ?? 0,
-      });
-    }
-
-    for (const position of externalPositions ?? []) {
-      if (position.activeBalanceYfi <= 0n) continue;
-
-      holdings.push({
-        label:
-          position.symbol === "veYFI"
-            ? "veYFI"
-            : getLlyfiDisplaySymbol(position.symbol),
-        yfiWeight: position.activeBalanceYfi,
-        apr: position.effectiveApr,
-      });
-    }
-
-    return holdings;
-  }, [balances, externalPositions, styfiBaseApr, styfixApr]);
-
-  const blendedApr = useMemo(
-    () =>
-      deriveWeightedApr(
-        activeHoldings.map((holding) => ({
-          weight: holding.yfiWeight,
-          apr: holding.apr,
-        }))
-      ),
-    [activeHoldings]
-  );
-
-  let titleLabel: string = defaultAprLabel;
-  let displayAprLabel = styfiBaseApr === null ? "--%" : formatPercent(styfiBaseApr, 2);
-  let aprTooltipContent: ReactNode = defaultAprTooltip;
-
-  if (activeHoldings.length === 1) {
-    titleLabel = copy.rewards.apr.yourLabel;
-    displayAprLabel = formatPercent(activeHoldings[0].apr, 2);
-    aprTooltipContent = copy.rewards.apr.yourTooltip;
-  } else if (activeHoldings.length > 1) {
-    titleLabel = copy.rewards.apr.averageLabel;
-    displayAprLabel = blendedApr === null ? "--%" : formatPercent(blendedApr, 2);
-    aprTooltipContent = (
-      <div className="w-full min-w-[240px] text-xs leading-tight">
-        <div className="mb-2 font-bold uppercase tracking-wide text-neutral-500">
-          {copy.rewards.apr.breakdownTitle}
-        </div>
-        {activeHoldings.map((holding) => (
-          <div
-            key={holding.label}
-            className="mb-1 flex items-center justify-between gap-3"
-          >
-            <span className="text-neutral-600">
-              {holding.label}{" "}
-              <span className="ml-1 text-neutral-400">
-                ({formatTokenAmount(holding.yfiWeight, 18, 1)} YFI)
-              </span>
-            </span>
-            <span className="font-medium font-number">
-              {formatPercent(holding.apr, 2)}
-            </span>
-          </div>
-        ))}
-        <div className="my-1.5 border-t border-neutral-200" />
-        <div className="flex items-center justify-between">
-          <span className="font-bold text-neutral-900">
-            {copy.rewards.apr.breakdownTotal}
-          </span>
-          <span className="font-bold font-number text-neutral-900">
-            {displayAprLabel}
-          </span>
-        </div>
-      </div>
-    );
-  }
 
   const blacklistStatus = data?.blacklistStatus ?? "unknown";
   const isDisabled =
@@ -214,13 +84,12 @@ export function RewardsCard({
 
   if (!data) {
     return (
-      <Card className="h-full flex flex-col items-center justify-center min-h-[300px] text-center space-y-4">
-        <div className="rounded-full bg-neutral-100 p-4 text-neutral-400">
-          <IconWallet className="h-8 w-8" />
-        </div>
-        <div>
-          <h3 className="font-bold text-neutral-900">{copy.rewards.title}</h3>
-          <p className="text-sm text-neutral-500 mt-1 max-w-[200px] mx-auto">
+      <Card className="h-full min-h-[300px] space-y-4">
+        <h3 className="text-sm font-bold uppercase tracking-wide text-neutral-500">{copy.rewards.title}</h3>
+        <AprBreakdown snapshot={apr} isLoading={isAprLoading} />
+        <div className="flex items-center gap-3 border-t border-border pt-4">
+          <IconWallet className="h-5 w-5 shrink-0 text-neutral-400" />
+          <p className="text-sm text-neutral-500">
             {copy.rewards.disconnected}
           </p>
         </div>
@@ -243,17 +112,17 @@ export function RewardsCard({
           </Banner>
         )}
 
-        <div className="grid grid-cols-2 gap-8">
+        <div className="grid grid-cols-2 gap-4">
           <div className="space-y-1">
             <Tooltip content={aprTooltipContent} side="top">
               <button
                 type="button"
-                className="text-xs font-bold text-neutral-500 cursor-help border-b border-dotted border-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none focus-visible:text-neutral-700"
+                className="min-h-10 text-xs font-bold text-neutral-500 cursor-help border-b border-dotted border-neutral-400 hover:text-neutral-700 transition-colors focus:outline-none focus-visible:text-neutral-700"
               >
                 {titleLabel}
               </button>
             </Tooltip>
-            <p className="text-3xl md:text-4xl font-number font-bold text-neutral-900 tracking-tight">
+            <p className={`font-number font-bold tabular-nums text-neutral-900 tracking-tight ${displayAprLabel === copy.rewards.apr.unavailable ? "text-lg" : "text-2xl md:text-3xl"}`} data-testid="styfi-total-apr">
               {displayAprLabel}
             </p>
           </div>
@@ -263,7 +132,7 @@ export function RewardsCard({
               content={copy.rewards.token.tooltip(data.rewardToken.symbol)}
               side="top"
             >
-              <span className="text-xs font-bold text-neutral-500 cursor-help border-b border-dotted border-neutral-400 hover:text-neutral-700 transition-colors">
+              <span className="inline-flex min-h-10 items-center text-xs font-bold text-neutral-500 cursor-help border-b border-dotted border-neutral-400 hover:text-neutral-700 transition-colors">
                 {copy.rewards.token.label}
               </span>
             </Tooltip>
@@ -294,6 +163,8 @@ export function RewardsCard({
             </div>
           </div>
         </div>
+
+        <AprBreakdown snapshot={apr} isLoading={isAprLoading} />
 
         {isEpochZero && (
           <div className="rounded-lg border border-neutral-200 bg-neutral-50 px-3 py-2 text-xs text-neutral-700">

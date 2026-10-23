@@ -8,7 +8,7 @@ export const styfiCopy = {
     stats: {
       totalSupply: { label: "Total Supply" },
       staked: { label: "Staked" },
-      apr: { label: "APR" },
+      apr: { label: "stYFIx APR" },
       aprEpoch1: { label: "Epoch 1 APR" },
     },
     connectBanner: {
@@ -37,26 +37,46 @@ export const styfiCopy = {
     disconnected: "Connect your wallet to view balances.",
     drawer: {
       title: "Choose how you want to stake",
-      body: "Pick between vote-enabled stYFI and APR maximized stYFIx.",
+      body: "Choose direct voting with stYFI or delegated voting with stYFIx.",
     },
     activeBadge: "Selected",
     cards: {
       styfi: {
         title: "stYFI",
+        badge: "Vote-dependent APR",
         kicker: "For active governance participants",
         description:
-          "Participate in Yearn Governance. Vote on proposals to increase your yield. If you do not participate, your yield may reduce.",
+          "Keep your voting rights. Vote on proposals to earn Vote Boost. Participation across the last six epochs determines your boost.",
       },
       x: {
         title: "stYFIx",
-        kicker: "For max yield with no effort",
+        badge: "Delegated voting",
+        recommended: "Recommended",
+        kicker: "For delegated governance",
         description:
-          "Voting is delegated to a group of individual Yearn contributors. Enjoy max yield without managing votes. Set, forget, and let builders steer.",
+          "YBC votes on behalf of stYFIx holders. Full Vote Boost requires YBC participation in every counted proposal.",
       },
     },
   },
   governance: {
     headerLabel: "Voting & Proposals",
+  },
+  votingPower: {
+    title: "Your voting power",
+    direct: "Direct voting power",
+    staked: "stYFI + liquid lockers",
+    migrated: "Migrated veYFI",
+    delegated: "stYFIx via YBC",
+    collective: "YBC stake",
+    influence: "Voting influence (estimate)",
+    ybcTitle: "Your YBC voting influence",
+    beforeDecay: "Current voting weight before any late-vote reduction.",
+    aggregation: "The contract combines stYFI and liquid-locker voting weight. New stake gains weight over four epochs.",
+    delegatedNotice: "Your stYFIx votes are delegated to YBC. They do not add to your direct voting power.",
+    estimate: "The YBC estimate assumes every member with voting weight votes. Your share on each proposal depends on which members participate.",
+    unavailable: "Voting power is unavailable. Try again shortly.",
+    influenceUnavailable: "Your direct voting power is current. The YBC estimate is unavailable until the complete member roster can be verified.",
+    unit: "YFI",
   },
   hero: {
     kicker: "Choose your path",
@@ -83,7 +103,7 @@ export const styfiCopy = {
     summarySuffix: (modeLabel: string) => `as ${modeLabel}`,
     descriptions: {
       styfi: "stYFI keeps your vote and earns standard rewards.",
-      x: "stYFIx delegates voting to YBC and maximizes rewards.",
+      x: "stYFIx delegates voting to YBC. Its Vote Boost follows YBC participation.",
     },
     mode: {
       styfiLabel: "stYFI",
@@ -93,8 +113,17 @@ export const styfiCopy = {
   cockpit: {
     mockBanner: {
       title: "Mock mode",
-      body: "This dashboard is running against mock clients while contracts finalize.",
+      body: "This dashboard uses deterministic mock balances, rewards, and voting participation.",
       resetCta: "Reset mock state",
+    },
+  },
+  debug: {
+    aprScenariosLabel: "APR scenarios",
+    aprScenarios: {
+      full: "All votes",
+      partial: "Some votes",
+      missed: "No votes",
+      ybc: "YBC member",
     },
   },
   stakeManage: {
@@ -146,6 +175,43 @@ export const styfiCopy = {
       yourTooltip: "The effective APR of your active position.",
       breakdownTitle: "Weighted Yield Breakdown",
       breakdownTotal: "Average Return",
+      maxLabel: "Full participation APR",
+      maxTooltip:
+        "Estimated stYFI APR with full Vote Boost participation at current pool rates. Actual stYFIx APR can differ because rewards use historical balances.",
+      portfolioLabel: "Your total APR",
+      portfolioTooltip:
+        "Annualized rewards across your active governance positions, including your Vote Boost and any YBC income.",
+      baseLabel: "stYFI base APR",
+      delegatedLabel: "stYFIx APR",
+      delegatedTooltip:
+        "The current stYFIx rate includes its recorded Vote Boost rewards. YBC votes on behalf of stYFIx holders.",
+      delegatedNote:
+        "stYFIx includes rewards from YBC voting. Its APR reflects the delegated pool’s recorded rewards.",
+      personalLabel: "Your stYFI position APR",
+      personalNote:
+        "Includes your recorded Vote Boost and any YBC income. Historical rewards can reflect earlier holdings.",
+      personalBoostLabel: "Your Vote Boost",
+      ybcLabel: "YBC income",
+      ybcIncluded: "Your total APR includes your share of YBC rewards.",
+      contributionsTitle: "Contributions to your total APR",
+      baseContributionLabel: "stYFI base rewards",
+      delegatedContributionLabel: "stYFIx rewards",
+      externalContributionLabel: "veYFI & liquid lockers",
+      mixedPositions:
+        "Vote Boost combines your eligible positions, including earlier holdings. Its contribution is shown across your total active balance.",
+      unavailable: "Unavailable",
+      unavailableBody: "Current APR data is unavailable. Your rewards can still be claimed.",
+      priceStale: "Estimates use an older YFI price.",
+      participationLabel: "Your voting participation",
+      participation: (votes: string, proposals: string) =>
+        `${votes} of ${proposals} proposals`,
+      noProposals: "No proposals in the current six-epoch window.",
+      participationTiming:
+        "Participation covers the last six epochs. Votes this epoch affect rewards from the next epoch.",
+      streamingEpoch: (rewardEpoch: number, currentEpoch: number) =>
+        `Epoch ${rewardEpoch} Vote Boost rewards are streaming in epoch ${currentEpoch}.`,
+      ratesEstimate:
+        "APRs are annualized estimates. Reward amounts, balances, and YFI prices can change.",
     },
     token: {
       label: "Reward Token",

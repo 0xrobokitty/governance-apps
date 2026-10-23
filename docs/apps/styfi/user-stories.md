@@ -1,7 +1,7 @@
 # `user-stories-styfi.md`
 
 **User Stories — stYFI & stYFIx**
-**Version:** 1.3
+**Version:** 1.4
 **Scope:** Part I of the Governance Apps (stYFI + stYFIx)
 
 ---
@@ -130,6 +130,27 @@ We assume a technically literate DeFi user familiar with:
 - If blacklisted:
 
   - Action disabled with explanation
+
+---
+
+## Story ST-04A — Understand Vote Boost and YBC Income
+
+**As a** governance participant
+**I want** separate base, Vote Boost, delegated, and YBC reward rates
+**So that** I can understand the rewards from my positions and votes
+
+### Acceptance Criteria
+
+- The headline shows the actual stYFIx APR, including its recorded Vote Boost rewards.
+- The reward card shows the stYFI base APR and the actual stYFIx APR separately.
+- An active stYFI position shows its personal APR when historical rewards can be attributed to that position.
+- Mixed or earlier external holdings use an account-wide Vote Boost contribution with an explanation.
+- A YBC member sees YBC income included once in the total portfolio APR.
+- Current reward rates use the completed reward epoch. The card identifies the epoch in which those rewards stream.
+- Current voting participation covers the rolling six-epoch window. The card explains that new votes affect rewards from the next epoch.
+- Missing reward or price data shows an unavailable state, not a zero APR.
+- A separate full-participation estimate assumes a vote on every counted proposal. It does not guarantee future YBC participation.
+- Reward-token APY remains separate from staking APR.
 
 ---
 
@@ -337,7 +358,7 @@ These stories explicitly **not** part of this domain:
 - Redemption caps
 - In-app governance voting (shared DAO proposal discovery and linking are in scope)
 - Voting power decay visuals
-- YBC-specific behaviour
+- YBC membership management and elections
 - Historical metrics / analytics
 - Transfer UI
 
