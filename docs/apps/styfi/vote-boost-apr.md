@@ -88,3 +88,5 @@ The change is read-only for protocol reward and voting data. Existing transactio
 The mainnet staking middleware address now matches the current contract deployment.
 The APR reader does not require a statistics-feed schema rollout beyond the optional valuation metadata.
 No production deployment is part of this review branch.
+
+See the [implementation and validation report](validation/vote-boost-review-2026-10-23.md) for local previews, test results, and the reproduced baseline failure.
