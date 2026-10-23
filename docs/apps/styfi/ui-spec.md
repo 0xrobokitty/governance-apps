@@ -119,7 +119,8 @@ Personal voting power appears on the DAO front page, beside the proposal board.
   - The estimated APR value uses Yearn blue.
 - **Interaction:** Cards function as buttons to call `onSelectAsset`.
 
-The onboarding cards and compare modal use the same estimates, with adjacent labels and values.
+The onboarding cards and compare modal place the APR label above its value in both modes.
+Both card footers align even when the stYFI range includes decimal places.
 The full-participation estimates are not next-epoch forecasts or guaranteed returns.
 Unavailable valuation produces an unavailable value. The cards omit repeated multiplier captions and freshness notices.
 

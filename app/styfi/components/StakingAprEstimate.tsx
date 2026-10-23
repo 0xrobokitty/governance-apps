@@ -28,7 +28,7 @@ export function StakingAprEstimate({
       : formatPercent(full / 10_000, 2);
 
   return (
-    <div className={`flex flex-wrap items-baseline gap-x-2 gap-y-1 ${compact ? "" : "border-t border-border pt-4"}`} data-testid={`staking-apr-${asset.toLowerCase()}`}>
+    <div className={cn("flex gap-x-2 gap-y-1", compact ? "flex-wrap items-baseline" : "flex-col items-start border-t border-border pt-4")} data-testid={`staking-apr-${asset.toLowerCase()}`}>
       <p className="text-xs font-semibold text-neutral-500">{copy.label}</p>
       <p className={cn("font-number font-bold tabular-nums text-neutral-900", compact ? "text-lg" : "text-2xl", valueClassName)}>{value}</p>
     </div>

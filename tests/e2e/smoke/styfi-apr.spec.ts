@@ -129,4 +129,21 @@ for (const width of [1280, 390]) test(`aligns mode comparison and preserves esti
   await expect(compare.getByTestId("staking-apr-styfi")).toContainText("8%–20%");
   await expect(compare.getByTestId("staking-apr-styfix")).toContainText("20%");
   await expect(compare.getByText("Delegate your vote to YBC to earn maximum APR.", { exact: true })).toBeVisible();
+  // Read both cards in one frame so the dialog's entrance animation cannot skew alignment.
+  const estimateLayouts = await compare.locator('[data-testid^="staking-apr-"]').evaluateAll((estimates) => estimates.map((estimate) => {
+    const bounds = estimate.getBoundingClientRect();
+    const paragraphs = estimate.querySelectorAll("p");
+    const label = paragraphs[0].getBoundingClientRect();
+    const value = paragraphs[1].getBoundingClientRect();
+    return { y: bounds.y, height: bounds.height, labelX: label.x, labelBottom: label.bottom, valueX: value.x, valueY: value.y };
+  }));
+  expect(estimateLayouts).toHaveLength(2);
+  for (const layout of estimateLayouts) {
+    expect(layout.valueY).toBeGreaterThanOrEqual(layout.labelBottom);
+    expect(Math.abs(layout.valueX - layout.labelX)).toBeLessThanOrEqual(1);
+  }
+  if (width >= 768) {
+    expect(Math.abs(estimateLayouts[0].y - estimateLayouts[1].y)).toBeLessThanOrEqual(1);
+    expect(Math.abs(estimateLayouts[0].height - estimateLayouts[1].height)).toBeLessThanOrEqual(1);
+  }
 });
