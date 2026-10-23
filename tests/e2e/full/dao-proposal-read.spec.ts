@@ -263,14 +263,25 @@ test("contains proposed script and technical values at every review viewport", a
     const resultsHeading = page.getByRole("heading", { name: "Vote results" });
     await expect(immutableHeading).toBeVisible();
     await expect(resultsHeading).toBeVisible();
+    const immutableBox = await immutableHeading.boundingBox();
+    const resultsBox = await resultsHeading.boundingBox();
+    expect(immutableBox).not.toBeNull();
+    expect(resultsBox).not.toBeNull();
+    if (viewport.width < 1_024) {
+      expect(resultsBox!.y).toBeLessThan(immutableBox!.y);
+    } else {
+      expect(resultsBox!.x).toBeGreaterThan(immutableBox!.x);
+    }
+    await openDetailSection(page, "script");
+    const script = page.locator("#dao-proposal-script");
     await expect(
-      page.getByRole("heading", { name: "Proposed script" })
+      script.getByRole("heading", { name: "Proposed script" })
     ).toBeVisible();
-    await expect(page.getByText("Raw call data").first()).toBeVisible();
+    await expect(script.getByText("Raw call data").first()).toBeVisible();
     await expect(page.getByText("No verified source", { exact: true })).toHaveCount(0);
-    await expect(page.getByText(/Some calls are shown as raw data/)).toBeVisible();
-    await page.getByText("Call data", { exact: true }).first().click();
-    await expect(page.getByText("Calldata", { exact: true }).first()).toBeVisible();
+    await expect(script.getByText(/Some calls are shown as raw data/)).toBeVisible();
+    await script.getByText("Call data", { exact: true }).first().click();
+    await expect(script.getByText("Calldata", { exact: true }).first()).toBeVisible();
     await page.getByText("Proposal rules", { exact: true }).click();
     await expect(
       page
@@ -279,10 +290,7 @@ test("contains proposed script and technical values at every review viewport", a
     ).toHaveAttribute("href", PINNED_VOTING_SOURCE_URL);
     await expectNoDeliveryLanguage(page);
 
-    const technicalSummary = page.getByText("Technical details", {
-      exact: true,
-    });
-    await technicalSummary.click();
+    await openDetailSection(page, "technical");
     await expect(
       page.getByText("Proposal identity", { exact: true }),
     ).toBeVisible();
@@ -294,15 +302,6 @@ test("contains proposed script and technical values at every review viewport", a
       page.getByRole("button", { name: "Copy script hash" })
     );
 
-    const immutableBox = await immutableHeading.boundingBox();
-    const resultsBox = await resultsHeading.boundingBox();
-    expect(immutableBox).not.toBeNull();
-    expect(resultsBox).not.toBeNull();
-    if (viewport.width < 1_024) {
-      expect(resultsBox!.y).toBeLessThan(immutableBox!.y);
-    } else {
-      expect(resultsBox!.x).toBeGreaterThan(immutableBox!.x);
-    }
     if (viewport.name === "short desktop") {
       await expect(resultsHeading.locator("xpath=ancestor::aside")).toHaveCSS(
         "position",
@@ -330,7 +329,7 @@ test("keeps technical address copy controls visible for coarse pointers", async 
   expect(
     await coarsePage.evaluate(() => matchMedia("(pointer: coarse)").matches)
   ).toBe(true);
-  await coarsePage.getByText("Technical details", { exact: true }).click();
+  await openDetailSection(coarsePage, "technical");
 
   for (const name of [
     "Copy voting contract",
@@ -341,6 +340,7 @@ test("keeps technical address copy controls visible for coarse pointers", async 
     await expect(control).toBeVisible();
     await expectMinimumHitArea(control);
   }
+  await openDetailSection(coarsePage, "script");
   const targetControl = coarsePage
     .getByRole("button", { name: "Copy target" })
     .first();
@@ -383,6 +383,7 @@ test("renders every terminal fixture with explicit status and vote rule copy", a
         { exact: true }
       )
     ).toBeVisible();
+    await openDetailSection(page, "lifecycle");
     await expect(
       page.getByRole("heading", { name: "Lifecycle" })
     ).toBeVisible();
@@ -394,27 +395,28 @@ test("renders every terminal fixture with explicit status and vote rule copy", a
   await expect(page.getByText("No executable actions").first()).toBeVisible();
 
   await page.goto("/dao/proposals/11");
+  await openDetailSection(page, "lifecycle");
   await expect(page.getByText("Flagged", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("No community result", { exact: true }).first()).toBeVisible();
   await expect(page.getByText("Flagging retracts the proposal and blocks voting and execution. No community vote result is implied.")).toBeVisible();
 
   await page.goto("/dao/proposals/12");
+  await openDetailSection(page, "lifecycle");
   await expect(page.getByText("This proposal is retracted and vetoed. Voting and execution are blocked.")).toBeVisible();
   await page.goto("/dao/proposals/13");
+  await openDetailSection(page, "lifecycle");
   await expect(page.getByText(/Participation voting remains available/)).toBeVisible();
 
   await page.goto("/dao/proposals/6");
+  await openDetailSection(page, "lifecycle");
   await expect(page.getByText(/Executed .+ UTC/).first()).toBeVisible();
   await expect(
     page.getByRole("link", { name: /View Ethereum transaction/ }).first()
   ).toHaveAttribute("rel", /noopener/);
 
   await page.goto("/dao/proposals/20");
-  const lifecycle = page
-    .getByRole("heading", { name: "Lifecycle" })
-    .locator(
-      "xpath=ancestor::div[contains(concat(' ', normalize-space(@class), ' '), ' rounded-box ')][1]"
-    );
+  await openDetailSection(page, "lifecycle");
+  const lifecycle = page.locator("#dao-proposal-lifecycle");
   await expect(
     lifecycle.getByText("Time unavailable", { exact: true })
   ).toBeVisible();
@@ -431,10 +433,8 @@ test("keeps onchain records and trust failures explicit", async ({ page }) => {
     page.getByText("Immutable content could not be retrieved").first()
   ).toBeVisible();
   await expect(page.getByText(/onchain proposal remains visible/).first()).toBeVisible();
-  const technicalDetails = page
-    .getByText("Technical details", { exact: true })
-    .locator("xpath=ancestor::details");
-  await technicalDetails.getByText("Technical details", { exact: true }).click();
+  await openDetailSection(page, "technical");
+  const technicalDetails = page.locator("#dao-proposal-technical");
   await expect(
     technicalDetails.getByText("Voting contract", { exact: true })
   ).toBeVisible();
@@ -449,9 +449,11 @@ test("keeps onchain records and trust failures explicit", async ({ page }) => {
   await expect(page.getByText(/yearn\.dao\.proposal\.v1/).first()).toBeVisible();
 
   await page.goto("/dao/proposals/16");
-  await expect(page.getByText("Exact proposed script bytes are unavailable.", { exact: true })).toBeVisible();
+  await openDetailSection(page, "script");
+  await expect(page.locator("#dao-proposal-script").getByText("Exact proposed script bytes are unavailable.", { exact: true })).toBeVisible();
 
   await page.goto("/dao/proposals/18");
+  await openDetailSection(page, "script");
   await expect(page.getByText(/The first Executor header is incomplete\./).first()).toBeVisible();
 
   await page.goto("/dao/proposals/19");
@@ -554,6 +556,14 @@ async function expectNoDocumentOverflow(page: Page, context: string) {
     widths.scrollWidth,
     `${context} should contain long values inside the viewport`
   ).toBeLessThanOrEqual(widths.clientWidth);
+}
+
+async function openDetailSection(page: Page, section: "lifecycle" | "script" | "technical") {
+  await page.getByRole("tab", { name: "Details", exact: true }).click();
+  const disclosure = page.locator(`#dao-proposal-${section} > details`);
+  if (!(await disclosure.evaluate((element) => (element as HTMLDetailsElement).open))) {
+    await disclosure.locator(":scope > summary").click();
+  }
 }
 
 async function expectMinimumHitArea(locator: Locator) {

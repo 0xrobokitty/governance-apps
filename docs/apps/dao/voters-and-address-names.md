@@ -29,8 +29,9 @@ The compact name extends its hit area upward to 40 pixels, without overlapping t
 Long names are shortened visually; the full name remains in the edit control's
 accessible label and tooltip. Desktop rows align the first name, choice, time,
 and weight lines. The sort control reserves space for an inset chevron.
-The header links directly to the voter table. The table appears before lifecycle
-history. ENS names resolve as pages are viewed; ENS search covers those resolved
+The header links directly to the Votes tab. Lifecycle history is in Details.
+See [Proposal navigation](proposal-navigation.md) for tab behavior and section links.
+ENS names resolve as pages are viewed; ENS search covers those resolved
 names. Full-address and generated or custom-name search covers all rows.
 
 The client orders events by block, transaction index, and log index. A later vote

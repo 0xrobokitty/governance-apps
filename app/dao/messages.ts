@@ -183,6 +183,11 @@ export const daoCopy = {
       "Open this proposal's forum discussion in a new tab",
     backToBoard: "Back to proposals",
     proposedBy: "Proposed by",
+    tabs: { navigation: "Proposal sections", proposal: "Proposal", votes: "Votes", details: "Details" },
+    proposedActions: "Proposed actions",
+    reviewScript: "Review proposed script",
+    actionsUnavailable: "The proposed actions could not be decoded. Review the script details before voting.",
+    moreActions: (count: number) => `${count} more ${count === 1 ? "action" : "actions"} in the full script`,
     immutableContent: "Proposal content",
     immutableContentDescription:
       "The text recorded with this proposal.",

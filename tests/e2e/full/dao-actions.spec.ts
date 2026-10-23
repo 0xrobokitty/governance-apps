@@ -416,8 +416,11 @@ for (const scenario of lifecycleScenarios) {
       page.getByText(scenario.indexedStatus, { exact: true }).first()
     ).toBeVisible();
     if (scenario.reason) {
+      await page.getByRole("tab", { name: "Details", exact: true }).click();
+      const lifecycle = page.locator("#dao-proposal-lifecycle");
+      await lifecycle.locator(":scope > details > summary").click();
       await expect(
-        page.getByText(scenario.reason, { exact: true }).first()
+        lifecycle.getByText(scenario.reason, { exact: true }).first()
       ).toBeVisible();
     }
   });

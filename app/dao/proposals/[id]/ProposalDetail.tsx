@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import { Badge } from "@/components/ui/Badge";
 import { Card } from "@/components/ui/Card";
 import { AddressLink, TransactionLink } from "@/components/ui/ExplorerLink";
@@ -38,6 +38,11 @@ import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
 import { getDaoSummaryNodeIndex } from "@/lib/clients/dao/content";
 import { ProposalVoters } from "../../components/ProposalVoters";
+import { ProposalDetailTabs } from "../../components/ProposalDetailTabs";
+import { deriveDaoVoterTable } from "@/lib/clients/dao/votes";
+import { getDaoCollectiveVoteAddresses } from "@/lib/clients/dao/voter-accounts";
+import { isDaoMockRuntimeEnabled } from "@/lib/runtime/features";
+import { formatAddress } from "@/lib/format";
 import {
   createDaoBoardGroupHref,
   createDaoRootHref,
@@ -48,6 +53,7 @@ export function ProposalDetail({
   snapshotNotice = null,
   actionPanel = null,
   voterPanel,
+  isMock = isDaoMockRuntimeEnabled(),
   envelope,
   hostname,
   now: runtimeNow,
@@ -56,12 +62,25 @@ export function ProposalDetail({
   snapshotNotice?: React.ReactNode;
   actionPanel?: React.ReactNode;
   voterPanel?: React.ReactNode;
+  isMock?: boolean;
   envelope: DaoProposalReadEnvelope;
   hostname?: string;
   now?: number;
   requestedOrigin?: string | null;
 }) {
   const { feed, proposal } = envelope;
+  const articleRef = useRef<HTMLElement>(null);
+  useEffect(() => {
+    const header = document.querySelector<HTMLElement>("header.sticky");
+    if (!header) return;
+    const updateHeight = () => articleRef.current?.style.setProperty("--dao-header-height", `${header.getBoundingClientRect().height}px`);
+    updateHeight();
+    const observer = typeof ResizeObserver === "undefined" ? null : new ResizeObserver(updateHeight);
+    observer?.observe(header);
+    window.addEventListener("resize", updateHeight);
+    return () => { observer?.disconnect(); window.removeEventListener("resize", updateHeight); };
+  }, []);
+  const voterCount = useMemo(() => deriveDaoVoterTable(proposal, getDaoCollectiveVoteAddresses(proposal.ref.chainId, isMock)).individualRows.length, [proposal, isMock]);
   const now = runtimeNow ?? feed.canonicalBlock.timestamp;
   const proposalId = proposal.ref.proposalId.toString();
   const parsedContent = proposal.content.value
@@ -76,7 +95,7 @@ export function ProposalDetail({
   const lifecycleFacts = deriveDaoLifecycleFacts(proposal, now);
 
   return (
-    <article className="min-w-0 space-y-5">
+    <article ref={articleRef} className="min-w-0 space-y-5">
       <DaoBreadcrumbs
         items={[
           {
@@ -177,16 +196,22 @@ export function ProposalDetail({
           {actionPanel ? <div id="dao-proposal-actions" className="scroll-mt-24 rounded-box focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary" tabIndex={-1}>{actionPanel}</div> : null}
         </aside>
 
-        <div className="order-last min-w-0 space-y-5 lg:order-first">
-          <ImmutableContent
-            hostname={hostname}
-            parsed={parsedContent}
-            proposal={proposal}
+        <div className="order-last min-w-0 lg:order-first">
+          <ProposalDetailTabs
+            proposalKey={serializeDaoProposalRef(proposal.ref)}
+            voterCount={voterCount}
+            labels={daoCopy.detail.tabs}
+            proposal={<>
+              <ImmutableContent hostname={hostname} parsed={parsedContent} proposal={proposal} />
+              <ProposedActionsSummary proposal={proposal} />
+            </>}
+            votes={voterPanel ?? <ProposalVoters proposal={proposal} hostname={hostname} isMock={isMock} />}
+            details={<>
+              <ProposalLifecycle now={now} proposal={proposal} />
+              <ExecutionAnalysis proposal={proposal} />
+              <TechnicalDetails feed={feed} proposal={proposal} />
+            </>}
           />
-          {voterPanel ?? <ProposalVoters proposal={proposal} />}
-          <ProposalLifecycle now={now} proposal={proposal} />
-          <ExecutionAnalysis proposal={proposal} />
-          <TechnicalDetails feed={feed} proposal={proposal} />
         </div>
       </div>
     </article>
@@ -416,12 +441,7 @@ function ProposalLifecycle({
       : daoCopy.detail.lifecycleFacts.notDecided;
 
   return (
-    <Card className="min-w-0 space-y-5">
-      <SectionHeading
-        title={daoCopy.detail.lifecycle}
-        description={daoCopy.detail.lifecycleDescription}
-      />
-
+    <DetailDisclosure id="dao-proposal-lifecycle" title={daoCopy.detail.lifecycle} description={daoCopy.detail.lifecycleDescription}>
       <dl className="grid min-w-0 gap-4 rounded-box bg-surface-secondary/60 p-4 sm:grid-cols-2">
         <LifecycleFact
           label={daoCopy.detail.lifecycleFacts.status}
@@ -504,7 +524,7 @@ function ProposalLifecycle({
           ))}
         </ol>
       </section>
-    </Card>
+    </DetailDisclosure>
   );
 }
 
@@ -626,12 +646,56 @@ function LifecycleRow({
 
 function ExecutionAnalysis({ proposal }: { proposal: DaoProposal }) {
   return (
-    <Card className="min-w-0 space-y-5">
-      <SectionHeading title={daoCopy.detail.analysis} description={daoCopy.detail.analysisDescription} />
+    <DetailDisclosure id="dao-proposal-script" title={daoCopy.detail.analysis} description={daoCopy.detail.analysisDescription}>
       {proposal.type === "signal" ? <p>{daoCopy.detail.signalAnalysis}</p> : null}
       <ScriptIntegrity proposal={proposal} />
       {proposal.analysis.error ? <p className="break-words text-sm text-text-secondary [overflow-wrap:anywhere]">{proposal.analysis.error}</p> : null}
       <DecodedCalls analysis={proposal.analysis} />
+    </DetailDisclosure>
+  );
+}
+
+function ProposedActionsSummary({ proposal }: { proposal: DaoProposal }) {
+  if (proposal.type !== "executable") return null;
+  const calls = proposal.analysis.calls;
+  return (
+    <Card className="min-w-0 space-y-3">
+      <h2 className="text-balance text-xl font-bold">{daoCopy.detail.proposedActions}</h2>
+      <ScriptIntegrity proposal={proposal} />
+      {calls.length > 0 ? (
+        <ol className="min-w-0 space-y-2">
+          {calls.slice(0, 3).map((call) => (
+            <li key={`${call.index}:${call.target}`} className="flex min-w-0 items-start gap-3 text-sm">
+              <span className="shrink-0 font-number tabular-nums text-text-tertiary">{call.index + 1}.</span>
+              <span className="min-w-0 break-words [overflow-wrap:anywhere]">
+                <span className="font-bold">{call.contractName ?? formatAddress(call.target)}</span>
+                <span className="text-text-secondary"> · {call.functionSignature ?? daoCopy.detail.unknownCall}</span>
+              </span>
+            </li>
+          ))}
+        </ol>
+      ) : <p className="text-sm text-text-secondary">{proposal.analysis.error || proposal.script.hashVerified !== true ? daoCopy.detail.actionsUnavailable : daoCopy.detail.noExecutableActions}</p>}
+      {calls.length > 3 ? <p className="text-xs text-text-secondary">{daoCopy.detail.moreActions(calls.length - 3)}</p> : null}
+      <a href="#dao-proposal-script" className="inline-flex min-h-10 items-center rounded text-sm font-bold text-yearn-blue hover:underline focus:outline-none focus-visible:ring-2 focus-visible:ring-text-primary dark:text-blue-300">
+        {daoCopy.detail.reviewScript}<span aria-hidden className="ml-1.5">→</span>
+      </a>
+    </Card>
+  );
+}
+
+function DetailDisclosure({ id, title, description, children }: { id: string; title: string; description: string; children: React.ReactNode }) {
+  return (
+    <Card id={id} className="min-w-0 scroll-mt-[calc(var(--dao-header-height,4rem)+var(--dao-detail-tabs-height,3.5rem)+1rem)] p-0">
+      <details className="group/detail min-w-0">
+        <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-box px-6 py-4 transition-[background-color] duration-150 ease-out hover:bg-surface-secondary/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text-primary motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
+          <div className="min-w-0">
+            <h2 className="text-balance text-base font-bold">{title}</h2>
+            <p className="mt-1 text-pretty text-xs text-text-secondary">{description}</p>
+          </div>
+          <span aria-hidden className="shrink-0 text-xl group-open/detail:rotate-45">+</span>
+        </summary>
+        <div className="min-w-0 space-y-5 border-t border-border p-6">{children}</div>
+      </details>
     </Card>
   );
 }
@@ -814,7 +878,7 @@ function TechnicalDetails({
   );
   const proposeEvent = proposal.events.find((event) => event.type === "propose");
   return (
-    <Card className="min-w-0 p-0">
+    <Card id="dao-proposal-technical" className="min-w-0 scroll-mt-[calc(var(--dao-header-height,4rem)+var(--dao-detail-tabs-height,3.5rem)+1rem)] p-0">
       <details className="group min-w-0">
         <summary className="flex min-h-14 cursor-pointer list-none items-center justify-between gap-4 rounded-box px-6 py-4 transition-[background-color] duration-150 ease-out hover:bg-surface-secondary/50 focus:outline-none focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-text-primary motion-reduce:transition-none [&::-webkit-details-marker]:hidden">
           <span className="min-w-0">

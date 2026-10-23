@@ -24,7 +24,7 @@ for (const viewport of VIEWPORTS) {
     const rows = table.getByRole("rowgroup", { name: "Individual voters" }).getByRole("row");
     const collective = table.getByRole("rowgroup", { name: "Current YBC vote" });
     await page.getByRole("link", { name: "View votes", exact: true }).click();
-    await expect(page.getByLabel("Votes", { exact: true })).toBeFocused();
+    await expect(page.getByRole("tabpanel", { name: /^Votes/ })).toBeFocused();
     // Collective replacements are combined once, outside the sortable individual list.
     await expect(rows).toHaveCount(2);
     await expect(collective.getByText("75% Yea", { exact: true })).toBeVisible();
@@ -113,6 +113,7 @@ test.describe("touch voter names", () => {
   test("keeps the pencil visible and opens the editor from the name", async ({ page }) => {
     await page.goto("/dao/proposals/2");
     await waitForTestBridge(page);
+    await page.getByRole("tab", { name: /^Votes/ }).tap();
     const rows = page.getByRole("rowgroup", { name: "Individual voters" }).getByRole("row");
     const edit = rows.first().getByRole("button", { name: /^Edit name:/ });
     await expect(edit.locator("svg")).toHaveCSS("opacity", "1");

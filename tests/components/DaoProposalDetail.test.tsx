@@ -1,5 +1,5 @@
 import { fireEvent, render, screen, within } from "@testing-library/react";
-import { describe, expect, it } from "vitest";
+import { beforeEach, describe, expect, it } from "vitest";
 import { ProposalDetail } from "@/app/dao/proposals/[id]/ProposalDetail";
 import { formatUtcDateTime } from "@/lib/date";
 import {
@@ -13,6 +13,10 @@ const PINNED_VOTING_SOURCE_URL =
   "https://github.com/yearn/stYFI/blob/9395d5e6fffdfe21fda32af94d32fca1a4f7840b/contracts/governance/Voting.vy";
 
 describe("DAO proposal detail", () => {
+  beforeEach(() => {
+    window.history.replaceState({}, "", "/dao/proposals/2");
+  });
+
   it.each(["A complete short proposal.", "## Summary\n\nA complete short proposal."])("keeps a short proposal visible in its content card: %s", (body) => {
     const value = structuredClone(proposal(4n));
     value.content.value!.markdown = `# A short proposal\n\n${body}`;
@@ -31,7 +35,7 @@ describe("DAO proposal detail", () => {
     [12n, "vetoed"],
     [13n, "vetoed"],
   ] satisfies Array<[bigint, DaoDisplayStatus]>) (
-    "renders terminal proposal #%s as %s with lifecycle and results",
+    "opens terminal proposal #%s as %s on Proposal and retains its details",
     (proposalId, displayStatus) => {
       const value = proposal(proposalId);
       const { unmount } = render(
@@ -45,12 +49,15 @@ describe("DAO proposal detail", () => {
         screen.getByRole("heading", { name: "Vote results" })
       ).toBeVisible();
       expect(screen.getByText(/of votes cast · \d/)).toBeVisible();
-      expect(
-        screen.getByRole("heading", { name: "Lifecycle" })
-      ).toBeVisible();
+      expect(screen.getByRole("tab", { name: "Proposal" })).toHaveAttribute("aria-selected", "true");
+      expect(screen.getByRole("tabpanel", { name: "Proposal" })).toBeVisible();
       expect(
         screen.getByRole("heading", { name: "Proposal content" })
       ).toBeVisible();
+      expect(screen.queryByRole("heading", { name: "Lifecycle" })).not.toBeInTheDocument();
+      openDetailSection("lifecycle");
+      expect(screen.getByRole("heading", { name: "Lifecycle" })).toBeVisible();
+      expect(screen.getByRole("heading", { name: "Vote results" })).toBeVisible();
       unmount();
     }
   );
@@ -64,6 +71,7 @@ describe("DAO proposal detail", () => {
     expect(
       screen.getAllByText("No executable actions", { exact: true }).length
     ).toBeGreaterThan(0);
+    openDetailSection("script");
     expect(
       screen.getByText(
         "Signal proposals contain no executable calls."
@@ -80,6 +88,7 @@ describe("DAO proposal detail", () => {
 
   it("presents flagging as moderation without inventing a community result", () => {
     render(<ProposalDetail envelope={envelope(proposal(11n))} />);
+    openDetailSection("lifecycle");
 
     expect(screen.getByText("Moderation", { exact: true })).toBeVisible();
     expect(screen.getAllByText("Flagged", { exact: true })[0]).toBeVisible();
@@ -98,6 +107,7 @@ describe("DAO proposal detail", () => {
     [13n, "Participation voting remains available until the voting window closes, but approval and execution are blocked."],
   ])("explains stored veto eligibility for proposal #%s", (proposalId, explanation) => {
     render(<ProposalDetail envelope={envelope(proposal(proposalId))} />);
+    openDetailSection("lifecycle");
 
     expect(screen.getAllByText("Vetoed", { exact: true })[0]).toBeVisible();
     expect(screen.getByText(explanation, { exact: true })).toBeVisible();
@@ -158,6 +168,7 @@ describe("DAO proposal detail", () => {
 
   it("keeps missing script bytes distinct from an empty signal", () => {
     render(<ProposalDetail envelope={envelope(proposal(16n))} />);
+    openDetailSection("script");
     expect(screen.getByRole("heading", { name: "Proposed script" })).toBeVisible();
     expect(screen.getAllByText(/script.*unavailable|missing script/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Analysis pending|simulation succeeded/i)).not.toBeInTheDocument();
@@ -167,6 +178,7 @@ describe("DAO proposal detail", () => {
   it("explains missing decoding once and retains exact call data for inspection", () => {
     const value = proposal(17n);
     render(<ProposalDetail envelope={envelope(value)} />);
+    openDetailSection("script");
     expect(screen.getAllByText("Raw call data")).toHaveLength(value.analysis.calls.length);
     expect(screen.getAllByText(/Some calls are shown as raw data/)).toHaveLength(1);
     expect(screen.queryByText("Unknown contract")).not.toBeInTheDocument();
@@ -186,6 +198,7 @@ describe("DAO proposal detail", () => {
 
   it("shows malformed framing without historical simulation claims", () => {
     render(<ProposalDetail envelope={envelope(proposal(18n))} />);
+    openDetailSection("script");
     expect(screen.getAllByText(/header|frame|malformed/i).length).toBeGreaterThan(0);
     expect(screen.queryByText(/Simulation failed|proposal-time simulation/i)).not.toBeInTheDocument();
   });
@@ -195,6 +208,7 @@ describe("DAO proposal detail", () => {
     value.script.hashVerified = false;
     value.analysis.calls[0].decodeStatus = "failed";
     render(<ProposalDetail envelope={envelope(value)} />);
+    openDetailSection("script");
     expect(screen.getByRole("alert")).toHaveTextContent("Event script does not match the stored script hash");
     expect(screen.getByText("Unable to decode")).toBeVisible();
   });
@@ -219,16 +233,18 @@ describe("DAO proposal detail", () => {
     };
 
     render(<ProposalDetail envelope={envelope(value, feed)} />);
+    expect(within(screen.getByRole("tabpanel", { name: "Proposal" })).getByText("vaultFactory.v2", { exact: true })).toBeVisible();
+    const script = within(openDetailSection("script"));
 
-    expect(screen.getByText("vaultFactory.v2", { exact: true })).toBeVisible();
-    expect(screen.getByText("rebalance_v2()", { exact: true })).toBeVisible();
-    expect(screen.getByText("Decoded call", { exact: true })).toBeVisible();
-    const firstCallData = screen.getAllByText("Call data", { exact: true })[0];
+    expect(script.getByText("vaultFactory.v2", { exact: true })).toBeVisible();
+    expect(script.getByText("rebalance_v2()", { exact: true })).toBeVisible();
+    expect(script.getByText("Decoded call", { exact: true })).toBeVisible();
+    const firstCallData = script.getAllByText("Call data", { exact: true })[0];
     fireEvent.click(firstCallData);
     const calldataRow = within(firstCallData.closest("details")!).getByText("Calldata", { exact: true }).parentElement!;
     expect(within(calldataRow).getByText(value.analysis.calls[0].calldata, { exact: true })).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Verified Vault source" })
+      script.getByRole("link", { name: "Verified Vault source" })
     ).toHaveAttribute(
       "href",
       "https://repo.sourcify.dev/contracts/full_match/1/0x0000000000000000000000000000000000000001/"
@@ -241,7 +257,8 @@ describe("DAO proposal detail", () => {
     if (!execute) throw new Error("Missing execute event.");
     execute.log.timestamp = 1_776_513_840;
 
-    render(<ProposalDetail envelope={envelope(value)} />);
+    const firstView = render(<ProposalDetail envelope={envelope(value)} />);
+    openDetailSection("lifecycle");
 
     expect(
       screen
@@ -251,6 +268,7 @@ describe("DAO proposal detail", () => {
     expect(
       screen.getAllByRole("link", { name: /View Ethereum transaction/ }).length
     ).toBeGreaterThan(0);
+    firstView.unmount();
 
     const unavailable = structuredClone(proposal(20n));
     const proposed = unavailable.events.find((event) => event.type === "propose");
@@ -258,6 +276,7 @@ describe("DAO proposal detail", () => {
     proposed.log.timestamp = null;
     proposed.log.transactionHash = null;
     const { unmount } = render(<ProposalDetail envelope={envelope(unavailable)} />);
+    openDetailSection("lifecycle");
     expect(
       screen
         .getAllByText("Time unavailable", { exact: true })
@@ -277,7 +296,7 @@ describe("DAO proposal detail", () => {
     if (!value) throw new Error("Missing proposal #17.");
 
     render(<ProposalDetail envelope={envelope(value, feed)} />);
-    fireEvent.click(screen.getByText("Technical details", { exact: true }));
+    openDetailSection("technical");
 
     expect(
       screen.getByText(formatUtcDateTime(feed.canonicalBlock.timestamp), {
@@ -302,7 +321,7 @@ describe("DAO proposal detail", () => {
     );
 
     expect(screen.getByText("Voting ends in 5 hours")).toBeVisible();
-    fireEvent.click(screen.getByText("Technical details", { exact: true }));
+    openDetailSection("technical");
     expect(
       screen.getByText(formatUtcDateTime(feed.canonicalBlock.timestamp), {
         exact: true,
@@ -369,6 +388,7 @@ describe("DAO proposal detail", () => {
         )
     ).toBe(true);
 
+    fireEvent.click(screen.getByRole("tab", { name: "Details" }));
     const technicalSummary = screen
       .getByText("Technical details")
       .closest("summary");
@@ -395,6 +415,16 @@ describe("DAO proposal detail", () => {
     expect(screen.getByText("60% of votes cast", { exact: true })).toBeVisible();
   });
 });
+
+function openDetailSection(section: "lifecycle" | "script" | "technical") {
+  fireEvent.click(screen.getByRole("tab", { name: "Details" }));
+  const wrapper = document.getElementById(`dao-proposal-${section}`);
+  const disclosure = wrapper?.querySelector("details");
+  const summary = disclosure?.querySelector("summary");
+  if (!wrapper || !disclosure || !summary) throw new Error(`Missing ${section} disclosure.`);
+  if (!disclosure.open) fireEvent.click(summary);
+  return wrapper;
+}
 
 function proposal(id: bigint): DaoProposal {
   const value = DAO_MOCK_FEED.proposals.find(

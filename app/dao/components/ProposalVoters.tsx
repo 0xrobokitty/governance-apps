@@ -10,9 +10,7 @@ import { UtcTime } from "@/components/ui/UtcTime";
 import { IconChevron } from "@/components/icons/IconChevron";
 import { IconLinkOut } from "@/components/icons/IconLinkOut";
 import { deriveDaoVoterTable, type DaoCollectiveVote, type DaoVoterRow } from "@/lib/clients/dao/votes";
-import { DAO_MOCK_YBC_AGGREGATE_ADDRESS, DAO_MOCK_STYFIX_AGGREGATE_ADDRESS } from "@/lib/clients/dao/fixtures";
-import { YBC_MAINNET_DEPLOYMENT } from "@/lib/clients/ybc/deployment";
-import deployment from "@/lib/deployment.json";
+import { getDaoCollectiveVoteAddresses } from "@/lib/clients/dao/voter-accounts";
 import { isDaoMockRuntimeEnabled } from "@/lib/runtime/features";
 import { formatDaoBasisPoints } from "@/lib/clients/dao/read-display";
 import type { DaoProposal } from "@/lib/clients/dao/types";
@@ -65,13 +63,7 @@ export function ProposalVoters({ proposal, isMock = isDaoMockRuntimeEnabled(), h
   const [search, setSearch] = useState("");
   const [sort, setSort] = useState<"newest" | "oldest" | "power">("newest");
   const [page, setPage] = useState(0);
-  const collectiveAddresses = useMemo(() => {
-    if (proposal.ref.chainId !== mainnet.id) return null;
-    return {
-      ybc: isMock ? DAO_MOCK_YBC_AGGREGATE_ADDRESS : YBC_MAINNET_DEPLOYMENT.ybc,
-      styfix: isMock ? DAO_MOCK_STYFIX_AGGREGATE_ADDRESS : deployment.STYFIX,
-    };
-  }, [proposal.ref.chainId, isMock]);
+  const collectiveAddresses = useMemo(() => getDaoCollectiveVoteAddresses(proposal.ref.chainId, isMock), [proposal.ref.chainId, isMock]);
   const { individualRows: rows, collective } = useMemo(() => deriveDaoVoterTable(proposal, collectiveAddresses), [proposal, collectiveAddresses]);
   const identities = useMemo(() => buildAddressIdentityMap([], [], {
     aliases, verifiedEns, trustRecordEns: false,
@@ -97,7 +89,7 @@ export function ProposalVoters({ proposal, isMock = isDaoMockRuntimeEnabled(), h
   }, [onVisibleAddressesChange, visibleAddressKey]);
 
   return (
-    <Card id="dao-proposal-votes" tabIndex={-1} className="min-w-0 scroll-mt-24 space-y-5" aria-label={copy.title}>
+    <Card id="dao-proposal-voter-list" tabIndex={-1} className="min-w-0 scroll-mt-24 space-y-5" aria-label={copy.title}>
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h2 className="flex items-center gap-2 text-balance text-xl font-bold">
           {copy.title}<span className="rounded-full bg-surface-secondary px-2.5 py-0.5 text-sm tabular-nums text-text-secondary">{rows.length}</span>
