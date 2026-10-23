@@ -40,8 +40,8 @@ function VotingPowerSummary({ data, isLoading = false, isSystemLoading = false }
     ? null
     : formatShare(share, amount > 0n);
   const value = isLoading ? copy.loading : formattedShare ?? (amount === undefined ? copy.missingTotal : formatPower(amount));
-  const status = isLoading || amount === undefined ? null : formattedShare
-    ? copy.ofTotal
+  const status = isLoading || amount === undefined || formattedShare
+    ? null
     : isSystemLoading ? copy.loadingTotal : copy.shareUnavailable;
   const explanation = isLoading ? copy.loading : amount === undefined ? copy.unavailable : !system
     ? isSystemLoading ? copy.loadingTotal : copy.totalUnavailable
@@ -67,17 +67,13 @@ function VotingPowerSummary({ data, isLoading = false, isSystemLoading = false }
           aria-busy={isLoading || isSystemLoading}
           onClick={() => setIsOpen(true)}
           onKeyDown={(event) => { if (event.key === "Escape") event.currentTarget.blur(); }}
-          className="h-auto min-h-11 w-full justify-between gap-3 rounded-xl border-border/70 px-3 py-2 text-left shadow-sm hover:shadow-md motion-reduce:transition-none motion-reduce:active:scale-100"
+          className="h-auto min-h-11 w-full justify-between gap-3 border-border/70 px-3 py-2 text-left shadow-sm hover:shadow-md motion-reduce:transition-none motion-reduce:active:scale-100"
         >
-          <span className="min-w-0 space-y-0.5">
-            <span className="flex flex-wrap items-baseline gap-x-2 gap-y-0.5 text-xs text-text-secondary">
-              <span>{copy.yours}</span>{" "}
-              {data?.isYbcMember && !estimate && <span>{copy.directOnly}</span>}
-            </span>
-            <span className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
-              <span className="font-number text-base font-semibold tabular-nums">{value}</span>{" "}
-              {status && <span className="text-xs text-text-secondary">{status}</span>}
-            </span>
+          <span className="flex min-w-0 flex-wrap items-baseline gap-x-2 gap-y-0.5">
+            <span className="text-xs text-text-secondary">{copy.yours}</span>{" "}
+            <span className="font-number text-base font-semibold tabular-nums">{value}</span>{" "}
+            {status && <span className="text-xs text-text-secondary">{status}</span>}
+            {data?.isYbcMember && !estimate && <span className="text-xs text-text-secondary">{copy.directOnly}</span>}
           </span>
           <IconChevron aria-hidden="true" className="size-4 shrink-0 -rotate-90 text-text-secondary" />
         </Button>

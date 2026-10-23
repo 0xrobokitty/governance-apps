@@ -9,7 +9,6 @@ export const daoCopy = {
     yours: "Your voting power",
     description: "Your stake and delegated influence in Yearn governance.",
     breakdown: "Voting power breakdown",
-    ofTotal: "of total",
     loading: "Loading…",
     shareUnavailable: "Share unavailable",
     emptyTotal: "There is no DAO voting power at this snapshot, so a percentage is not available.",

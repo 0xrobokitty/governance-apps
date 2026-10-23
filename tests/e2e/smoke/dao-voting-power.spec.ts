@@ -29,12 +29,12 @@ test("keeps voting power compact in the proposal header and opens its YBC breakd
   const header = page.locator("header").filter({ has: heading });
   await expect(header.getByTestId("dao-voting-power")).toBeVisible();
   await expect(trigger).toContainText("3.22%");
-  await expect(trigger).toContainText("of total");
+  await expect(trigger).not.toContainText("of total");
   await expect(page.getByRole("dialog")).toHaveCount(0);
   await expect(heading).toBeInViewport();
   await expect(page.getByRole("tab", { name: /Active/ })).toBeInViewport();
   const bounds = await trigger.boundingBox();
-  expect(bounds!.height).toBeLessThanOrEqual(80);
+  expect(bounds!.height).toBe(44);
   await expectContained(trigger, page);
 
   await trigger.focus();

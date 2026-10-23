@@ -2,6 +2,8 @@
 
 The DAO front page orders its header actions as **Discussion forum**, **Your voting power**, then **Create proposal**. The voting control shows the wallet's share of total DAO voting power. YBC assumptions appear in the tooltip and breakdown. The control wraps onto a small row on narrow screens, so **Proposals** remains first.
 
+The voting label and percentage share one line at normal text size, without an **of total** suffix. Its 44-pixel height and corner radius match **Create proposal**. Text can wrap at enlarged sizes.
+
 Hover or keyboard focus shows the calculation: personal voting power divided by total DAO voting power. A click or tap opens the full breakdown in a modal. The modal includes the calculation, personal components, system components, snapshot time, and participation assumptions. It traps keyboard focus and returns focus to the control when it closes.
 
 Ordinary wallets use exact `WeightMeasure.weight(account)`. YBC members also see an estimated share of the delegated stYFIx pool and YBC-held stake. The estimate assumes every current YBC member votes. Actual influence depends on which members vote on each proposal. The breakdown distinguishes the member's share of YBC weight from their share of total DAO voting power.

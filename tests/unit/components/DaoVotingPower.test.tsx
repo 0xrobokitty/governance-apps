@@ -26,7 +26,7 @@ describe("DAO voting power control", () => {
 
   it("shows a compact estimated share with associated math and opens the full YBC breakdown", async () => {
     render(<DaoVotingPower />);
-    expect(trigger()).toHaveTextContent("10.28% of total");
+    expect(trigger()).toHaveTextContent("Your voting power 10.28%");
     expect(trigger()).not.toHaveTextContent("YBC estimate");
     expect(trigger()).toHaveAttribute("aria-haspopup", "dialog");
     expect(trigger()).toHaveAttribute("aria-expanded", "false");
@@ -111,12 +111,12 @@ describe("DAO voting power control", () => {
     const { rerender } = render(<DaoVotingPower />);
     expect(trigger()).toHaveTextContent("3.22%");
     act(() => setStyfiMockScenario("ybc"));
-    expect(trigger()).toHaveTextContent("10% of total");
+    expect(trigger()).toHaveTextContent("Your voting power 10%");
     expect(trigger()).toHaveAccessibleDescription(/310 YFI ÷ 3,100 YFI/);
     expect(mocks.useStyfiVotingPower).not.toHaveBeenCalled();
     mocks.useDaoMockRuntime.mockReturnValue({ ...runtime, account: { ...runtime.account, votingWeight: 0n } });
     rerender(<DaoVotingPower />);
-    expect(trigger()).toHaveTextContent("0% of total");
+    expect(trigger()).toHaveTextContent("Your voting power 0%");
   });
 
   it.each(["connected", "correctChain"] as const)("hides DAO mock power when %s is false", (field) => {
