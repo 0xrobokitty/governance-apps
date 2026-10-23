@@ -53,6 +53,11 @@ CI workflow `/.github/workflows/security-and-quality.yml` enforces:
 - `npm run typecheck`
 - `npm run lint`
 - `npm test`
+- `npm run build` with production flags and placeholder service URLs
+
+The production build generates and checks Next.js route types. This catches
+framework type changes that a fresh checkout's standalone typecheck cannot detect.
+The build does not deploy the application.
 
 Deployment workflows apply the same dependency policy before building or deploying workers.
 
