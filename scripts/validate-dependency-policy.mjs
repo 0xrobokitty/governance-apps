@@ -16,7 +16,7 @@ const msPerDay = 24 * 60 * 60 * 1000;
 
 const allowedInstallScriptPackages = new Map([
   [
-    "node_modules/@opennextjs/aws/node_modules/esbuild@0.25.4",
+    "node_modules/@opennextjs/aws/node_modules/esbuild@0.28.2",
     "OpenNext AWS adapter uses esbuild's platform binary validation.",
   ],
   [
@@ -48,7 +48,7 @@ const allowedInstallScriptPackages = new Map([
     "Optional native WebSocket validation helper used by transitive wallet/RPC dependencies.",
   ],
   [
-    "node_modules/workerd@1.20260801.1",
+    "node_modules/workerd@1.20261006.1",
     "Cloudflare worker tooling validates the workerd runtime binary.",
   ],
 ]);

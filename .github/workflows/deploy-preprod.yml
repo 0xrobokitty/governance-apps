@@ -108,6 +108,11 @@ jobs:
       - name: Validate Worker Size
         run: npm run validate:worker-size -- wrangler.preprod.jsonc
 
+      - name: Validate Worker Runtime
+        env:
+          NEXT_PUBLIC_ENABLE_DAO: ${{ vars.NEXT_PUBLIC_ENABLE_DAO || 'false' }}
+        run: npm run validate:worker-runtime -- wrangler.preprod.jsonc
+
       - name: Deploy To Cloudflare Preprod
         env:
           NODE_ENV: production

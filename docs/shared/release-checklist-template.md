@@ -15,6 +15,9 @@ and record why.
 - [ ] `npm run lint`
 - [ ] `npm run test`
 - [ ] targeted e2e passes
+- [ ] `npm run worker:build`
+- [ ] `npm run validate:worker-size -- <target-config>`
+- [ ] `npm run validate:worker-runtime -- <target-config>` with the build's DAO flag
 - [ ] docs updated
 - [ ] no mock-only affordances exposed in production mode
 
