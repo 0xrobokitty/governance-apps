@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { walletErrorMessage, walletLaunchUrl } from "@/web3/wallet-ui-helpers";
+import { isAppleMobileWalletBrowser, walletErrorMessage, walletLaunchUrl } from "@/web3/wallet-ui-helpers";
 
 describe("wallet error copy", () => {
   it("finds provider rejection codes in nested causes", () => {
@@ -34,10 +34,42 @@ describe("wallet launch links", () => {
     const uri = `wc:${"a".repeat(64)}@2?relay-protocol=irn&symKey=secret`;
     expect(walletLaunchUrl("metamask", uri)).toBe(`metamask://wc?uri=${encodeURIComponent(uri)}`);
     expect(walletLaunchUrl("rabby", uri)).toBe(`rabby://walletconnect?uri=${encodeURIComponent(uri)}`);
+    expect(walletLaunchUrl("oath", uri)).toBe(`oathwallet://wc?uri=${encodeURIComponent(uri)}`);
   });
 
-  it("rejects arbitrary URLs and malformed pairing payloads", () => {
-    expect(walletLaunchUrl("metamask", "javascript:alert(1)")).toBeUndefined();
-    expect(walletLaunchUrl("rabby", "wc:broken@1?key=value")).toBeUndefined();
+  it("preserves reserved characters through exactly one Oath query decoding", () => {
+    const uri = `wc:${"b".repeat(64)}@2?relay-protocol=irn&symKey=a%2Fb+c&extra=?#&value=é`;
+    const href = walletLaunchUrl("oath", uri);
+    expect(href).toBe(`oathwallet://wc?uri=${encodeURIComponent(uri)}`);
+    expect(new URL(href!).searchParams.get("uri")).toBe(uri);
+  });
+
+  it.each(["metamask", "rabby", "oath"] as const)("rejects invalid or oversized payloads for %s", (wallet) => {
+    for (const uri of [
+      "javascript:alert(1)",
+      "https://wallet.example/",
+      "wc:broken@2?key=value",
+      `wc:${"a".repeat(64)}@1?key=value`,
+      `wc:${"a".repeat(64)}@2?key=${"a".repeat(4096)}`,
+    ]) {
+      expect(walletLaunchUrl(wallet, uri)).toBeUndefined();
+    }
+  });
+});
+
+describe("Apple mobile wallet browser detection", () => {
+  it.each([
+    ["iPhone", { userAgent: "Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)", platform: "iPhone", maxTouchPoints: 5 }, true],
+    ["iPad", { userAgent: "Mozilla/5.0 (iPad; CPU OS 17_0 like Mac OS X)", platform: "iPad", maxTouchPoints: 5 }, true],
+    ["desktop-mode iPadOS", { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)", platform: "MacIntel", maxTouchPoints: 5 }, true],
+    ["Mac", { userAgent: "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)", platform: "MacIntel", maxTouchPoints: 0 }, false],
+    ["single-touch Mac", { platform: "MacIntel", maxTouchPoints: 1 }, false],
+    ["Android", { userAgent: "Mozilla/5.0 (Linux; Android 14)", platform: "Linux armv8l", maxTouchPoints: 5 }, false],
+    ["Windows touch", { userAgent: "Mozilla/5.0 (Windows NT 10.0; Win64; x64)", platform: "Win32", maxTouchPoints: 10 }, false],
+    ["iPod", { userAgent: "Mozilla/5.0 (iPod touch; CPU iPhone OS 15_0 like Mac OS X)", platform: "iPod", maxTouchPoints: 5 }, false],
+    ["unknown browser", {}, false],
+    ["server", undefined, false],
+  ] as const)("identifies %s conservatively", (_name, browser, expected) => {
+    expect(isAppleMobileWalletBrowser(browser)).toBe(expected);
   });
 });

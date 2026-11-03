@@ -22,9 +22,24 @@ export function walletErrorMessage(error: unknown, action: "connect" | "switch" 
   return "Could not connect. Try again.";
 }
 
+/** Browser capability hint only; this does not detect an installed wallet. */
+export function isAppleMobileWalletBrowser(browser?: {
+  userAgent?: string;
+  platform?: string;
+  maxTouchPoints?: number;
+}): boolean {
+  if (!browser || /\biPod\b/i.test(browser.userAgent ?? "")) return false;
+  return /\b(iPhone|iPad)\b/i.test(browser.userAgent ?? "") ||
+    browser.platform === "MacIntel" && (browser.maxTouchPoints ?? 0) > 1;
+}
+
 /** Source-verified wallet routes. Navigation happens only on an explicit link click. */
-export function walletLaunchUrl(wallet: "metamask" | "rabby", uri: string): string | undefined {
+export function walletLaunchUrl(wallet: "metamask" | "rabby" | "oath", uri: string): string | undefined {
   if (uri.length > 4096 || !/^wc:[a-f0-9]{64}@2\?/i.test(uri)) return undefined;
-  const prefix = wallet === "metamask" ? "metamask://wc" : "rabby://walletconnect";
-  return `${prefix}?uri=${encodeURIComponent(uri)}`;
+  const prefixes = {
+    metamask: "metamask://wc",
+    rabby: "rabby://walletconnect",
+    oath: "oathwallet://wc",
+  };
+  return `${prefixes[wallet]}?uri=${encodeURIComponent(uri)}`;
 }

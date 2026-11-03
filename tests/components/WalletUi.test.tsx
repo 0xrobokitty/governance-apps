@@ -244,6 +244,67 @@ describe("app-owned wallet controls", () => {
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
   });
 
+  it.each(["iPhone", "iPad"])("offers Oath on %s using the existing pending request", async (device) => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(`Mozilla/5.0 (${device}; CPU OS 17_0 like Mac OS X)`);
+    const user = userEvent.setup();
+    state.connect.mockReturnValue(new Promise(() => {}));
+    renderWallet();
+    await user.click(screen.getByText("Connect test wallet"));
+    await user.click(screen.getByRole("button", { name: /WalletConnect/ }));
+    expect(screen.queryByRole("link", { name: "Open Oath" })).not.toBeInTheDocument();
+    setPairing({ status: "pending", uri });
+    const oath = screen.getByRole("link", { name: "Open Oath" });
+    expect(oath).toHaveAttribute("href", `oathwallet://wc?uri=${encodeURIComponent(uri)}`);
+    expect(screen.getByRole("link", { name: "Open MetaMask" })).toHaveAttribute("href", `metamask://wc?uri=${encodeURIComponent(uri)}`);
+    expect(screen.getByRole("link", { name: "Open Rabby" })).toHaveAttribute("href", `rabby://walletconnect?uri=${encodeURIComponent(uri)}`);
+    // Avoid operating-system navigation; the action must not start another connector.
+    oath.addEventListener("click", (event) => event.preventDefault());
+    await user.click(oath);
+    expect(state.connect).toHaveBeenCalledExactlyOnceWith({ connector: state.connectors[1] });
+    expect(state.cancel).not.toHaveBeenCalled();
+    expect(screen.getByRole("status")).toHaveTextContent("Waiting for your wallet…");
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    expect(state.cancel).toHaveBeenCalledOnce();
+    expect(screen.queryByRole("link", { name: "Open Oath" })).not.toBeInTheDocument();
+    await user.click(screen.getByText("Need a wallet?"));
+    expect(screen.getAllByRole("link").map((link) => link.textContent).sort()).toEqual(["Ambire", "MetaMask", "Rabby"]);
+  });
+
+  it.each([
+    "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15)",
+    "Mozilla/5.0 (Linux; Android 14)",
+  ])("keeps Oath out of an unsupported browser", async (userAgent) => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue(userAgent);
+    const user = userEvent.setup();
+    state.connect.mockReturnValue(new Promise(() => {}));
+    renderWallet();
+    await user.click(screen.getByText("Connect test wallet"));
+    await user.click(screen.getByRole("button", { name: /WalletConnect/ }));
+    setPairing({ status: "pending", uri });
+    expect(screen.getByRole("img", { name: "WalletConnect pairing QR code" })).toBeVisible();
+    expect(screen.queryByRole("link", { name: "Open Oath" })).not.toBeInTheDocument();
+  });
+
+  it.each(["cancelled", "expired", "error"])("removes stale Oath links after pairing becomes %s", async (status) => {
+    vi.spyOn(navigator, "userAgent", "get").mockReturnValue("Mozilla/5.0 (iPhone; CPU iPhone OS 17_0 like Mac OS X)");
+    const user = userEvent.setup();
+    state.connect.mockReturnValue(new Promise(() => {}));
+    renderWallet();
+    await user.click(screen.getByText("Connect test wallet"));
+    await user.click(screen.getByRole("button", { name: /WalletConnect/ }));
+    setPairing({ status: "pending", uri });
+    expect(screen.getByRole("link", { name: "Open Oath" })).toBeVisible();
+    // The provider can retain a stale field; status still removes every launch action.
+    setPairing({ status, uri });
+    expect(screen.queryByRole("link", { name: "Open Oath" })).not.toBeInTheDocument();
+    expect(screen.queryByRole("img", { name: "WalletConnect pairing QR code" })).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "Try again" }));
+    const nextUri = uri.replace("a".repeat(64), "b".repeat(64));
+    setPairing({ status: "pending", uri: nextUri });
+    expect(screen.getByRole("link", { name: "Open Oath" })).toHaveAttribute("href", `oathwallet://wc?uri=${encodeURIComponent(nextUri)}`);
+    expect(state.connect).toHaveBeenCalledTimes(2);
+  });
+
   it("removes expired QR codes and provides a fresh retry action", async () => {
     const user = userEvent.setup();
     state.connect.mockReturnValue(new Promise(() => {}));

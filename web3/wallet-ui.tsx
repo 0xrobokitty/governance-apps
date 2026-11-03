@@ -35,7 +35,7 @@ import {
   subscribeWalletConnectPairing,
   walletConnectPairingServerSnapshot,
 } from "./walletconnect-pairing";
-import { walletErrorMessage, walletLaunchUrl } from "./wallet-ui-helpers";
+import { isAppleMobileWalletBrowser, walletErrorMessage, walletLaunchUrl } from "./wallet-ui-helpers";
 
 type Panel = "connect" | "account" | "network";
 type WalletUiContextValue = {
@@ -412,6 +412,24 @@ export function WalletUiProvider({ children }: { children: ReactNode }) {
   );
 }
 
+const walletLaunchOptions = [
+  { id: "metamask", name: "MetaMask", icon: "io.metamask" },
+  { id: "rabby", name: "Rabby", icon: "io.rabby" },
+  { id: "oath", name: "Oath", icon: "oath" },
+] as const;
+
+function subscribeBrowserPlatform() {
+  return () => {};
+}
+
+function getAppleMobileSnapshot() {
+  return typeof navigator !== "undefined" && isAppleMobileWalletBrowser(navigator);
+}
+
+function getServerAppleMobileSnapshot() {
+  return false;
+}
+
 function PairingPanel({
   uri,
   status,
@@ -421,6 +439,11 @@ function PairingPanel({
   status: string;
   onCopy: (uri: string) => void;
 }) {
+  const appleMobile = useSyncExternalStore(
+    subscribeBrowserPlatform,
+    getAppleMobileSnapshot,
+    getServerAppleMobileSnapshot,
+  );
   if (!uri) {
     return status === "connecting" || status === "idle" ? <p>Preparing connection…</p> : null;
   }
@@ -430,18 +453,17 @@ function PairingPanel({
       <WalletPairingQr uri={uri} />
       <p className="text-center text-xs">Scan with your wallet</p>
       <div className="flex flex-wrap gap-2">
-        {(["metamask", "rabby"] as const).map((wallet) => {
-          const href = walletLaunchUrl(wallet, uri);
-          const name = wallet === "metamask" ? "MetaMask" : "Rabby";
+        {walletLaunchOptions.filter((wallet) => wallet.id !== "oath" || appleMobile).map((wallet) => {
+          const href = walletLaunchUrl(wallet.id, uri);
           return href ? (
             <a
-              key={wallet}
+              key={wallet.id}
               href={href}
-              aria-label={`Open ${name}`}
+              aria-label={`Open ${wallet.name}`}
               className={getButtonClassName({ variant: "secondary", size: "sm", className: `${walletActionClass} flex-1 basis-32 gap-2` })}
             >
-              <WalletBrandIcon id={wallet === "metamask" ? "io.metamask" : "io.rabby"} className="size-5 shrink-0" />
-              <span className="min-w-0 break-words">{name}</span>
+              <WalletBrandIcon id={wallet.icon} className="size-5 shrink-0" />
+              <span className="min-w-0 break-words">{wallet.name}</span>
             </a>
           ) : null;
         })}

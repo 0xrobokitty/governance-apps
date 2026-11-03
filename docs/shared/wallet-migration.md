@@ -51,7 +51,11 @@ Software decoder checks do not establish phone-camera compatibility. The current
 
 The WalletConnect SDK loads when a connection or stored session needs it. A missing project ID disables mobile pairing with an explanation. The application does not substitute a fake project ID.
 
-Wallet approval is separate from a transaction. The connection dialog supplies a QR code, a copyable URI, and explicit MetaMask/Rabby launch buttons. Phone users return to the browser manually when their operating system does not return automatically.
+Wallet approval is separate from a transaction. The connection dialog supplies a QR code, a copyable URI, and explicit MetaMask/Rabby launch buttons. On iPhone and iPad, it also offers Open Oath. All launch buttons use the same current pairing URI. They disappear when that request ends. Phone users return to the browser manually when their operating system does not return automatically.
+
+Oath uses `oathwallet://wc?uri=<encoded pairing URI>`, verified against its [5.0.1 source](https://github.com/devdasx/oath-wallet/blob/c7acd23bb139864a40273f405d18b479589d2b20/OathAtmosphere/Scanner/OathWalletLink.swift). This independently implemented launch action replaces the RainbowKit-specific integration proposed in [PR #141](https://github.com/yearn/governance-apps/pull/141). It adds no provider, dependency, storage namespace, or download recommendation. Android and desktop users retain generic QR pairing.
+
+This source check does not certify Oath's security or confirm that its installed App Store version supports the flow. On November 3, 2026, [Apple's listing](https://apps.apple.com/us/app/oath-crypto-bitcoin-wallet/id6780187283) reported version 4.1.2; no matching source tag was available. Record the installed version during physical-device acceptance.
 
 Closing a pending request cancels its use by the application. The adapter expires only the Sign Client proposal that matches this attempt's pairing topic. A new request starts after the SDK approval promise settles. Late approvals are disconnected, including orphan sessions from a settlement race. Unrelated proposals and newer sessions remain intact. If targeted expiry is unavailable, the existing retry fence remains.
 
@@ -116,8 +120,8 @@ Record the device, OS, browser, wallet version, result, and observed error for e
 8. Close a pending request, then approve the old wallet prompt.
 9. Verify that the old approval does not reconnect the app.
 10. Scan the desktop QR with iPhone MetaMask.
-11. Repeat the scan with iPhone Rabby.
-12. Open the page in iPhone Safari and use each explicit wallet launch button.
+11. Repeat the scan with iPhone Rabby and Oath.
+12. Open the page in iPhone Safari and use the MetaMask, Rabby, and Oath launch buttons. Test Oath on iPad Safari too. Record the installed Oath version; source review alone does not prove App Store compatibility.
 13. Return to Safari after approval.
 14. Repeat reconnect, disconnect, rejection, and expiry on the phone.
 15. Open Need a wallet and verify all three official download links.
