@@ -10,6 +10,12 @@ test("Pulse replaces Metrics with six historical chart tiles", async ({ page, re
   await expect(page.locator("header")).not.toContainText("0xf39F");
   await page.getByRole("group", { name: "History window" }).getByRole("button", { name: "90D" }).click();
   await expect(page.getByTestId("pulse-range")).toContainText("5 Aug");
+  await page.getByRole("group", { name: "History window" }).getByRole("button", { name: "365D" }).click();
+  await expect(page.getByTestId("pulse-range")).toHaveText("3 Nov 2025 – 2 Nov 2026 · completed UTC days");
+  await page.getByRole("button", { name: "Details: Net external flows", exact: true }).click();
+  await expect(page.getByRole("dialog").locator("tbody tr")).toHaveCount(365);
+  await expect(page.getByRole("dialog").locator("tbody tr").first()).toContainText("3 Nov 2025");
+  await page.keyboard.press("Escape");
   await page.getByRole("combobox", { name: "Capital asset group" }).selectOption("eth");
   await expect(page.getByRole("table", { name: /Product trends/ })).not.toContainText("USDC");
   await expect(page.getByTestId("pulse-fees")).toContainText("All products");

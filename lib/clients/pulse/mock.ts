@@ -1,7 +1,9 @@
 import type { GovernanceDay, Observation, Product, Scenario } from "./types";
 
 export const END_DATE = "2026-11-02";
-export const DAYS = 190;
+export const DAYS = 740; // Two annual windows plus moving-average warmup.
+const RECENT_DAYS = 190;
+const PREFIX_DAYS = DAYS - RECENT_DAYS;
 export const PRODUCTS: Product[] = [
   { id: "usdc", name: "USDC", chain: "Ethereum", group: "stable", asset: "USDC", units: 18000000, price: 1, daily: 66000 },
   { id: "weth", name: "WETH", chain: "Ethereum", group: "eth", asset: "ETH", units: 7400, price: 2800, daily: 27 },
@@ -34,7 +36,7 @@ function accounts(chain: string, day: number, product: number, count: number, of
 export function createLedger(scenario: Exclude<Scenario, "unavailable">): Observation[] {
   return PRODUCTS.flatMap((product, index) => {
     let units = product.units;
-    return Array.from({ length: DAYS }, (_, day) => {
+    const recent = Array.from({ length: RECENT_DAYS }, (_, day) => {
       const phase = late(day);
       const growing = scenario === "growth";
       const leaving = scenario === "outflows";
@@ -50,7 +52,7 @@ export function createLedger(scenario: Exclude<Scenario, "unavailable">): Observ
       const reports = (day + index) % 3 === 0 ? 1 + index % 3 : 0;
       const harvestPnl = reports ? earnings * price * 3 * (0.82 + noise(day, index) * 0.4) : 0;
       return {
-        day, date: dateAt(day), product: product.id, openingUnits, closingUnits: units,
+        day: day + PREFIX_DAYS, date: dateAt(day + PREFIX_DAYS), product: product.id, openingUnits, closingUnits: units,
         openingPrice: priceAt(product, day - 1), price, deposits, withdrawals, earnings,
         depositAccounts: accounts(product.chain, day, index, depositCount, 0),
         withdrawalAccounts: accounts(product.chain, day, index, withdrawalCount, 23),
@@ -59,20 +61,48 @@ export function createLedger(scenario: Exclude<Scenario, "unavailable">): Observ
         proceeds: (day + index) % 5 === 0 ? earnings * price * 5 * 0.095 : 0,
       };
     });
+    // Prepend a reconciled history backwards from the original opening balance.
+    // The existing 7/30/90-day examples retain their observations and comparisons.
+    const earlier: Observation[] = [];
+    let closingUnits = product.units;
+    for (let past = -1; past >= -PREFIX_DAYS; past--) {
+      const day = past + PREFIX_DAYS;
+      const deposits = closingUnits * 0.00035 * (1 + 0.25 * Math.sin(past / 11 + index));
+      const withdrawals = closingUnits * 0.00028 * (1 + 0.3 * Math.cos(past / 13 + index));
+      const openingUnits = (closingUnits - deposits + withdrawals) / (1 + (0.035 + index * 0.003) / 365);
+      const earnings = openingUnits * (0.035 + index * 0.003) / 365;
+      const price = priceAt(product, past);
+      const reports = (past + index) % 3 === 0 ? 1 + index % 3 : 0;
+      const harvestPnl = reports ? earnings * price * 3 * 0.95 : 0;
+      const depositCount = Math.round(20 - index + 3 * Math.sin(past / 9));
+      const withdrawalCount = Math.round(12 - index + 2 * Math.cos(past / 13));
+      earlier.push({
+        day, date: dateAt(day), product: product.id, openingUnits, closingUnits,
+        openingPrice: priceAt(product, past - 1), price, deposits, withdrawals, earnings,
+        depositAccounts: accounts(product.chain, day, index, depositCount, 0),
+        withdrawalAccounts: accounts(product.chain, day, index, withdrawalCount, 23),
+        depositActions: depositCount + 3 + index, withdrawalActions: withdrawalCount + 2 + index,
+        fees: harvestPnl * (0.09 + index * 0.004), harvestPnl, reports,
+        proceeds: (past + index) % 5 === 0 ? earnings * price * 5 * 0.095 : 0,
+      });
+      closingUnits = openingUnits;
+    }
+    return [...earlier.reverse(), ...recent];
   });
 }
 export function createGovernance(scenario: Scenario): GovernanceDay[] {
-  return Array.from({ length: DAYS }, (_, day) => {
+  return Array.from({ length: DAYS }, (_, index) => {
+    const day = index - PREFIX_DAYS;
     const phase = late(day);
-    const direct = 6460 + day * 2.1 + Math.sin(day / 10) * 35 - phase * (scenario === "outflows" ? 310 : 50);
-    const delegated = 3060 + day * 6.2 + Math.sin(day / 9) * 42;
+    const direct = (day < 0 ? 6460 * Math.exp(day * 2.1 / 6460) : 6460 + day * 2.1) + Math.sin(day / 10) * 35 - phase * (scenario === "outflows" ? 310 : 50);
+    const delegated = (day < 0 ? 3060 * Math.exp(day * 6.2 / 3060) : 3060 + day * 6.2) + Math.sin(day / 9) * 42;
     const supply = 36666;
     const eligible = 9000 + day * 2;
-    const voting = [107, 123, 140, 155, 169, 181, 187].includes(day);
+    const voting = day < 0 ? day % 28 === -1 : [107, 123, 140, 155, 169, 181, 187].includes(day);
     const used = eligible * (0.61 + day / 1450 + Math.sin(day / 14) * 0.07);
     const usd = 4200 + day * 4 + 180 * Math.sin(day / 13) + phase * 320;
     return {
-      date: dateAt(day), direct, delegated, directRate: direct / supply * 100, delegatedRate: delegated / supply * 100,
+      date: dateAt(index), direct, delegated, directRate: direct / supply * 100, delegatedRate: delegated / supply * 100,
       total: direct + delegated, rate: (direct + delegated) / supply * 100,
       pending: 120 + phase * 60 + 30 * Math.sin(day / 7),
       apr: 9.7 - day * 0.008 + Math.sin(day / 8) * 0.55 - phase * 0.6,

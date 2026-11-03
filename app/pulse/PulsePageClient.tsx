@@ -6,7 +6,7 @@ import { Modal } from "@/components/ui/Modal";
 import { usePulse } from "@/lib/hooks/usePulse";
 import type { Asset, GovernanceView, Period, Scenario } from "@/lib/clients/pulse/types";
 import { TrendChart, Sparkline, type TrendSeries } from "./TrendChart";
-import { money, number, percent, points, shortDate } from "./format";
+import { money, number, percent, points, shortDate, fullDate, dateRange } from "./format";
 import { copy, ui } from "./messages";
 import styles from "./pulse.module.css";
 
@@ -102,8 +102,8 @@ export function PulsePageClient() {
 
     <div className="mb-4 flex flex-wrap items-center justify-between gap-3 border-y border-border py-3">
       <div className="flex flex-wrap items-center gap-3">
-        <Choice label="History window" value={String(period)} options={[7, 30, 90].map(value => ({ value: String(value), label: value + "D" }))} onChange={value => setPeriod(Number(value) as Period)} />
-        <p className="text-xs text-text-secondary" data-testid="pulse-range">{data ? shortDate(data.start) + " – " + shortDate(data.end) + " 2026 · completed UTC days" : "No observations available"}</p>
+        <Choice label="History window" value={String(period)} options={[7, 30, 90, 365].map(value => ({ value: String(value), label: value + "D" }))} onChange={value => setPeriod(Number(value) as Period)} />
+        <p className="text-xs text-text-secondary" data-testid="pulse-range">{data ? dateRange(data.start, data.end) + " · completed UTC days" : "No observations available"}</p>
       </div>
       <label className="flex items-center gap-2 text-xs text-text-secondary">{copy.scope}
         <select aria-label="Capital asset group" className={selectClass} value={asset} onChange={event => setAsset(event.target.value as Asset)}>
@@ -195,7 +195,7 @@ export function PulsePageClient() {
 
     <Modal isOpen={method} onClose={() => setMethod(false)} title={copy.method} className="max-h-[85dvh] max-w-2xl overflow-y-auto"><div className="space-y-5">{copy.definitions.map(([title, text]) => <section key={title}><h3 className="text-sm font-bold">{title}</h3><p className="mt-1 text-sm leading-relaxed text-text-secondary">{text}</p></section>)}</div></Modal>
     <Modal isOpen={!!detail} onClose={() => setDetail(null)} title={detail?.title} className="max-h-[85dvh] max-w-2xl overflow-y-auto">
-      {detail && <><p className="mb-4 text-sm leading-relaxed text-text-secondary">{detail.note}</p><div className="overflow-x-auto"><table className="w-full text-right text-xs"><caption className="sr-only">{detail.title}{ui.dataTable}</caption><thead><tr className="border-b border-border"><th scope="col" className="py-2 text-left">{ui.dateUTC}</th>{detail.series.map(s => <th scope="col" key={s.label} className="px-2">{s.label}</th>)}</tr></thead><tbody>{detail.dates.map((date, index) => <tr key={date} className="border-b border-border"><th scope="row" className="py-2 text-left font-normal">{shortDate(date)}</th>{detail.series.map(s => <td key={s.label} className="px-2 font-number">{s.values[index] === null ? "No observation" : detail.format(s.values[index]! - (s.floor?.[index] ?? 0))}</td>)}</tr>)}</tbody></table></div></>}
+      {detail && <><p className="mb-4 text-sm leading-relaxed text-text-secondary">{detail.note}</p><div className="overflow-x-auto"><table className="w-full text-right text-xs"><caption className="sr-only">{detail.title}{ui.dataTable}</caption><thead><tr className="border-b border-border"><th scope="col" className="py-2 text-left">{ui.dateUTC}</th>{detail.series.map(s => <th scope="col" key={s.label} className="px-2">{s.label}</th>)}</tr></thead><tbody>{detail.dates.map((date, index) => <tr key={date} className="border-b border-border"><th scope="row" className="py-2 text-left font-normal">{fullDate(date)}</th>{detail.series.map(s => <td key={s.label} className="px-2 font-number">{s.values[index] === null ? "No observation" : detail.format(s.values[index]! - (s.floor?.[index] ?? 0))}</td>)}</tr>)}</tbody></table></div></>}
     </Modal>
   </div>;
 }

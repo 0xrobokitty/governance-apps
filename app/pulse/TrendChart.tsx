@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useId, useRef, useState } from "react";
-import { shortDate } from "./format";
+import { shortDate, fullDate } from "./format";
 
 export interface TrendSeries {
   label: string; color: string; values: (number | null)[];
@@ -40,7 +40,7 @@ export function TrendChart({ label, dates, series, format, height = 168, zero = 
       return command + x(index).toFixed(2) + "," + y(value).toFixed(2);
     }).join(" ");
   };
-  const barWidth = Math.max(1, Math.min(11, (right - left) / dates.length * 0.66));
+  const barWidth = Math.max(0.3, Math.min(11, (right - left) / dates.length * 0.66));
   const ticks = [min, (min + max) / 2, max];
   const labels = [0, Math.round((dates.length - 1) / 2), dates.length - 1];
   return <div className="relative" data-testid="pulse-chart">
@@ -69,8 +69,8 @@ export function TrendChart({ label, dates, series, format, height = 168, zero = 
           return "L" + x(i).toFixed(2) + "," + y(s.floor?.[i] ?? min).toFixed(2);
         }).join(" ") + " Z"} fill={s.color} opacity={s.floor ? ".32" : ".09"} />}
         {(s.kind === "bar" || s.kind === "points") ? s.values.map((value, i) => value === null ? null : s.kind === "points"
-          ? <circle key={i} cx={x(i)} cy={y(value)} r="4" fill={s.color}><title>{shortDate(dates[i]) + ": " + format(value)}</title></circle>
-          : <rect key={i} x={x(i) - barWidth / 2} y={value >= 0 ? y(value) : y(0)} width={barWidth} height={Math.max(1, Math.abs(y(value) - y(0)))} rx="1.5" fill={value < 0 ? "#cc7451" : s.color} opacity=".8"><title>{shortDate(dates[i]) + ": " + format(value)}</title></rect>)
+          ? <circle key={i} cx={x(i)} cy={y(value)} r="4" fill={s.color}><title>{fullDate(dates[i]) + ": " + format(value)}</title></circle>
+          : <rect key={i} x={x(i) - barWidth / 2} y={value >= 0 ? y(value) : y(0)} width={barWidth} height={Math.max(1, Math.abs(y(value) - y(0)))} rx="1.5" fill={value < 0 ? "#cc7451" : s.color} opacity=".8"><title>{fullDate(dates[i]) + ": " + format(value)}</title></rect>)
           : <path d={path(s.values)} fill="none" stroke={s.color} strokeWidth={index === 0 ? 2.2 : 1.9} strokeDasharray={s.dash ? "5 4" : undefined} strokeLinejoin="round" strokeLinecap="round" />}
       </g>)}
       {labels.map((i, index) => <text key={index} x={x(i)} y={height - 5} textAnchor={index === 0 ? "start" : index === 2 ? "end" : "middle"} fill="currentColor" fontSize="10" className="text-text-secondary">{shortDate(dates[i])}</text>)}
@@ -81,7 +81,7 @@ export function TrendChart({ label, dates, series, format, height = 168, zero = 
     </svg>
     <div id={id} aria-live="polite" className={active === null ? "sr-only" : "pointer-events-none absolute left-16 top-0 z-10 max-w-[calc(100%-4rem)] rounded-box border border-border bg-surface px-3 py-2 text-[11px] shadow-lg"}>
       {active === null ? "Detailed values are available through the chart's Details button." : <>
-        <p className="mb-1 font-bold">{shortDate(dates[active])}</p>
+        <p className="mb-1 font-bold">{fullDate(dates[active])}</p>
         {series.map(s => <p key={s.label} className="flex justify-between gap-4"><span>{s.label}</span><span className="font-number">{s.values[active] === null ? "No observation" : format(s.values[active]! - (s.floor?.[active] ?? 0))}</span></p>)}
       </>}
     </div>

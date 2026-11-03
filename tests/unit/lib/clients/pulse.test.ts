@@ -12,7 +12,7 @@ describe("Pulse reconciled history", () => {
     }
   });
   it("reconciles each full period, including product totals and normalized daily flows", () => {
-    for (const period of [7, 30, 90] as const) for (const asset of ["all", "stable", "eth", "other"] as const) {
+    for (const period of [7, 30, 90, 365] as const) for (const asset of ["all", "stable", "eth", "other"] as const) {
       const data = getPulse(period, asset, "mixed")!;
       expect(data.days).toHaveLength(period);
       expect(data.tvl - data.openingTVL).toBeCloseTo(data.net + data.earned + data.repricing, 6);
@@ -20,6 +20,23 @@ describe("Pulse reconciled history", () => {
       expect(data.products.reduce((n, product) => n + product.net, 0)).toBeCloseTo(data.net, 6);
       expect(data.days.at(-1)!.tvlIndex).toBeCloseTo(100 + data.tvlChange);
       expect(data.days.at(-1)!.fixedIndex).toBeCloseTo(100 + data.fixedChange);
+    }
+  });
+  it("uses a complete preceding year and finite observations for 365D", () => {
+    const data = getPulse(365, "all", "mixed")!;
+    const ledger = createLedger("mixed");
+    const prior = ledger.filter(row => row.day >= DAYS - 730 && row.day < DAYS - 365);
+    expect(new Set(prior.map(row => row.date)).size).toBe(365);
+    expect(data.start).toBe("2025-11-03");
+    expect(data.end).toBe("2026-11-02");
+    const previousFees = prior.reduce((total, row) => total + row.fees, 0);
+    expect(data.feeChange).toBeCloseTo((data.fees / previousFees - 1) * 100);
+    expect(data.days.every(day => Object.values(day).filter(value => typeof value === "number").every(Number.isFinite))).toBe(true);
+    for (const day of data.governance) {
+      expect(day.direct).toBeGreaterThan(0);
+      expect(day.delegated).toBeGreaterThan(0);
+      if (day.vote) expect(day.vote.rate).toBeGreaterThanOrEqual(0);
+      if (day.vote) expect(day.vote.rate).toBeLessThanOrEqual(100);
     }
   });
   it("does not change normalized flows when current market prices change", () => {

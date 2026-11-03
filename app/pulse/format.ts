@@ -6,3 +6,5 @@ export function money(value: number, signed = false) {
 export const percent = (value: number, signed = false, digits = 2) => (value < 0 ? "−" : signed && value > 0 ? "+" : "") + number(Math.abs(value), digits) + "%";
 export const points = (value: number) => (value < 0 ? "−" : "+") + number(Math.abs(value), 2) + " pp";
 export function shortDate(value: string) { return new Date(value + "T00:00:00Z").toLocaleDateString("en-GB", { day: "numeric", month: "short", timeZone: "UTC" }); }
+export function fullDate(value: string) { return shortDate(value) + " " + value.slice(0, 4); }
+export function dateRange(start: string, end: string) { return (start.slice(0, 4) === end.slice(0, 4) ? shortDate(start) : fullDate(start)) + " – " + fullDate(end); }

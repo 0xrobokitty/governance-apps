@@ -13,7 +13,7 @@ Use six chart tiles to answer daily executive questions:
 5. How are harvested results and protocol fees developing?
 6. How are YFI staking, stYFIx APR, voting and price changing?
 
-Product movers add cumulative-flow sparklines and rank changes. Focus view keeps the six tiles visible and hides secondary material. Windows are 7, 30 and 90 completed UTC days, defaulting to 30. Every main tile contains history. Current values summarize those histories rather than substituting for them.
+Product movers add cumulative-flow sparklines and rank changes. Focus view keeps the six tiles visible and hides secondary material. Windows are 7, 30, 90 and 365 completed UTC days, defaulting to 30. Every main tile contains history. Current values summarize those histories rather than substituting for them.
 
 The original prototype's inline SVG trend tiles informed this revision. Its static team descriptions and broad financial scorecards are not carried over. Existing Yearn fonts, shell, colors, cards, dialogs and themes remain in use.
 
@@ -37,7 +37,7 @@ YFI stake counts underlying assets once across direct stYFI and stYFIx. Pending 
 
 Capital and account filters apply to TVL, flows, destinations, accounts and product movers. Fees and governance remain protocol-wide and are labeled accordingly. The partial example excludes Base from the whole displayed window, including comparisons, rather than producing a false cliff when coverage disappears. Unavailable data suppresses all totals.
 
-The fictional ledger spans 190 completed days through 2 November 2026. The mixed-signals example intentionally combines rising dollar TVL with weakening external flows. Broad-inflow, capital-leaving, partial and unavailable examples support review.
+The fictional ledger spans 740 completed days through 2 November 2026. The mixed-signals example intentionally combines rising dollar TVL with weakening external flows. Broad-inflow, capital-leaving, partial and unavailable examples support review.
 
 No live indexer, RPC, price, vote, analytics, Treasury or Teams feed is wired. The data layer still needs agreed product scope, wrapper and migration deduplication, event completeness, historical prices, freshness and reconciliation. Acquisition and retention metrics remain later candidates once attributable, complete cohorts exist.
 
@@ -50,3 +50,5 @@ The domain model is in lib/clients/pulse; usePulse supplies the UI. No dependenc
 Unit checks cover price neutrality, reconciled TVL, weighted rates, rolling averages, unique accounts, historical stake/votes, coverage and gating. Opt-in browser checks cover the renamed route, filters, normalization, governance tabs, focus view, missing data and mobile access. Required broad repository checks remain applicable.
 
 The source work package builds on cf67395921ea9c1ad21e92cd7d6205ea3eeb4425; public master was fetched and remained 2b7f39e37364ad541941d0e387492201e79f9c3c. Keep this design branch outside the accepted integration lane until owner approval. Live source integration and publication require later scope.
+
+The 365D view means a rolling 365-day window, not a calendar year. Its comparison uses the preceding 365 days. The extended fixture preserves the original recent history and includes earlier observations for both annual windows and moving-average warmup. Date ranges and inspected values show years where needed.

@@ -1,4 +1,4 @@
-export type Period = 7 | 30 | 90;
+export type Period = 7 | 30 | 90 | 365;
 export type Asset = "all" | "stable" | "eth" | "other";
 export type Scenario = "mixed" | "growth" | "outflows" | "partial" | "unavailable";
 export type GovernanceView = "stake" | "apr" | "votes" | "price";
