@@ -1,0 +1,71 @@
+.page {
+  max-width: 1520px;
+  margin: 0 auto;
+  padding: 24px;
+}
+.grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 16px;
+}
+.tile {
+  min-width: 0;
+  padding: 18px 20px 14px;
+  box-shadow: none;
+}
+.tileTop {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px;
+  min-height: 28px;
+}
+.metric {
+  display: flex;
+  align-items: baseline;
+  flex-wrap: wrap;
+  gap: 8px 12px;
+  min-height: 43px;
+  margin-top: 6px;
+}
+.legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  min-height: 28px;
+  align-items: center;
+  font-size: 11px;
+}
+.controls {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  min-height: 35px;
+}
+.foot {
+  margin-top: 8px;
+  min-height: 32px;
+  font-size: 11px;
+  line-height: 1.5;
+}
+.wall {
+  max-width: none;
+  padding: 16px 24px;
+}
+:global(body):has(.wall) :global(header) {
+  display: none;
+}
+@media (max-width: 1199px) {
+  .grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+@media (max-width: 760px) {
+  .page { padding: 18px 16px; }
+  .grid { grid-template-columns: minmax(0, 1fr); }
+  .tile { padding: 16px; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .page * { transition: none !important; }
+}

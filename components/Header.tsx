@@ -27,7 +27,7 @@ export function Header() {
   const pathname = usePathname();
   const segments = useSelectedLayoutSegments();
   const segment = segments?.[0] ?? null;
-  const isReadOnlyMetrics = pathname === "/metrics";
+  const isReadOnlyPulse = pathname === "/pulse";
   const hostname = useHostname();
   const clock = useEpochClock({ tickMs: 1000 });
   const preferMocks =
@@ -108,7 +108,7 @@ export function Header() {
             ) : null}
             <div className="hidden items-center gap-2 md:flex">
               <ThemeToggle />
-              {!isReadOnlyMetrics && <WalletButton e2ePresentation={e2eWalletPresentation} />}
+              {!isReadOnlyPulse && <WalletButton e2ePresentation={e2eWalletPresentation} />}
             </div>
             <button
               ref={mobileMenuTriggerRef}
@@ -127,7 +127,7 @@ export function Header() {
         isOpen={isMobileMenuOpen}
         onClose={() => setIsMobileMenuOpen(false)}
         returnFocusRef={mobileMenuTriggerRef}
-        hideWallet={isReadOnlyMetrics}
+        hideWallet={isReadOnlyPulse}
         e2eWalletPresentation={e2eWalletPresentation}
         governanceLink={governanceLink}
       />
