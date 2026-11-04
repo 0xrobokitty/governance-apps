@@ -45,9 +45,9 @@ export function YLockersSection({ data, period, onInspect, compact = false }: { 
       <Card className={styles.tile} data-testid="ylockers-rewards">
         <div className={styles.tileTop}><h3 className="text-sm font-bold">{lockers.rewards}</h3>{details(lockers.rewards, lockers.rewardNote, data.rewardDates, rewardSeries, value => amount(value) + " crvUSD")}</div>
         {metrics(product => amount(product.lastReward), true)}
-        <p className={styles.lockerCaption}>{lockers.rewardUnits} · {fullDate(data.rewardDates.at(-1)!)}{compact && " · " + lockers.averageHint}</p>
+        <p className={styles.lockerCaption}>{lockers.rewardUnits} · {fullDate(data.rewardDates.at(-1)!)}{compact && " · " + (data.rewardDates.length === 1 ? lockers.averagePointHint : lockers.averageHint)}</p>
         <TrendChart label={lockers.rewardChart} dates={data.rewardDates} series={rewardSeries} format={amount} height={chartHeight} zero groupBars />
-        <div className={styles.foot + " border-t border-border pt-2 text-text-secondary"}><p>{lockers.rewardFoot}</p><p className="mt-1" title={lockers.currentWeekNote}>{lockers.currentWeek}: {products.map(product => lockers.names[product.id] + " " + amount(product.currentReward)).join(" · ")} crvUSD <span className="text-text-tertiary">({lockers.through} {fullDate(data.dates.at(-1)!)})</span></p></div>
+        <div className={styles.foot + " border-t border-border pt-2 text-text-secondary"}><p>{data.rewardDates.length === 1 ? lockers.rewardPointFoot : lockers.rewardFoot}</p><p className="mt-1" title={lockers.currentWeekNote}>{lockers.currentWeek}: {products.map(product => lockers.names[product.id] + " " + amount(product.currentReward)).join(" · ")} crvUSD <span className="text-text-tertiary">({lockers.through} {fullDate(data.dates.at(-1)!)})</span></p></div>
       </Card>
       <Card className={styles.tile} data-testid="ylockers-peg">
         <div className={styles.tileTop}><h3 className="text-sm font-bold">{lockers.peg}</h3>{details(lockers.peg, lockers.pegNote, data.dates, pegSeries, ratio)}</div>
