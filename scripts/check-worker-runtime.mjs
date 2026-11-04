@@ -73,6 +73,42 @@ try {
     },
   });
 
+  // Safe fetches this public file from its own origin before it opens an iframe.
+  // Cloudflare can serve it directly from ASSETS, bypassing Next.js headers().
+  for (const origin of [
+    "https://app.dao-ops.com",
+    "https://dao.yearn.fi",
+    "https://styfi.yearn.fi",
+  ]) {
+    const url = `${origin}/manifest.json`;
+    const response = await worker.fetch(url, {
+      headers: { "x-forwarded-host": new URL(url).host, Origin: "https://app.safe.global" },
+      redirect: "manual",
+      signal: AbortSignal.timeout(20_000),
+    });
+    assert.equal(response.status, 200, `${url} must return the manifest without a redirect`);
+    assert.equal(response.headers.get("access-control-allow-origin"), "*", `${url} must allow Safe to read the manifest`);
+    assert.match(response.headers.get("content-type") || "", /application\/json/i);
+    const manifest = await response.json();
+    assert.equal(typeof manifest.name, "string");
+    assert.ok(manifest.name.length > 0);
+    assert.equal(typeof manifest.description, "string");
+    assert.ok(manifest.description.length > 0);
+    const iconPath = manifest.icons?.[0]?.src || manifest.iconPath;
+    assert.equal(typeof iconPath, "string");
+    assert.ok(iconPath.length > 0);
+    const iconUrl = new URL(iconPath, `${origin}/`);
+    assert.equal(iconUrl.origin, origin, "The Safe app icon must remain a local public asset");
+    const icon = await worker.fetch(iconUrl.href, {
+      headers: { "x-forwarded-host": iconUrl.host },
+      signal: AbortSignal.timeout(20_000),
+    });
+    assert.equal(icon.status, 200, `${iconUrl} must load the Safe app icon`);
+    assert.match(icon.headers.get("content-type") || "", /^image\//i);
+    await icon.arrayBuffer();
+    console.log(`PASS ${url}: HTTP 200, cross-origin manifest and public icon`);
+  }
+
   for (const [url, title] of probes) {
     const response = await worker.fetch(url, {
       // Wrangler's local proxy rewrites Host; preserve the intended app host.

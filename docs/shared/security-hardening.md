@@ -258,7 +258,17 @@ To support Safe custom app embedding while preserving clickjacking protections, 
   - `https://*.safe.global`
   - `https://gnosis-safe.io`
   - `https://*.gnosis-safe.io`
-- `/manifest.json` is published at the site root with Safe app metadata and route-scoped CORS headers so Safe Wallet can validate app capability.
+- `/manifest.json` provides the Safe app metadata at the site root.
+- `public/_headers` sets CORS headers for this file in Cloudflare Static Assets. Cloudflare serves the file before the Next.js Worker runs.
+- `next.config.ts` keeps the same CORS policy for the Next.js server. Next.js headers alone do not cover Cloudflare asset responses.
+- `npm run validate:worker-runtime` checks the built manifest through the local Cloudflare runtime, including both reported hosts and the public icon.
+
+Safe fetches the manifest from its own origin before it opens the app. Missing CORS headers cause the custom-app form to reject valid metadata.
+This failure occurs before the wallet connector runs. The CORS exception covers only `/manifest.json` and does not change API access or iframe permissions.
+
+After deployment, add `https://dao.yearn.fi` and `https://styfi.yearn.fi` through Safe's custom-app form.
+Both manifests must return HTTP 200 and `Access-Control-Allow-Origin: *` to requests from `https://app.safe.global`.
+A Next.js development-server test does not verify this Cloudflare behavior.
 
 Security rationale:
 
