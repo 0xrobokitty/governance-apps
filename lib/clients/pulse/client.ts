@@ -1,3 +1,4 @@
+import { getYLockers } from "./ylockers";
 import { createGovernance, createLedger, dateAt, DAYS, PRODUCTS } from "./mock";
 import type { Asset, Observation, Period, Pulse, Scenario } from "./types";
 
@@ -103,6 +104,7 @@ export function getPulse(period: Period, asset: Asset, scenario: Scenario): Puls
   const periodFees = sum(days, day => day.fees);
   const groups = { stable: "Stablecoins", eth: "ETH assets", other: "Other assets" };
   return {
+    ylockers: getYLockers(period, scenario),
     period, start: dateAt(start), end: dateAt(DAYS - 1), openingDate: dateAt(start - 1), partial: scenario === "partial",
     days, governance, products, openingTVL, tvl: last.tvl, fixedTVL: last.fixedTVL,
     tvlChange: change(last.tvl, openingTVL), fixedChange: change(last.fixedTVL, openingTVL),

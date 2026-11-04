@@ -69,3 +69,32 @@
 @media (prefers-reduced-motion: reduce) {
   .page * { transition: none !important; }
 }
+
+.lockerHeader {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+}
+.lockerMetrics {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 22px;
+  margin-top: 7px;
+  min-height: 48px;
+}
+.lockerCaption {
+  min-height: 29px;
+  display: flex;
+  align-items: center;
+  font-size: 10px;
+  color: var(--color-text-secondary);
+}
+.wall .tile { padding: 10px 14px; }
+.wall .foot { display: none; }
+.wall .metric { min-height: 32px; }
+.wall .grid { gap: 12px; }
+
+.wall footer { display: none; }

@@ -29,6 +29,7 @@ export interface ProductTrend {
   depositors: number; rankChange: number; series: number[];
 }
 export interface Pulse {
+  ylockers: YLockers;
   period: Period; start: string; end: string; openingDate: string; partial: boolean;
   days: Day[]; governance: GovernanceDay[]; products: ProductTrend[];
   openingTVL: number; tvl: number; fixedTVL: number; tvlChange: number; fixedChange: number;
@@ -39,4 +40,32 @@ export interface Pulse {
   recentNet: number; priorRecentNet: number; stakeDelta: number; aprDelta: number;
   destinationGroups: { id: Exclude<Asset, "all">; label: string; net: number; rate: number }[];
   positiveProducts: number;
+}
+
+export type YLockerId = "ycrv" | "yyb";
+export interface YLockerDay {
+  date: string;
+  peg: number | null;
+  net: number | null;
+  netRate: number | null;
+  averageRate: number | null;
+}
+export interface YLockerHistory {
+  id: YLockerId;
+  coverageStart: string;
+  openingBalance: number;
+  days: YLockerDay[];
+  net: number;
+  netRate: number;
+  lastReward: number;
+  rewardChange: number;
+  currentReward: number;
+  rewards: (number | null)[];
+  rewardAverages: (number | null)[];
+}
+export interface YLockers {
+  dates: string[];
+  rewardDates: string[];
+  currentWeekStart: string;
+  products: YLockerHistory[];
 }

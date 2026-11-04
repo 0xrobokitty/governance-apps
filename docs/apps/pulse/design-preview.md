@@ -13,7 +13,7 @@ Use six chart tiles to answer daily executive questions:
 5. How are harvested results and protocol fees developing?
 6. How are YFI staking, stYFIx APR, voting and price changing?
 
-Product movers add cumulative-flow sparklines and rank changes. Focus view keeps the six tiles visible and hides secondary material. Windows are 7, 30, 90 and 365 completed UTC days, defaulting to 30. Every main tile contains history. Current values summarize those histories rather than substituting for them.
+Product movers add cumulative-flow sparklines and rank changes. A compact yLockers row follows the six overview tiles. Focus view keeps all nine charts visible and hides secondary material. Windows are 7, 30, 90 and 365 completed UTC days, defaulting to 30. Every main tile contains history. Current values summarize those histories rather than substituting for them.
 
 The original prototype's inline SVG trend tiles informed this revision. Its static team descriptions and broad financial scorecards are not carried over. Existing Yearn fonts, shell, colors, cards, dialogs and themes remain in use.
 
@@ -35,7 +35,7 @@ YFI stake counts underlying assets once across direct stYFI and stYFIx. Pending 
 
 ## Coverage and source boundary
 
-Capital and account filters apply to TVL, flows, destinations, accounts and product movers. Fees and governance remain protocol-wide and are labeled accordingly. The partial example excludes Base from the whole displayed window, including comparisons, rather than producing a false cliff when coverage disappears. Unavailable data suppresses all totals.
+Capital and account filters apply to TVL, flows, destinations, accounts and product movers. Fees and governance remain protocol-wide and are labeled accordingly. The yLockers section keeps both products independent of the capital filter. The partial example excludes Base from the whole displayed window, including comparisons, rather than producing a false cliff when coverage disappears. Unavailable data suppresses all totals.
 
 The fictional ledger spans 740 completed days through 2 November 2026. The mixed-signals example intentionally combines rising dollar TVL with weakening external flows. Broad-inflow, capital-leaving, partial and unavailable examples support review.
 
@@ -52,3 +52,17 @@ Unit checks cover price neutrality, reconciled TVL, weighted rates, rolling aver
 The source work package builds on cf67395921ea9c1ad21e92cd7d6205ea3eeb4425; public master was fetched and remained 2b7f39e37364ad541941d0e387492201e79f9c3c. Keep this design branch outside the accepted integration lane until owner approval. Live source integration and publication require later scope.
 
 The 365D view means a rolling 365-day window, not a calendar year. Its comparison uses the preceding 365 days. The extended fixture preserves the original recent history and includes earlier observations for both annual windows and moving-average warmup. Date ranges and inspected values show years where needed.
+
+## yLockers mock section
+
+Three compact charts compare yCRV and yYB using consistent colours and a shared product selector. Both series are visible initially. The row sits below the six overview charts and above Product movers. It uses the same date range, theme, keyboard inspection, and Details table as Pulse.
+
+Rewards show weekly allocations in crvUSD. Grouped bars preserve both product values. Dashed four-week averages use earlier completed weeks for warmup. The headline shows the latest complete week and its change from the prior week. A separate current-week amount is provisional and excluded from the chart. A 7D view retains the single completed week, with an average marker. Week-close dates select whole reward periods; no proration occurs at the range boundary.
+
+Peg shows daily market value relative to CRV or YB, with a 100% parity reference. This example is not a fixed-size execution quote or a guaranteed redemption rate.
+
+Net deposits combine the direct staking and auto-compounder boundary. Synthetic reinvestment changes balances but never the external-flow series. Rates use each product's own opening token balance, without market prices. The headline is the period net rate; the chart switches between daily rates and seven-day averages. Details also include daily native-token amounts. Rates across products are not additive.
+
+The fictional yYB history begins later than yCRV. The 365D view leaves earlier values blank and identifies the coverage start. Its first available opening balance is the denominator when the window extends before coverage. Four-week reward averages remain unavailable until four complete weeks exist. Seven-day flow averages remain unavailable until seven covered days exist.
+
+These fixtures do not represent live allocations, prices, balances, or performance. Their shared Thursday periods are illustrative; the live feed must retain each distributor's actual epoch boundaries and valuation blocks. No source integration, host routing, or deployment is added by this revision.

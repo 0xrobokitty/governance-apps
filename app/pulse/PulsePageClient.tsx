@@ -1,5 +1,6 @@
 "use client";
 import { useState } from "react";
+import { YLockersSection } from "./YLockersSection";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -46,6 +47,7 @@ export function PulsePageClient() {
   const [wall, setWall] = useState(false);
   const [method, setMethod] = useState(false);
   const [detail, setDetail] = useState<Detail | null>(null);
+  const chartHeight = wall ? 128 : 168;
   const data = usePulse(period, asset, scenario);
   const dates = data?.days.map(day => day.date) ?? [];
   const lastGovernance = data?.governance.at(-1);
@@ -124,7 +126,7 @@ export function PulsePageClient() {
           <div className={styles.tileTop}><h2 className="text-sm font-bold">{copy.tvl}</h2>{detailButton(copy.tvl, copy.definitions[0][1], tvlDates, tvlSeries, tvlFormat)}</div>
           <div className={styles.metric}><span className="font-number text-[28px] leading-tight">{money(data.tvl)}</span><Change value={data.tvlChange} suffix={"over " + period + "D"} /></div>
           <div className={styles.controls}><span className="text-[11px] text-text-secondary">{ui.fixedPriceGrowth}<strong className="font-number text-text-primary">{percent(data.fixedChange, true, 1)}</strong></span><Choice label="TVL scale" value={indexed} onChange={setIndexed} options={[{ value: "usd", label: ui.uSD }, { value: "index", label: ui.start100 }]} /></div>
-          <TrendChart label="TVL over time" dates={tvlDates} series={tvlSeries} format={tvlFormat} />
+          <TrendChart height={chartHeight} label="TVL over time" dates={tvlDates} series={tvlSeries} format={tvlFormat} />
           <Legend series={tvlSeries} />
           <p className={styles.foot + " border-t border-border pt-2 text-text-secondary"}>{ui.changeFlows}<span className="font-number">{money(data.net, true)}</span>{ui.earned}<span className="font-number">{money(data.earned, true)}</span>{ui.repricing}<span className="font-number">{money(data.repricing, true)}</span></p>
         </Card>
@@ -133,7 +135,7 @@ export function PulsePageClient() {
           <div className={styles.tileTop}><h2 className="text-sm font-bold">{copy.flows}</h2>{detailButton(copy.flows, flowBasis === "rate" ? copy.definitions[3][1] : copy.definitions[2][1], dates, flowSeries, flowFormat)}</div>
           <div className={styles.metric}><span className={"font-number text-[28px] leading-tight " + ((flowBasis === "rate" ? data.fixedNet : data.net) >= 0 ? positive : negative)}>{flowBasis === "rate" ? percent(data.flowRate, true) : money(data.net, true)}</span><span className="text-xs text-text-secondary">{flowBasis === "rate" ? money(data.fixedNet, true) + " " + ui.atOpeningPrices : ui.atMovementPrices}</span></div>
           <div className={styles.controls}><Choice label="Flow aggregation" value={flowView} onChange={setFlowView} options={[{ value: "daily", label: ui.daily }, { value: "cumulative", label: ui.cumulative }]} /><Choice label="Flow units" value={flowBasis} onChange={setFlowBasis} options={[{ value: "usd", label: ui.uSD }, { value: "rate", label: ui.tVL2 }]} /></div>
-          <TrendChart label="External flows over time" dates={dates} series={flowSeries} format={flowFormat} zero />
+          <TrendChart height={chartHeight} label="External flows over time" dates={dates} series={flowSeries} format={flowFormat} zero />
           <div className={styles.legend + " text-text-secondary"}><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-blue-500" />{ui.netInflow}</span><span className="inline-flex items-center gap-1.5"><span className="h-2 w-2 rounded-sm bg-orange-600" />{ui.netOutflow}</span><span className="ml-auto">{flowBasis === "rate" ? "Price-neutral" : "At movement prices"}</span></div>
           <p className={styles.foot + " border-t border-border pt-2 text-text-secondary"}>{flowBasis === "rate" ? "Fixed-price flows ÷ TVL at the start of this window. Daily rates sum to the period rate." : "External deposits less withdrawals. Internal Yearn movements are excluded."}</p>
         </Card>
@@ -142,7 +144,7 @@ export function PulsePageClient() {
           <div className={styles.tileTop}><h2 className="text-sm font-bold">{copy.accounts}</h2>{detailButton(copy.accounts, copy.definitions[4][1], dates, accountSeries, value => number(value, 1))}</div>
           <div className={styles.metric}><span className="font-number text-[26px] leading-tight">{number(data.depositAverage)}<span className="mx-2 text-lg text-text-tertiary">/</span><span style={{ color: ORANGE }}>{number(data.withdrawAverage)}</span></span><span className="text-[11px] text-text-secondary">{ui.depositingWithdrawingPerDay}</span></div>
           <div className={styles.controls}><span className="text-[11px] text-text-secondary">{ui.vsPrior}{period}{ui.d}<span className="font-number">{percent(data.depositTrend, true, 1)} / {percent(data.withdrawTrend, true, 1)}</span></span><Choice label="Account smoothing" value={accountView} onChange={setAccountView} options={[{ value: "daily", label: ui.daily }, { value: "average", label: ui.label7DAvg }]} /></div>
-          <TrendChart label="Account activity over time" dates={dates} series={accountSeries} format={value => number(value)} />
+          <TrendChart height={chartHeight} label="Account activity over time" dates={dates} series={accountSeries} format={value => number(value)} />
           <Legend series={accountSeries} />
           <p className={styles.foot + " border-t border-border pt-2 text-text-secondary"}>{number(data.depositors)}{ui.depositing2}{number(data.withdrawers)}{ui.withdrawingAccountsIn}{period}{ui.dChainAddressNotPeopleDirectionsCan}</p>
         </Card>
@@ -151,7 +153,7 @@ export function PulsePageClient() {
           <div className={styles.tileTop}><h2 className="text-sm font-bold">{copy.destinations}</h2>{detailButton(copy.destinations, copy.definitions[3][1], dates, destinationSeries, destinationFormat)}</div>
           <div className={styles.metric}><span className="text-xl font-bold">{ui.cumulativeNetFlows}</span></div>
           <div className={styles.controls}><span className="text-[11px] text-text-secondary">{ui.compareAssetGroupsOnTheSameTimeline}</span><Choice label="Destination units" value={destinationBasis} onChange={setDestinationBasis} options={[{ value: "usd", label: ui.uSD }, { value: "rate", label: ui.ownTVL }]} /></div>
-          <TrendChart label="Capital destinations over time" dates={dates} series={destinationSeries} format={destinationFormat} zero />
+          <TrendChart height={chartHeight} label="Capital destinations over time" dates={dates} series={destinationSeries} format={destinationFormat} zero />
           <Legend series={destinationSeries} />
           <p className={styles.foot + " border-t border-border pt-2 text-text-secondary"}>{destinationBasis === "rate" ? "Each group uses its own opening TVL and fixed opening prices. Percentages are not additive." : "Cumulative dollar flows at movement prices. A larger product base can produce larger absolute flows."}</p>
         </Card>
@@ -160,7 +162,7 @@ export function PulsePageClient() {
           <div className={styles.tileTop}><h2 className="text-sm font-bold">{copy.fees}</h2><span className="text-[10px] text-text-tertiary">{ui.allProducts}</span>{detailButton(copy.fees, copy.definitions[5][1], dates, feeSeries, value => feeView === "reports" ? number(value) : money(value))}</div>
           <div className={styles.metric}><span className="font-number text-[28px] leading-tight">{feeView === "fees" ? money(data.fees) : feeView === "pnl" ? money(data.harvestPnl) : number(data.reports)}</span>{feeView === "fees" ? <Change value={data.feeChange} suffix={"vs prior " + period + "D"} /> : <span className="text-xs text-text-secondary">{feeView === "pnl" ? "reported strategy profit" : "harvest reports"}{ui.in}{period}{ui.d2}</span>}</div>
           <div className={styles.controls}><Choice label="Harvest measure" value={feeView} onChange={setFeeView} options={[{ value: "fees", label: ui.fees }, { value: "pnl", label: ui.harvestPL }, { value: "reports", label: ui.reports }]} /></div>
-          <TrendChart label="Harvest and fee history" dates={dates} series={feeSeries} format={value => feeView === "reports" ? number(value) : money(value)} zero />
+          <TrendChart height={chartHeight} label="Harvest and fee history" dates={dates} series={feeSeries} format={value => feeView === "reports" ? number(value) : money(value)} zero />
           <Legend series={feeSeries} />
           <p className={styles.foot + " border-t border-border pt-2 text-text-secondary"}>{ui.auctionProceeds}<span className="font-number">{money(data.proceeds)}</span>{ui.in}{period}{ui.dASeparateConversionStepNotAdditional}</p>
         </Card>
@@ -172,11 +174,13 @@ export function PulsePageClient() {
             <span className="text-xs text-text-secondary">{governanceView === "stake" ? points(data.stakeDelta) + " of supply over " + period + "D" : governanceView === "apr" ? points(data.aprDelta) + " over " + period + "D" : governanceView === "votes" ? "last closed vote · " + (lastVote ? shortDate(lastVote.date) : "none") : "YFI price"}</span>
           </div>
           <div className={styles.controls}><Choice label="YFI governance measure" value={governanceView} onChange={setGovernanceView} options={[{ value: "stake", label: ui.staking }, { value: "apr", label: ui.aPR }, { value: "votes", label: ui.voting }, { value: "price", label: ui.yFIPrice }]} />{governanceView === "price" && <Choice label="YFI price currency" value={priceBasis} onChange={setPriceBasis} options={[{ value: "usd", label: ui.uSD }, { value: "eth", label: ui.eTH }]} />}</div>
-          <TrendChart label="YFI governance history" dates={dates} series={governanceSeries} format={governanceFormat} zero={governanceView === "stake" || governanceView === "votes"} />
+          <TrendChart height={chartHeight} label="YFI governance history" dates={dates} series={governanceSeries} format={governanceFormat} zero={governanceView === "stake" || governanceView === "votes"} />
           <Legend series={governanceSeries} />
           <p className={styles.foot + " border-t border-border pt-2 text-text-secondary"}>{governanceView === "stake" ? number(lastGovernance!.total) + " underlying YFI, counted once. " + number(lastGovernance!.pending) + " pending unstake excluded." : governanceView === "apr" ? "Historical stated APR, including VoteBoost. No assumed compounding." : governanceView === "votes" ? data.governance.filter(day => day.vote).length + " closed votes. Each dot uses that vote’s eligible power; gaps are not zeros." : "Snapshot context in USD or ETH. Price movement does not count as new capital."}</p>
         </Card>
       </section>
+
+      <YLockersSection compact={wall} data={data.ylockers} period={period} onInspect={setDetail} />
 
       {!wall && <Card className="mt-4 min-w-0 overflow-hidden p-0 shadow-none">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"><div><h2 className="text-sm font-bold">{copy.products}</h2><p className="mt-1 text-[11px] text-text-secondary">{data.positiveProducts}{ui.of}{data.products.length}{ui.productsHaveNetInflowsInThisWindow}</p></div><Choice label="Product ranking" value={productView} onChange={setProductView} options={[{ value: "in", label: ui.largestInflows }, { value: "out", label: ui.largestOutflows }]} /></div>
@@ -195,7 +199,7 @@ export function PulsePageClient() {
 
     <Modal isOpen={method} onClose={() => setMethod(false)} title={copy.method} className="max-h-[85dvh] max-w-2xl overflow-y-auto"><div className="space-y-5">{copy.definitions.map(([title, text]) => <section key={title}><h3 className="text-sm font-bold">{title}</h3><p className="mt-1 text-sm leading-relaxed text-text-secondary">{text}</p></section>)}</div></Modal>
     <Modal isOpen={!!detail} onClose={() => setDetail(null)} title={detail?.title} className="max-h-[85dvh] max-w-2xl overflow-y-auto">
-      {detail && <><p className="mb-4 text-sm leading-relaxed text-text-secondary">{detail.note}</p><div className="overflow-x-auto"><table className="w-full text-right text-xs"><caption className="sr-only">{detail.title}{ui.dataTable}</caption><thead><tr className="border-b border-border"><th scope="col" className="py-2 text-left">{ui.dateUTC}</th>{detail.series.map(s => <th scope="col" key={s.label} className="px-2">{s.label}</th>)}</tr></thead><tbody>{detail.dates.map((date, index) => <tr key={date} className="border-b border-border"><th scope="row" className="py-2 text-left font-normal">{fullDate(date)}</th>{detail.series.map(s => <td key={s.label} className="px-2 font-number">{s.values[index] === null ? "No observation" : detail.format(s.values[index]! - (s.floor?.[index] ?? 0))}</td>)}</tr>)}</tbody></table></div></>}
+      {detail && <><p className="mb-4 text-sm leading-relaxed text-text-secondary">{detail.note}</p><div className="overflow-x-auto"><table className="w-full text-right text-xs"><caption className="sr-only">{detail.title}{ui.dataTable}</caption><thead><tr className="border-b border-border"><th scope="col" className="py-2 text-left">{ui.dateUTC}</th>{detail.series.map(s => <th scope="col" key={s.label} className="px-2">{s.label}</th>)}</tr></thead><tbody>{detail.dates.map((date, index) => <tr key={date} className="border-b border-border"><th scope="row" className="py-2 text-left font-normal">{fullDate(date)}</th>{detail.series.map(s => <td key={s.label} className="px-2 font-number">{s.values[index] === null ? "No observation" : (s.format ?? detail.format)(s.values[index]! - (s.floor?.[index] ?? 0))}</td>)}</tr>)}</tbody></table></div></>}
     </Modal>
   </div>;
 }
