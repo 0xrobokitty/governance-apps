@@ -1,7 +1,7 @@
 "use client";
 
 import { GovernanceAppNotice } from "../GovernanceShell";
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useConnectModal } from "@/web3/wallet-ui";
 import { useIdentity } from "@/state/identity";
 import { StatsBar } from "@/components/ui/StatsBar";
 import { Tooltip } from "@/components/ui/Tooltip";

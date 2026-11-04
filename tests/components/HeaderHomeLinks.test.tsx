@@ -53,7 +53,7 @@ vi.mock("@/lib/hooks/useTheme", () => ({
   useTheme: () => ({ theme: "light", toggleTheme: vi.fn() }),
 }));
 
-vi.mock("@rainbow-me/rainbowkit", () => ({
+vi.mock("@/web3/wallet-ui", () => ({
   useAccountModal: () => ({ openAccountModal: vi.fn() }),
   useChainModal: () => ({ openChainModal: vi.fn() }),
   useConnectModal: () => ({ openConnectModal: vi.fn() }),

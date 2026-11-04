@@ -42,9 +42,9 @@ const {
   },
 }));
 
-vi.mock("@rainbow-me/rainbowkit", async (importOriginal) => {
+vi.mock("@/web3/wallet-ui", async (importOriginal) => {
   const actual =
-    await importOriginal<typeof import("@rainbow-me/rainbowkit")>();
+    await importOriginal<typeof import("@/web3/wallet-ui")>();
   return {
     ...actual,
     useChainModal: () => ({

@@ -94,17 +94,24 @@ for (const width of [1280, 390]) test(`aligns mode comparison and preserves esti
   await expect(onboarding).toContainText("8%–20%");
   await expect(onboarding).not.toContainText("1×–2.5× Vote Boost");
   const delegated = page.getByRole("button").filter({ has: page.getByTestId("mode-header-styfix") });
-  const directBounds = await onboarding.boundingBox();
-  const delegatedBounds = await delegated.boundingBox();
-  expect(directBounds).not.toBeNull();
-  expect(delegatedBounds).not.toBeNull();
-  expect(Math.abs(directBounds!.height - delegatedBounds!.height)).toBeLessThanOrEqual(1);
-  const directEstimate = await onboarding.getByTestId("staking-apr-styfi").boundingBox();
-  const delegatedEstimate = await delegated.getByTestId("staking-apr-styfix").boundingBox();
-  expect(Math.abs((directEstimate!.y - directBounds!.y) - (delegatedEstimate!.y - delegatedBounds!.y))).toBeLessThanOrEqual(1);
-  const delegatedBadge = await delegated.getByText("Delegated", { exact: true }).boundingBox();
-  const recommendedBadge = await delegated.getByText("Recommended", { exact: true }).boundingBox();
-  expect(delegatedBadge!.y).toBe(recommendedBadge!.y);
+  // The stats banner can move both cards during hydration. Measure each card
+  // and its children in one frame instead of combining different page positions.
+  const cardLayouts = await page.evaluate(() => ["styfi", "styfix"].map((asset) => {
+    const estimate = document.querySelector<HTMLElement>(`[data-testid="staking-apr-${asset}"]`)!;
+    const card = estimate.closest("button")!;
+    const cardBounds = card.getBoundingClientRect();
+    const estimateBounds = estimate.getBoundingClientRect();
+    return { height: cardBounds.height, estimateOffset: estimateBounds.y - cardBounds.y };
+  }));
+  expect(Math.abs(cardLayouts[0].height - cardLayouts[1].height)).toBeLessThanOrEqual(1);
+  expect(Math.abs(cardLayouts[0].estimateOffset - cardLayouts[1].estimateOffset)).toBeLessThanOrEqual(1);
+  const badgePositions = await delegated.evaluate((card) => {
+    const badges = Array.from(card.querySelectorAll("span")).filter((badge) =>
+      badge.textContent === "Delegated" || badge.textContent === "Recommended");
+    return badges.map((badge) => badge.getBoundingClientRect().y);
+  });
+  expect(badgePositions).toHaveLength(2);
+  expect(badgePositions[0]).toBe(badgePositions[1]);
   await expect(delegated.getByTestId("staking-apr-styfix").getByText("20%", { exact: true })).toHaveCSS("color", "rgb(6, 87, 249)");
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
   await onboarding.click();

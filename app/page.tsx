@@ -1,7 +1,7 @@
 // app/page.tsx
 "use client";
 
-import { ConnectButton } from "@rainbow-me/rainbowkit";
+import { ConnectButton } from "@/web3/wallet-ui";
 import Link from "next/link";
 import { homeCopy as copy } from "./messages";
 import {
@@ -20,7 +20,7 @@ export default function Home() {
   return (
     <main className="min-h-screen bg-slate-950 text-slate-100 flex flex-col items-center justify-center gap-6">
       <div>
-        <ConnectButton showBalance={false} />
+        <ConnectButton />
       </div>
 
       <h1 className="text-3xl font-semibold">{copy.page.title}</h1>

@@ -22,7 +22,7 @@ let currentAccountState: YethAccountState | null;
 let currentAccountLoading = false;
 let currentYethUsesMockBackend = false;
 
-vi.mock("@rainbow-me/rainbowkit", () => ({
+vi.mock("@/web3/wallet-ui", () => ({
   useConnectModal: () => ({ openConnectModal: vi.fn() }),
 }));
 

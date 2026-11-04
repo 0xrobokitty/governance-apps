@@ -20,10 +20,6 @@ const allowlistedInstallScriptLockPackages = {
     version: "0.28.2",
     hasInstallScript: true,
   },
-  "node_modules/bufferutil": {
-    version: "4.0.9",
-    hasInstallScript: true,
-  },
   "node_modules/esbuild": {
     version: "0.28.1",
     hasInstallScript: true,
@@ -32,20 +28,12 @@ const allowlistedInstallScriptLockPackages = {
     version: "2.3.3",
     hasInstallScript: true,
   },
-  "node_modules/keccak": {
-    version: "3.0.4",
-    hasInstallScript: true,
-  },
   "node_modules/playwright/node_modules/fsevents": {
     version: "2.3.2",
     hasInstallScript: true,
   },
   "node_modules/unrs-resolver": {
     version: "1.11.1",
-    hasInstallScript: true,
-  },
-  "node_modules/utf-8-validate": {
-    version: "5.0.10",
     hasInstallScript: true,
   },
   "node_modules/workerd": {

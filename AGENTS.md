@@ -9,7 +9,7 @@ frontend product.
 - React 19
 - TypeScript (`strict: true`)
 - Tailwind CSS
-- viem + wagmi + RainbowKit
+- viem + wagmi + app-owned wallet UI
 - Vitest + Playwright
 - Cloudflare / OpenNext deployment
 

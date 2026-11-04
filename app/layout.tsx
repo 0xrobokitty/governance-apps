@@ -1,7 +1,7 @@
 // app/layout.tsx
 import "./globals.css";
 import { ThemeScript } from "@/components/ThemeScript";
-import { Web3Providers } from "@/web3/rainbowkit";
+import { Web3Providers } from "@/web3/providers";
 import { ProtocolProvider } from "@/state/protocol";
 import { IdentityProvider } from "@/state/identity";
 import { Toaster } from "@/components/ui/Toast";

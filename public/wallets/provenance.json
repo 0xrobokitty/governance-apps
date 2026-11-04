@@ -1,0 +1,32 @@
+[
+  {
+    "file": "metamask.svg",
+    "source": "RainbowKit 2.2.11, metaMaskWallet-EI6MED72.js",
+    "sha256": "892c7dfab8c4ca5682878dda3f42f55a75195d7d365e4adb0832845f3a0a2135"
+  },
+  {
+    "file": "rabby.svg",
+    "source": "RainbowKit 2.2.11, rabbyWallet-GFVPHCTK.js",
+    "sha256": "dcae4de88ebfa10cffa1fe28df13d7c8c0b40736ef2b704f1f2fc348e777e443"
+  },
+  {
+    "file": "safe.svg",
+    "source": "RainbowKit 2.2.11, safeWallet-5MNKTR5Z.js",
+    "sha256": "227e120e1fa1f1c723c519366e533e1432087a25389ec148f3344e06ff9d30d3"
+  },
+  {
+    "file": "walletconnect.svg",
+    "source": "RainbowKit 2.2.11, walletConnectWallet-YHWKVTDY.js",
+    "sha256": "0654edd1d19c07f02a35fb636a686223e38c8e6149bc1848734ffbab742b08f3"
+  },
+  {
+    "file": "ethereum.svg",
+    "source": "RainbowKit 2.2.11, ethereum-RGGVA4PY.js",
+    "sha256": "0d313ea6273d3ea86c178873062e73bc0b8c815dd1e6db78cc30bceeff9cf3ba"
+  },
+  {
+    "file": "ambire.svg",
+    "source": "https://github.com/AmbireTech/ambire-brand/blob/5939a5bf633640424daa666b0908b4a9ced1d8dd/Icons/SVG/icon%20purple-white.svg",
+    "sha256": "111674a4b850375c9b8dab04579038e39a57683f2bbaf4538f02832ed4fa4ee0"
+  }
+]

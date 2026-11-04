@@ -1,7 +1,7 @@
 "use client";
 
 import * as React from "react";
-import { useEffect, useId, useRef, useState } from "react";
+import { useEffect, useId, useLayoutEffect, useRef, useState } from "react";
 import { createPortal } from "react-dom";
 import { cn } from "@/lib/cn";
 import { IconClose } from "@/components/icons/IconClose";
@@ -13,6 +13,8 @@ interface ModalProps {
   title?: string;
   children: React.ReactNode;
   className?: string;
+  overlayClassName?: string;
+  fitVisualViewport?: boolean;
 }
 
 export function Modal({
@@ -21,8 +23,11 @@ export function Modal({
   title,
   children,
   className,
+  overlayClassName,
+  fitVisualViewport = false,
 }: ModalProps) {
   const modalRef = useClickOutside<HTMLDivElement>(onClose);
+  const overlayRef = useRef<HTMLDivElement>(null);
   const closeRef = useRef<HTMLButtonElement>(null);
   const titleId = useId();
   const [mounted, setMounted] = useState(false);
@@ -32,6 +37,32 @@ export function Modal({
     const timer = setTimeout(() => setMounted(true), 0);
     return () => clearTimeout(timer);
   }, []);
+
+  // Mobile browsers can pan their visual viewport within an overflowing page.
+  // Keep opted-in dialogs inside the screen the user can currently see.
+  useLayoutEffect(() => {
+    const overlay = overlayRef.current;
+    const viewport = window.visualViewport;
+    if (!fitVisualViewport || !mounted || !isOpen || !overlay || !viewport) return;
+    const fit = () => {
+      overlay.style.left = `${viewport.offsetLeft}px`;
+      overlay.style.top = `${viewport.offsetTop}px`;
+      overlay.style.width = `${viewport.width}px`;
+      overlay.style.height = `${viewport.height}px`;
+      overlay.style.setProperty("--modal-viewport-width", `${viewport.width}px`);
+      overlay.style.setProperty("--modal-viewport-height", `${viewport.height}px`);
+    };
+    fit();
+    viewport.addEventListener("resize", fit);
+    viewport.addEventListener("scroll", fit);
+    return () => {
+      viewport.removeEventListener("resize", fit);
+      viewport.removeEventListener("scroll", fit);
+      for (const property of ["left", "top", "width", "height", "--modal-viewport-width", "--modal-viewport-height"]) {
+        overlay.style.removeProperty(property);
+      }
+    };
+  }, [fitVisualViewport, isOpen, mounted]);
 
   // Keep keyboard focus in the dialog and restore its trigger when it closes.
   useEffect(() => {
@@ -46,11 +77,8 @@ export function Modal({
     const trapFocus = (event: KeyboardEvent) => {
       if (event.key !== "Tab" || !modalRef.current) return;
       const controls = Array.from(modalRef.current.querySelectorAll<HTMLElement>(
-        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), [tabindex]:not([tabindex="-1"])'
-      )).filter((element) => {
-        const style = window.getComputedStyle(element);
-        return element.tabIndex >= 0 && !element.closest("[hidden], [inert]") && style.display !== "none" && style.visibility !== "hidden";
-      });
+        'button:not([disabled]), a[href], input:not([disabled]), select:not([disabled]), textarea:not([disabled]), summary, [tabindex]:not([tabindex="-1"])'
+      )).filter(isTabbable);
       const first = controls[0];
       const last = controls[controls.length - 1];
       if (!first || !last) {
@@ -87,7 +115,7 @@ export function Modal({
   if (!mounted || !isOpen) return null;
 
   return createPortal(
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200">
+    <div ref={overlayRef} className={cn("fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm transition-opacity animate-in fade-in duration-200", overlayClassName)}>
       <div
         ref={modalRef}
         role="dialog"
@@ -118,4 +146,29 @@ export function Modal({
     </div>,
     document.body
   );
+}
+
+/** Match native tab order, including disclosure controls and collapsed content. */
+function isTabbable(element: HTMLElement): boolean {
+  const isSummary = element.tagName === "SUMMARY";
+  if (isSummary) {
+    const details = element.parentElement;
+    if (details?.tagName !== "DETAILS" || firstSummary(details) !== element) return false;
+  }
+  if (element.tabIndex < 0 && !(isSummary && !element.hasAttribute("tabindex"))) return false;
+  if (element.matches(":disabled") || element.closest("[hidden], [inert]")) return false;
+
+  for (let ancestor: HTMLElement | null = element; ancestor; ancestor = ancestor.parentElement) {
+    const style = window.getComputedStyle(ancestor);
+    if (style.display === "none" || style.contentVisibility === "hidden") return false;
+    if (ancestor === element && (style.visibility === "hidden" || style.visibility === "collapse")) return false;
+    if (ancestor.tagName === "DETAILS" && !ancestor.hasAttribute("open")) {
+      if (!firstSummary(ancestor)?.contains(element)) return false;
+    }
+  }
+  return true;
+}
+
+function firstSummary(details: HTMLElement): Element | undefined {
+  return Array.from(details.children).find((child) => child.tagName === "SUMMARY");
 }

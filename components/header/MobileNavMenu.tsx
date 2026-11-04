@@ -16,7 +16,7 @@ import {
   useAccountModal,
   useChainModal,
   useConnectModal,
-} from "@rainbow-me/rainbowkit";
+} from "@/web3/wallet-ui";
 import { useAccount } from "wagmi";
 import { usePathname } from "next/navigation";
 import { IconChevron } from "@/components/icons/IconChevron";

@@ -46,6 +46,7 @@ export default defineConfig({
     },
   },
   projects: [
+    { name: "wallet", testDir: "tests/e2e/wallet" },
     { name: "treasury-rollout", testDir: "tests/e2e/treasury-rollout" },
     { name: "dao-live-feed", testDir: "tests/e2e/dao-live-feed" },
     { name: "dao-live", testDir: "tests/e2e/dao-live" },

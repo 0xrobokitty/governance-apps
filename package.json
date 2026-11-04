@@ -35,11 +35,11 @@
     "test:e2e:dao-live": "E2E_PORT=3310 E2E_WEB_SERVER_COMMAND=\"node scripts/dao-local-app.mjs\" playwright test --project=dao-live --workers=1",
     "test:e2e:dao-live-feed": "DAO_UAT_LIVE_FEED=true E2E_PORT=3310 E2E_WEB_SERVER_COMMAND=\"node scripts/dao-local-app.mjs\" playwright test --project=dao-live-feed --workers=1",
     "test:e2e:treasury-rollout": "node scripts/test-treasury-rollout.mjs",
-    "validate:worker-runtime": "node ./scripts/check-worker-runtime.mjs"
+    "validate:worker-runtime": "node ./scripts/check-worker-runtime.mjs",
+    "test:e2e:wallet": "NEXT_PUBLIC_E2E=false NEXT_PUBLIC_USE_MOCKS=true playwright test --project=wallet --workers=1"
   },
   "dependencies": {
     "@opennextjs/cloudflare": "1.20.12",
-    "@rainbow-me/rainbowkit": "2.2.11",
     "@tanstack/react-query": "5.90.10",
     "clsx": "2.1.1",
     "mdast-util-from-markdown": "2.0.3",
@@ -53,8 +53,12 @@
     "tailwind-merge": "3.6.0",
     "tailwindcss-animate": "1.0.7",
     "viem": "2.57.7",
-    "wagmi": "2.19.5",
-    "zod": "4.6.6"
+    "wagmi": "3.7.9",
+    "zod": "4.6.6",
+    "@walletconnect/universal-provider": "2.26.0",
+    "@safe-global/safe-apps-provider": "0.18.6",
+    "@safe-global/safe-apps-sdk": "9.1.0",
+    "qr": "0.7.2"
   },
   "devDependencies": {
     "@eslint/compat": "2.1.1",
@@ -79,7 +83,6 @@
   },
   "overrides": {
     "undici": "7.30.1",
-    "@coinbase/cdp-sdk": "1.52.0",
     "eslint-plugin-react@7.37.5": {
       "eslint": "$eslint"
     },

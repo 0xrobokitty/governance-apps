@@ -10,7 +10,8 @@ const { rpcClient, walletState } = vi.hoisted(() => ({
   },
 }));
 
-vi.mock("wagmi", () => ({
+vi.mock("wagmi", async (importOriginal) => ({
+  ...await importOriginal<typeof import("wagmi")>(),
   usePublicClient: () => rpcClient,
   useWalletClient: () => ({ data: walletState.current }),
 }));

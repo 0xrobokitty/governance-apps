@@ -1,13 +1,8 @@
 "use client";
-import { getDefaultConfig } from "@rainbow-me/rainbowkit";
-import {
-  injectedWallet,
-  metaMaskWallet,
-  rabbyWallet,
-  safeWallet,
-  walletConnectWallet,
-} from "@rainbow-me/rainbowkit/wallets";
-import { createConfig } from "wagmi";
+import { createConfig, createStorage } from "wagmi";
+import { injected } from "wagmi/connectors/injected";
+import { safe } from "wagmi/connectors/safe";
+import { walletConnect } from "./walletconnect-connector";
 import { mainnet } from "wagmi/chains";
 import { defineChain, http, fallback } from "viem";
 import { E2E_MOCK_ADDRESS } from "@/lib/constants";
@@ -16,7 +11,7 @@ import { createE2EMockConnector } from "./e2e-mock-connector";
 
 assertProductionRuntimeInvariants("web3/wagmi");
 
-const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID;
+const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID?.trim();
 const rawRpcUrls = (process.env.NEXT_PUBLIC_RPC_URLS ?? "")
   .split(",")
   .map((url) => url.trim())
@@ -95,24 +90,37 @@ export const wagmiConfig = isE2E
         }),
       ],
     })
-  : getDefaultConfig({
-      appName: "Yearn Governance Apps",
-      projectId: projectId || "demo-project-id",
-      wallets: [
-        {
-          groupName: "Wallets",
-          // Keep the explicit wallet list small enough for the OpenNext Worker bundle.
-          wallets: [
-            injectedWallet,
-            metaMaskWallet,
-            safeWallet,
-            rabbyWallet,
-            walletConnectWallet,
-          ],
-        },
-      ],
-      // Using the fork definition for Chain ID 1
+  : createConfig({
       chains: [mainnetFork],
       transports,
       ssr: true,
+      storage: createStorage({
+        key: "yearn-wallet-v3",
+        storage: {
+          getItem(key) {
+            try { return window.localStorage.getItem(key); } catch { return null; }
+          },
+          setItem(key, value) {
+            try { window.localStorage.setItem(key, value); } catch { /* Storage can be unavailable in private browsing. */ }
+          },
+          removeItem(key) {
+            try { window.localStorage.removeItem(key); } catch { /* A disconnected wallet remains disconnected in memory. */ }
+          },
+        },
+      }),
+      multiInjectedProviderDiscovery: true,
+      connectors: [
+        injected(),
+        safe({
+          shimDisconnect: true,
+          unstable_getInfoTimeout: 1000,
+          allowedDomains: [
+            /^https:\/\/(?:[a-z0-9-]+\.)*safe\.global$/,
+            /^https:\/\/(?:[a-z0-9-]+\.)*gnosis-safe\.io$/,
+          ],
+        }),
+        ...(projectId
+          ? [walletConnect({ projectId, rpcMap: { [mainnetFork.id]: rpcUrls[0] } })]
+          : []),
+      ],
     });

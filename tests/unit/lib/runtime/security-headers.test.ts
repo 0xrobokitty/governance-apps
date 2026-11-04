@@ -131,3 +131,13 @@ describe("security header policy", () => {
     ]);
   });
 });
+
+it.each([true, false])("permits the exact SDK verification iframe in development=%s", (isDevelopment) => {
+  const csp = buildContentSecurityPolicy({
+    nonce: "wallet-test", isDevelopment, isProduction: !isDevelopment,
+  });
+  const frameSources = csp.split(";").find((directive) => directive.trim().startsWith("frame-src "))!;
+  expect(frameSources.split(/\s+/)).toContain("https://verify.walletconnect.org");
+  expect(frameSources).not.toContain("https://*.walletconnect.org");
+  expect(csp).toContain("frame-ancestors 'none'");
+});

@@ -20,10 +20,6 @@ const allowedInstallScriptPackages = new Map([
     "OpenNext AWS adapter uses esbuild's platform binary validation.",
   ],
   [
-    "node_modules/bufferutil@4.0.9",
-    "Optional native WebSocket performance helper used by transitive wallet/RPC dependencies.",
-  ],
-  [
     "node_modules/esbuild@0.28.1",
     "Wrangler uses esbuild's platform binary validation.",
   ],
@@ -32,20 +28,12 @@ const allowedInstallScriptPackages = new Map([
     "Optional macOS file watcher dependency captured in the lockfile.",
   ],
   [
-    "node_modules/keccak@3.0.4",
-    "Ethereum hashing dependency uses a native build helper with JavaScript fallback behavior.",
-  ],
-  [
     "node_modules/playwright/node_modules/fsevents@2.3.2",
     "Optional macOS file watcher dependency captured by Playwright.",
   ],
   [
     "node_modules/unrs-resolver@1.11.1",
     "Resolver package validates its native binding selection after install.",
-  ],
-  [
-    "node_modules/utf-8-validate@5.0.10",
-    "Optional native WebSocket validation helper used by transitive wallet/RPC dependencies.",
   ],
   [
     "node_modules/workerd@1.20261006.1",

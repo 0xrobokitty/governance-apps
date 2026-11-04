@@ -5,7 +5,7 @@ import {
   useAccountModal,
   useChainModal,
   useConnectModal,
-} from "@rainbow-me/rainbowkit";
+} from "@/web3/wallet-ui";
 import { useAccount } from "wagmi";
 import { cn } from "@/lib/cn";
 import { E2E_MOCK_ADDRESS } from "@/lib/constants";

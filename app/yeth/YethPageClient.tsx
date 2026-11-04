@@ -1,6 +1,6 @@
 "use client";
 
-import { useConnectModal } from "@rainbow-me/rainbowkit";
+import { useConnectModal } from "@/web3/wallet-ui";
 import { useAccount } from "wagmi";
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { TxStatus } from "@/lib/tx/types";

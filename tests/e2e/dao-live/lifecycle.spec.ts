@@ -44,7 +44,7 @@ async function wallet(page: Page, account: string) {
 }
 async function connect(page: Page) {
   await page.getByRole("button", { name: /^Connect wallet$/i }).first().click({ timeout: 30_000 });
-  await page.getByRole("button", { name: "Browser Wallet", exact: true }).first().click();
+  await page.getByRole("button", { name: /Browser wallet.*Detected/i }).first().click();
 }
 async function clock(page: Page) { const state = fork("mine"); await page.clock.setFixedTime(new Date(state.timestamp * 1000)); }
 async function detail(page: Page) {

@@ -3,7 +3,7 @@
 import {
   useChainModal,
   useConnectModal,
-} from "@rainbow-me/rainbowkit";
+} from "@/web3/wallet-ui";
 import { useState, type ReactNode } from "react";
 import type { Address } from "viem";
 import { AmountInput } from "@/components/ui/AmountInput";

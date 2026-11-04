@@ -147,7 +147,7 @@ export function buildContentSecurityPolicy({
     "img-src 'self' data: blob: https:",
     "font-src 'self' data:",
     connectSrc,
-    `frame-src 'self' https://verify.walletconnect.com https://*.walletconnect.com${allowedAddressLabelsFrameSource ? ` ${allowedAddressLabelsFrameSource}` : ""}`,
+    `frame-src 'self' https://verify.walletconnect.org https://verify.walletconnect.com https://*.walletconnect.com${allowedAddressLabelsFrameSource ? ` ${allowedAddressLabelsFrameSource}` : ""}`,
     "worker-src 'self' blob:",
     "manifest-src 'self'",
     "object-src 'none'",

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { disconnect, getConnections, reconnect } from "@wagmi/core";
+import { disconnect, getConnections, reconnect } from "wagmi/actions";
 import { createConfig, http } from "wagmi";
 import { mainnet } from "wagmi/chains";
 import { getAddress } from "viem";
