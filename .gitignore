@@ -60,3 +60,6 @@ public/dao-voting-power.json
 public/dao-voting-power.json.tmp
 outputs/dao-voting-power-index.json
 outputs/dao-voting-power-index.json.tmp
+
+# Disposable yETH fork and UAT artifacts
+/.local/yeth/

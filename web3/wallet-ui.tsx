@@ -359,7 +359,7 @@ export function WalletUiProvider({ children }: { children: ReactNode }) {
                     ? <EthereumIcon className="size-6 shrink-0" />
                     : <IconWallet className="size-6 shrink-0 text-text-tertiary" aria-hidden />}
                   <span className="min-w-0 break-words text-sm text-text-primary">
-                    {account.chainId === 1 ? "Ethereum Mainnet" : `Unsupported network (${account.chainId ?? "unknown"})`}
+                    {account.chainId === 1 ? "Ethereum Mainnet" : chains.find(chain => chain.id === account.chainId)?.name ?? `Unsupported network (${account.chainId ?? "unknown"})`}
                   </span>
                 </div>
                 <Button variant="ghost" size="sm" className={`${walletActionClass} py-2 text-xs`} aria-label="Switch network" onClick={() => open("network")}>Switch</Button>
@@ -484,10 +484,11 @@ function PairingPanel({
 /** The landing page needs a wallet control that also remains visible on phones. */
 export function ConnectButton() {
   const account = useAccount();
+  const chains = useChains();
   const { openConnectModal } = useConnectModal();
   const { openAccountModal } = useAccountModal();
   const { openChainModal } = useChainModal();
-  const wrongNetwork = account.isConnected && account.chainId !== 1;
+  const wrongNetwork = account.isConnected && !chains.some(chain => chain.id === account.chainId);
   return (
     <Button variant="secondary" size="sm" onClick={account.isConnected ? wrongNetwork ? openChainModal : openAccountModal : openConnectModal}>
       {wrongNetwork ? "Wrong Network" : account.isConnected && account.address ? formatAddress(account.address) : "Connect wallet"}

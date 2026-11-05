@@ -63,6 +63,10 @@ for (const name of forbiddenEnabledFlags) {
   }
 }
 
+if (process.env.NEXT_PUBLIC_YETH_FORK_RPC_URL?.trim()) {
+  errors.push("NEXT_PUBLIC_YETH_FORK_RPC_URL must be unset in production.");
+}
+
 const requiredVars = [
   "NEXT_PUBLIC_RUNTIME_MODE",
   "NEXT_PUBLIC_WC_PROJECT_ID",

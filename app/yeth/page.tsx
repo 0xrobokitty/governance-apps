@@ -1,5 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import { notFound } from "next/navigation";
+import { RecoveryPreviewClient } from "./RecoveryPreviewClient";
+import { RecoveryLiveClient } from "./RecoveryLiveClient";
+import { isYethRecoveryLiveEnabled, isYethRecoveryPreviewEnabled } from "@/lib/runtime/features";
 import { YethPageClient } from "./YethPageClient";
 import { createGovernanceAppMetadata } from "@/lib/runtime/discoverability";
 import { isYethEnabled } from "@/lib/runtime/features";
@@ -80,5 +83,5 @@ export default function YethPage() {
   if (!isYethEnabled()) {
     notFound();
   }
-  return <YethPageClient />;
+  return isYethRecoveryPreviewEnabled() ? <RecoveryPreviewClient /> : isYethRecoveryLiveEnabled() ? <RecoveryLiveClient /> : <YethPageClient />;
 }

@@ -71,6 +71,7 @@ jobs:
           NEXT_PUBLIC_ENABLE_TEAMS: ${{ vars.NEXT_PUBLIC_ENABLE_TEAMS || secrets.NEXT_PUBLIC_ENABLE_TEAMS || 'false' }}
           NEXT_PUBLIC_ENABLE_YBC: ${{ vars.NEXT_PUBLIC_ENABLE_YBC || secrets.NEXT_PUBLIC_ENABLE_YBC || 'false' }}
           NEXT_PUBLIC_ENABLE_YETH: ${{ vars.NEXT_PUBLIC_ENABLE_YETH || secrets.NEXT_PUBLIC_ENABLE_YETH || 'false' }}
+          NEXT_PUBLIC_YETH_RECOVERY_LIVE: "true"
           NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID || vars.NEXT_PUBLIC_WC_PROJECT_ID }}
           NEXT_PUBLIC_GLOBAL_DATA_URL: ${{ vars.NEXT_PUBLIC_GLOBAL_DATA_URL || secrets.NEXT_PUBLIC_GLOBAL_DATA_URL }}
           NEXT_PUBLIC_TEAMS_DATA_URL: ${{ vars.NEXT_PUBLIC_TEAMS_DATA_URL || secrets.NEXT_PUBLIC_TEAMS_DATA_URL }}
@@ -96,6 +97,7 @@ jobs:
           NEXT_PUBLIC_ENABLE_TEAMS: ${{ vars.NEXT_PUBLIC_ENABLE_TEAMS || secrets.NEXT_PUBLIC_ENABLE_TEAMS || 'false' }}
           NEXT_PUBLIC_ENABLE_YBC: ${{ vars.NEXT_PUBLIC_ENABLE_YBC || secrets.NEXT_PUBLIC_ENABLE_YBC || 'false' }}
           NEXT_PUBLIC_ENABLE_YETH: ${{ vars.NEXT_PUBLIC_ENABLE_YETH || secrets.NEXT_PUBLIC_ENABLE_YETH || 'false' }}
+          NEXT_PUBLIC_YETH_RECOVERY_LIVE: "true"
           NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID || vars.NEXT_PUBLIC_WC_PROJECT_ID }}
           NEXT_PUBLIC_GLOBAL_DATA_URL: ${{ vars.NEXT_PUBLIC_GLOBAL_DATA_URL || secrets.NEXT_PUBLIC_GLOBAL_DATA_URL }}
           NEXT_PUBLIC_TEAMS_DATA_URL: ${{ vars.NEXT_PUBLIC_TEAMS_DATA_URL || secrets.NEXT_PUBLIC_TEAMS_DATA_URL }}
@@ -111,6 +113,8 @@ jobs:
       - name: Validate Worker Runtime
         env:
           NEXT_PUBLIC_ENABLE_DAO: ${{ vars.NEXT_PUBLIC_ENABLE_DAO || 'false' }}
+          NEXT_PUBLIC_ENABLE_YETH: ${{ vars.NEXT_PUBLIC_ENABLE_YETH || secrets.NEXT_PUBLIC_ENABLE_YETH || 'false' }}
+          NEXT_PUBLIC_YETH_RECOVERY_LIVE: "true"
         run: npm run validate:worker-runtime -- wrangler.preprod.jsonc
 
       - name: Deploy To Cloudflare Preprod
@@ -129,6 +133,7 @@ jobs:
           NEXT_PUBLIC_ENABLE_TEAMS: ${{ vars.NEXT_PUBLIC_ENABLE_TEAMS || secrets.NEXT_PUBLIC_ENABLE_TEAMS || 'false' }}
           NEXT_PUBLIC_ENABLE_YBC: ${{ vars.NEXT_PUBLIC_ENABLE_YBC || secrets.NEXT_PUBLIC_ENABLE_YBC || 'false' }}
           NEXT_PUBLIC_ENABLE_YETH: ${{ vars.NEXT_PUBLIC_ENABLE_YETH || secrets.NEXT_PUBLIC_ENABLE_YETH || 'false' }}
+          NEXT_PUBLIC_YETH_RECOVERY_LIVE: "true"
           NEXT_PUBLIC_WC_PROJECT_ID: ${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID || vars.NEXT_PUBLIC_WC_PROJECT_ID }}
           NEXT_PUBLIC_GLOBAL_DATA_URL: ${{ vars.NEXT_PUBLIC_GLOBAL_DATA_URL || secrets.NEXT_PUBLIC_GLOBAL_DATA_URL }}
           NEXT_PUBLIC_TEAMS_DATA_URL: ${{ vars.NEXT_PUBLIC_TEAMS_DATA_URL || secrets.NEXT_PUBLIC_TEAMS_DATA_URL }}

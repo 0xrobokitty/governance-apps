@@ -18,6 +18,7 @@ export type TxStatus =
   | "signing"
   | "submitted"
   | "mining"
+  | "pending"
   | "success"
   | "error";
 

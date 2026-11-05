@@ -3,6 +3,7 @@ import { createConfig, createStorage } from "wagmi";
 import { injected } from "wagmi/connectors/injected";
 import { safe } from "wagmi/connectors/safe";
 import { walletConnect } from "./walletconnect-connector";
+import { getRecoveryEnvironment } from "@/lib/clients/yeth/recovery/environment";
 import { mainnet } from "wagmi/chains";
 import { defineChain, http, fallback } from "viem";
 import { E2E_MOCK_ADDRESS } from "@/lib/constants";
@@ -11,6 +12,7 @@ import { createE2EMockConnector } from "./e2e-mock-connector";
 
 assertProductionRuntimeInvariants("web3/wagmi");
 
+const recoveryEnvironment = getRecoveryEnvironment();
 const projectId = process.env.NEXT_PUBLIC_WC_PROJECT_ID?.trim();
 const rawRpcUrls = (process.env.NEXT_PUBLIC_RPC_URLS ?? "")
   .split(",")
@@ -23,7 +25,7 @@ if (isProd && rawRpcUrls.length === 0) {
   );
 }
 const rpcUrls =
-  rawRpcUrls.length > 0 ? rawRpcUrls : mainnet.rpcUrls.default.http;
+  recoveryEnvironment.rpcUrl ? [recoveryEnvironment.rpcUrl] : rawRpcUrls.length > 0 ? rawRpcUrls : mainnet.rpcUrls.default.http;
 
 if (!isProd && rawRpcUrls.length === 0) {
   console.warn(
@@ -34,11 +36,11 @@ if (!isProd && rpcUrls.length === 0) {
   console.warn("No RPC URLs configured. Wallet RPC will be required for reads.");
 }
 
-// Define the fork chain overriding Mainnet (Chain ID 1)
+// Mainnet by default; the explicit development-only recovery fork uses chain 31337.
 const mainnetFork = defineChain({
   ...mainnet,
-  id: 1,
-  name: "Mainnet Fork",
+  id: Number(recoveryEnvironment.chainId),
+  name: recoveryEnvironment.fork ? "Local Ethereum fork" : "Ethereum",
   nativeCurrency: {
     decimals: 18,
     name: "Ether",
