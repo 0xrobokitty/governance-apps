@@ -29,6 +29,13 @@ if (process.env.NEXT_PUBLIC_ENABLE_DAO === "true") {
   );
 }
 
+if (process.env.NEXT_PUBLIC_ENABLE_YETH === "true") {
+  probes.push(
+    ["https://app.dao-ops.com/yeth", "yETH Recovery"],
+    ["https://yeth.yearn.fi/", "yETH Recovery"],
+  );
+}
+
 let worker;
 const envDirectory = await mkdtemp(path.join(tmpdir(), "worker-runtime-check-"));
 const envFile = path.join(envDirectory, "empty.env");
@@ -79,6 +86,7 @@ try {
     "https://app.dao-ops.com",
     "https://dao.yearn.fi",
     "https://styfi.yearn.fi",
+    ...(process.env.NEXT_PUBLIC_ENABLE_YETH === "true" ? ["https://yeth.yearn.fi"] : []),
   ]) {
     const url = `${origin}/manifest.json`;
     const response = await worker.fetch(url, {
@@ -124,6 +132,18 @@ try {
     assert.ok(html.includes("</html>"), `${url} returned incomplete HTML`);
     assert.doesNotMatch(html, /id="__next_error__"|NEXT_HTTP_ERROR_FALLBACK;500|Unexpected loadManifest/);
     console.log(`PASS ${url}: HTTP 200 and complete server-rendered HTML`);
+  }
+  if (process.env.YETH_VERIFY_PUBLIC_FEED === "true") {
+    const response = await worker.fetch("https://yeth.yearn.fi/api/yeth-recovery-data", {
+      headers: { "x-forwarded-host": "yeth.yearn.fi" },
+      signal: AbortSignal.timeout(25_000),
+    });
+    assert.equal(response.status, 200, "Live recovery feed proxy failed in workerd");
+    const envelope = await response.json();
+    assert.equal(envelope.head?.schema, "yeth-recovery/v3");
+    assert.equal(envelope.head?.mode, "live");
+    assert.ok(Object.keys(envelope.documents ?? {}).length > 0);
+    console.log("PASS yETH recovery proxy: live v3 feed and verified pages in workerd");
   }
 } catch (error) {
   console.error(error instanceof Error ? error.message : error);

@@ -19,6 +19,8 @@ function getPublicFeatureEnv(): FeatureEnv {
     NEXT_PUBLIC_ENABLE_TEAMS: process.env.NEXT_PUBLIC_ENABLE_TEAMS,
     NEXT_PUBLIC_ENABLE_YBC: process.env.NEXT_PUBLIC_ENABLE_YBC,
     NEXT_PUBLIC_ENABLE_YETH: process.env.NEXT_PUBLIC_ENABLE_YETH,
+    NEXT_PUBLIC_YETH_RECOVERY_PREVIEW: process.env.NEXT_PUBLIC_YETH_RECOVERY_PREVIEW,
+    NEXT_PUBLIC_YETH_RECOVERY_LIVE: process.env.NEXT_PUBLIC_YETH_RECOVERY_LIVE,
     NEXT_PUBLIC_ENABLE_DEBUG_UI: process.env.NEXT_PUBLIC_ENABLE_DEBUG_UI,
     NEXT_PUBLIC_ENABLE_SIMULATION_TRANSPORT_FALLBACK:
       process.env.NEXT_PUBLIC_ENABLE_SIMULATION_TRANSPORT_FALLBACK,
@@ -99,4 +101,14 @@ export function isTreasuryMockRuntimeEnabled(env: FeatureEnv = getPublicFeatureE
 /** Shared app directory and voting notice are staged with one production gate. */
 export function isGovernanceDiscoveryEnabled(env: FeatureEnv = getPublicFeatureEnv()) {
   return !isProductionRuntime(env) || isEnabled(env.NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY);
+}
+
+/** Mock acceptance milestone only. Production cannot expose this preview. */
+export function isYethRecoveryPreviewEnabled(env: FeatureEnv = getPublicFeatureEnv()) {
+  return !isProductionRuntime(env) && isEnabled(env.NEXT_PUBLIC_USE_MOCKS) && isEnabled(env.NEXT_PUBLIC_YETH_RECOVERY_PREVIEW);
+}
+
+/** Staged live recovery dashboard. Mock preview remains unavailable in production. */
+export function isYethRecoveryLiveEnabled(env: FeatureEnv = getPublicFeatureEnv()) {
+  return isYethEnabled(env) && isEnabled(env.NEXT_PUBLIC_YETH_RECOVERY_LIVE);
 }

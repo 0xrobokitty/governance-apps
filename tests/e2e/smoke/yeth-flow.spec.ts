@@ -12,6 +12,7 @@ const YETH_MANUAL_RECOVERY_CLAIM_URL =
   "https://github.com/yearn/yeth-manual-recovery-claims/issues/new?template=manual-yeth-claim.yml";
 
 test("claim, stay, redeem, claim-ended, and empty-state flows", async ({ page }) => {
+  test.skip(process.env.NEXT_PUBLIC_YETH_RECOVERY_PREVIEW === "true", "The mock recovery milestone replaces the legacy claim surface.");
   test.setTimeout(120_000);
 
   await page.goto("/yeth");

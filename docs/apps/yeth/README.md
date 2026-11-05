@@ -52,3 +52,14 @@ See [shared discovery delivery notes](../../shared/discovery-20261013.md) for va
 The app route renders for each request so its HTML uses the current CSP nonce.
 This prevents cached build output from blocking hydration on hosts with strict script policies.
 The root layout retains its existing rendering mode.
+
+## Recovery auction design
+
+The [recovery auction milestone](recovery-auctions.md) records the mock preview, verified contract behavior, data sources, and live integration gates.
+
+- [Recovery statistics producer request](recovery-data-request.md): proposed accounting, forecast, and account data contract for the mock recovery redesign.
+
+## Live recovery and auction UAT
+
+The [live dashboard runbook](recovery-live.md) defines the Stats v3 integration, transaction limits, and local fork review.
+The new page requires an explicit live rollout flag. Exits support connected wallets, Safe proposals, and delegated accounts. See the live UAT guide for receipt verification and fork acceptance cases.

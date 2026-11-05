@@ -10,7 +10,7 @@ import { useAccount } from "wagmi";
 import { cn } from "@/lib/cn";
 import { E2E_MOCK_ADDRESS } from "@/lib/constants";
 import { formatAddress } from "@/lib/format";
-import { MAINNET_CHAIN_ID } from "@/lib/tx/network";
+import { getRecoveryEnvironment } from "@/lib/clients/yeth/recovery/environment";
 import type { Address } from "viem";
 
 export type E2EWalletPresentation = {
@@ -91,7 +91,7 @@ export function WalletButton({
   }
 
   const isWrongNetwork =
-    !usesE2EFallback && !!chainId && chainId !== MAINNET_CHAIN_ID;
+    !usesE2EFallback && !!chainId && chainId !== getRecoveryEnvironment().chainId;
 
   if (isWrongNetwork) {
     return (

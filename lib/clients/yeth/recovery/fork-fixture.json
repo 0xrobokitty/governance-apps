@@ -1,0 +1,7 @@
+{
+  "kind": "synthetic-contract-target/v1",
+  "chainId": 31337,
+  "account": "0xf39Fd6e51aad88F6F4ce6aB8827279cffFb92266",
+  "seededSharesWei": "10000000000000000000",
+  "basisSource": "recoveryVault.targetAssetsPerShareWad"
+}

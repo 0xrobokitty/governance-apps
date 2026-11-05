@@ -10,6 +10,8 @@ import {
   isSimulationTransportFallbackEnabled,
   isYbcEnabled,
   isYethEnabled,
+  isYethRecoveryLiveEnabled,
+  isYethRecoveryPreviewEnabled,
 } from "@/lib/runtime/features";
 
 describe("runtime feature flags", () => {
@@ -136,5 +138,19 @@ describe("governance discovery rollout", () => {
     expect(isGovernanceDiscoveryEnabled({ NEXT_PUBLIC_RUNTIME_MODE: "production", NEXT_PUBLIC_ENABLE_GOVERNANCE_DISCOVERY: "true" })).toBe(true);
     expect(isGovernanceDiscoveryEnabled({ NEXT_PUBLIC_RUNTIME_MODE: "development" })).toBe(true);
     expect(isGovernanceDiscoveryEnabled({ NEXT_PUBLIC_RUNTIME_MODE: "preview" })).toBe(true);
+  });
+});
+
+
+describe("yETH recovery rollout", () => {
+  it("requires explicit live opt-in and the production app gate", () => {
+    expect(isYethRecoveryLiveEnabled({NEXT_PUBLIC_RUNTIME_MODE: "production"})).toBe(false);
+    expect(isYethRecoveryLiveEnabled({NEXT_PUBLIC_RUNTIME_MODE: "production", NEXT_PUBLIC_YETH_RECOVERY_LIVE: "true"})).toBe(false);
+    expect(isYethRecoveryLiveEnabled({NEXT_PUBLIC_RUNTIME_MODE: "production", NEXT_PUBLIC_ENABLE_YETH: "true", NEXT_PUBLIC_YETH_RECOVERY_LIVE: "true"})).toBe(true);
+    expect(isYethRecoveryLiveEnabled({NEXT_PUBLIC_RUNTIME_MODE: "development"})).toBe(false);
+  });
+  it("never exposes mock preview in production even if every mock flag is set", () => {
+    expect(isYethRecoveryPreviewEnabled({NEXT_PUBLIC_RUNTIME_MODE: "production", NEXT_PUBLIC_USE_MOCKS: "true", NEXT_PUBLIC_YETH_RECOVERY_PREVIEW: "true"})).toBe(false);
+    expect(isYethRecoveryPreviewEnabled({NEXT_PUBLIC_RUNTIME_MODE: "development", NEXT_PUBLIC_USE_MOCKS: "true", NEXT_PUBLIC_YETH_RECOVERY_PREVIEW: "true"})).toBe(true);
   });
 });

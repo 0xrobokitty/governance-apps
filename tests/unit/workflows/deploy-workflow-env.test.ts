@@ -18,6 +18,7 @@ const expectedRuntimeEnv: Record<string, string> = {
     "${{ vars.NEXT_PUBLIC_ENABLE_YBC || secrets.NEXT_PUBLIC_ENABLE_YBC || 'false' }}",
   NEXT_PUBLIC_ENABLE_YETH:
     "${{ vars.NEXT_PUBLIC_ENABLE_YETH || secrets.NEXT_PUBLIC_ENABLE_YETH || 'false' }}",
+  NEXT_PUBLIC_YETH_RECOVERY_LIVE: '"true"',
   NEXT_PUBLIC_WC_PROJECT_ID:
     "${{ secrets.NEXT_PUBLIC_WC_PROJECT_ID || vars.NEXT_PUBLIC_WC_PROJECT_ID }}",
   NEXT_PUBLIC_GLOBAL_DATA_URL:
@@ -103,6 +104,17 @@ describe("deploy workflow env wiring", () => {
       expect(parseStepEnvByRun(workflowPath, "npm run worker:build")).toEqual(
         expectedRuntimeEnvFor(relativePath)
       );
+    });
+
+    it(`${relativePath} checks yETH hosts with the same exposure gate and approved live flag`, () => {
+      const runtimeCommand = relativePath.includes("preprod")
+        ? "npm run validate:worker-runtime -- wrangler.preprod.jsonc"
+        : "npm run validate:worker-runtime -- wrangler.jsonc";
+      expect(parseStepEnvByRun(workflowPath, runtimeCommand)).toEqual({
+        NEXT_PUBLIC_ENABLE_DAO: "${{ vars.NEXT_PUBLIC_ENABLE_DAO || 'false' }}",
+        NEXT_PUBLIC_ENABLE_YETH: expectedRuntimeEnv.NEXT_PUBLIC_ENABLE_YETH,
+        NEXT_PUBLIC_YETH_RECOVERY_LIVE: '"true"',
+      });
     });
 
     it(`${relativePath} keeps runtime env and Cloudflare creds on deploy step`, () => {
