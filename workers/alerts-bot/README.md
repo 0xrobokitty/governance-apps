@@ -107,6 +107,9 @@ above any of those range or message limits.
 
 See [the operational runbook](../../docs/alerts-bot.md) and
 [the approved message catalogue](../../docs/alerts-bot-message-catalogue.md).
+The [yETH Recovery & Auctions upgrade](../../docs/apps/yeth/telegram-alerts.md)
+uses the existing channel and preserved state. `YETH_UPGRADED_MESSAGES_ENABLED`
+activates it once; disabling this flag afterward pauses yETH without skipping auction events.
 Teams and YBC have a separate
 [acceptance specification](../../docs/alerts-bot-teams-ybc-spec.md) and
 [review ledger](../../docs/alerts-bot-teams-ybc-review-resolution.md).
