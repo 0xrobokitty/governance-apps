@@ -13,7 +13,7 @@ Use six chart tiles to answer daily executive questions:
 5. How are harvested results and protocol fees developing?
 6. How are YFI staking, stYFIx APR, voting and price changing?
 
-Product movers add cumulative-flow sparklines and rank changes. A compact yLockers row follows the six overview tiles. Focus view keeps all nine charts visible and hides secondary material. Windows are 7, 30, 90 and 365 completed UTC days, defaulting to 30. Every main tile contains history. Current values summarize those histories rather than substituting for them.
+Product movers add cumulative-flow sparklines and rank changes. The last row contains yLockers, Recovery & loans, and Treasury reserves. Focus view keeps all nine charts visible and hides secondary material. Windows are 7, 30, 90 and 365 completed UTC days, defaulting to 30. Every main tile contains history. Current values summarize those histories rather than substituting for them.
 
 The original prototype's inline SVG trend tiles informed this revision. Its static team descriptions and broad financial scorecards are not carried over. Existing Yearn fonts, shell, colors, cards, dialogs and themes remain in use.
 
@@ -53,16 +53,18 @@ The source work package builds on cf67395921ea9c1ad21e92cd7d6205ea3eeb4425; publ
 
 The 365D view means a rolling 365-day window, not a calendar year. Its comparison uses the preceding 365 days. The extended fixture preserves the original recent history and includes earlier observations for both annual windows and moving-average warmup. Date ranges and inspected values show years where needed.
 
-## yLockers mock section
+## Nine-card mock
 
-Three compact charts compare yCRV and yYB using consistent colours and a shared product selector. Both series are visible initially. The row sits below the six overview charts and above Product movers. It uses the same date range, theme, keyboard inspection, and Details table as Pulse.
+The grid keeps the original six overview cards and adds one yLockers card, Recovery & loans, and Treasury reserves. All nine use the same date range. Capital filters do not alter these three cards.
 
-Rewards show weekly allocations in crvUSD. Grouped bars preserve both product values. Dashed four-week averages use earlier completed weeks for warmup. The headline shows the latest complete week and its change from the prior week. A separate current-week amount is provisional and excluded from the chart. A 7D view retains the single completed week, with an average marker. Week-close dates select whole reward periods; no proration occurs at the range boundary.
+yLockers has Rewards, Peg, and Net deposits tabs. Both yCRV and yYB appear by default. Legend checkboxes can isolate a product but cannot hide both. Tab buttons support arrow keys, Home, and End. Tab selection survives date-range and capital-filter changes.
 
-Peg shows daily market value relative to CRV or YB, with a 100% parity reference. This example is not a fixed-size execution quote or a guaranteed redemption rate.
+Rewards preserve completed-week bars, four-week averages and separate provisional funding. Peg keeps the 100% parity reference. Net deposits combine direct staking and auto-compounders, excluding reinvestment. Daily rates use each product's opening balance. Earlier yYB coverage stays blank; moving averages require enough covered history.
 
-Net deposits combine the direct staking and auto-compounder boundary. Synthetic reinvestment changes balances but never the external-flow series. Rates use each product's own opening token balance, without market prices. The headline is the period net rate; the chart switches between daily rates and seven-day averages. Details also include daily native-token amounts. Rates across products are not additive.
+Recovery & loans starts with yETH's outstanding contract target less its backing, in ETH. The reference target is not every claimant's original principal. The mock includes below-target exits: target released, actual payouts and new funding are separate. There is no repayment forecast. The Loans tab shows principal owed to Yearn, with all loans, Resupply, and another fictional loan selectable. Principal returned and interest received remain separate. Stablecoin loan marks are fixed at an illustrative $1; no actual loan balance or terms are inferred.
 
-The fictional yYB history begins later than yCRV. The 365D view leaves earlier values blank and identifies the coverage start. Its first available opening balance is the denominator when the window extends before coverage. Four-week reward averages remain unavailable until four complete weeks exist. Seven-day flow averages remain unavailable until seven covered days exist.
+Treasury defaults to liquid, uncommitted stablecoins and ETH, excluding YFI. Total holdings adds committed budgets, locked assets and receivables; YFI is optional there. Recovery backing and customer deposits are outside both treasury views. This mock has no new borrowing or internal transfers. Real asset classification remains a future data-contract decision.
 
-These fixtures do not represent live allocations, prices, balances, or performance. Their shared Thursday periods are illustrative; the live feed must retain each distributor's actual epoch boundaries and valuation blocks. No source integration, host routing, or deployment is added by this revision.
+The market and fixed-opening-price lines use the same quantities. Both start at the opening observation. Operating receipts, interest, spending and loan returns reconcile the daily balances. Principal returned increases reserves while reducing the matching receivable; it does not create new gross treasury assets. Details expose the series, period movements and valuation assumptions. Figures remain fictional, through 2 November 2026.
+
+Focus view retains all nine charts on a 1920 × 1080 display. Narrow layouts stack the cards. Source-app links lead to yETH and Treasury for context. No source app feed is connected, and no publication, routing or deployment is enabled.

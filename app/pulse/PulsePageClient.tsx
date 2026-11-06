@@ -1,6 +1,7 @@
 "use client";
 import { useState } from "react";
-import { YLockersSection } from "./YLockersSection";
+import { YLockersCard } from "./YLockersCard";
+import { RecoveryLoansCard, TreasuryCard } from "./FinanceCards";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { Modal } from "@/components/ui/Modal";
@@ -178,9 +179,10 @@ export function PulsePageClient() {
           <Legend series={governanceSeries} />
           <p className={styles.foot + " border-t border-border pt-2 text-text-secondary"}>{governanceView === "stake" ? number(lastGovernance!.total) + " underlying YFI, counted once. " + number(lastGovernance!.pending) + " pending unstake excluded." : governanceView === "apr" ? "Historical stated APR, including VoteBoost. No assumed compounding." : governanceView === "votes" ? data.governance.filter(day => day.vote).length + " closed votes. Each dot uses that vote’s eligible power; gaps are not zeros." : "Snapshot context in USD or ETH. Price movement does not count as new capital."}</p>
         </Card>
+        <YLockersCard compact={wall} data={data.ylockers} period={period} onInspect={setDetail} />
+        <RecoveryLoansCard compact={wall} data={data.finance} onInspect={setDetail} />
+        <TreasuryCard compact={wall} data={data.finance} onInspect={setDetail} />
       </section>
-
-      <YLockersSection compact={wall} data={data.ylockers} period={period} onInspect={setDetail} />
 
       {!wall && <Card className="mt-4 min-w-0 overflow-hidden p-0 shadow-none">
         <div className="flex flex-wrap items-center justify-between gap-3 px-5 py-4"><div><h2 className="text-sm font-bold">{copy.products}</h2><p className="mt-1 text-[11px] text-text-secondary">{data.positiveProducts}{ui.of}{data.products.length}{ui.productsHaveNetInflowsInThisWindow}</p></div><Choice label="Product ranking" value={productView} onChange={setProductView} options={[{ value: "in", label: ui.largestInflows }, { value: "out", label: ui.largestOutflows }]} /></div>

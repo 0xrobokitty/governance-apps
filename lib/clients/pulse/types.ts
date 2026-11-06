@@ -29,6 +29,7 @@ export interface ProductTrend {
   depositors: number; rankChange: number; series: number[];
 }
 export interface Pulse {
+  finance: import("./finance").FinanceHistory;
   ylockers: YLockers;
   period: Period; start: string; end: string; openingDate: string; partial: boolean;
   days: Day[]; governance: GovernanceDay[]; products: ProductTrend[];

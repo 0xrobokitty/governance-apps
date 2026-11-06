@@ -1,13 +1,15 @@
 import { expect, test } from "@playwright/test";
 test.skip(process.env.NEXT_PUBLIC_ENABLE_PULSE_PREVIEW !== "true", "Pulse preview is opt-in.");
 
-test("Pulse replaces Metrics with nine historical charts including yLockers", async ({ page, request }) => {
+test("Pulse replaces Metrics with nine historical cards including recovery and reserves", async ({ page, request }) => {
   expect((await request.get("/metrics")).status()).toBe(404);
   await page.goto("/pulse");
   await expect(page.getByRole("heading", { name: "Pulse", exact: true })).toBeVisible();
   await expect(page.getByText("Illustrative data · not live", { exact: true })).toBeVisible();
   await expect(page.locator('main svg[role="img"]')).toHaveCount(9);
   await expect(page.getByTestId("pulse-ylockers").getByRole("heading", { name: "yLockers", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Recovery & loans", exact: true })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Treasury reserves", exact: true })).toBeVisible();
   await expect(page.locator("header")).not.toContainText("0xf39F");
   await page.getByRole("group", { name: "History window" }).getByRole("button", { name: "90D" }).click();
   await expect(page.getByTestId("pulse-range")).toContainText("5 Aug");
