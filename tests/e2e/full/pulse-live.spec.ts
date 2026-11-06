@@ -1,0 +1,31 @@
+import { expect, test } from "@playwright/test";
+import fixture from "../../fixtures/pulse-live.json";
+test.skip(process.env.NEXT_PUBLIC_ENABLE_PULSE !== "true", "Pulse live review is opt-in.");
+test("Pulse live feed uses nine cards, real observations and visible gaps", async ({ page }) => {
+  const errors: string[] = [];
+  page.on("pageerror", e => errors.push(e.message));
+  await page.route("**/api/pulse-data", route => route.fulfill({ json: fixture }));
+  await page.goto("/pulse");
+  await expect(page.getByRole("heading", {name:"Pulse", exact:true})).toBeVisible();
+  await expect(page.getByTestId("pulse-live-card")).toHaveCount(9);
+  await expect(page.getByText("Illustrative data · not live", {exact:true})).toHaveCount(0);
+  await expect(page.getByRole("heading",{name:"TVL",exact:true})).toBeVisible();
+  await expect(page.getByText(/Kong’s TVL outlier/)).toBeVisible();
+  await page.getByRole("button",{name:"365D",exact:true}).click();
+  await expect(page.getByRole("button",{name:"365D",exact:true})).toHaveAttribute("aria-pressed","true");
+  await page.getByRole("tab",{name:"Peg",exact:true}).click();
+  await expect(page.getByText(/Sale quote for 10,000/)).toBeVisible();
+  await page.getByRole("tab",{name:"Net deposits",exact:true}).click();
+  await expect(page.getByRole("tabpanel",{name:"Net deposits"})).toContainText("awaiting boundary validation");
+  await page.getByRole("tab",{name:"Top products",exact:true}).click();
+  await expect(page.getByRole("table",{name:"Top products"})).toBeVisible();
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});
+test("Pulse does not replace failed live data with illustrative metrics", async ({ page }) => {
+  await page.route("**/api/pulse-data", route => route.fulfill({status:503,json:{error:"unavailable"}}));
+  await page.goto("/pulse");
+  await expect(page.getByText(/Pulse is not available yet/)).toBeVisible();
+  await expect(page.getByTestId("pulse-live-card")).toHaveCount(0);
+});

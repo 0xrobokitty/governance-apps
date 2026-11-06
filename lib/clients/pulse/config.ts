@@ -7,3 +7,5 @@ export function isPulseMockEnabled(env: Record<string, string | undefined> = {
 }) {
   return !isProductionMode(env) && env.NEXT_PUBLIC_ENABLE_PULSE_PREVIEW === "true" && env.NEXT_PUBLIC_USE_MOCKS === "true";
 }
+
+export function isPulseLiveEnabled() { return process.env.NEXT_PUBLIC_ENABLE_PULSE === "true"; }

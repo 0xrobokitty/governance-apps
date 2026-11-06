@@ -1,0 +1,26 @@
+import {expect,test} from "@playwright/test";
+test.skip(process.env.PULSE_LOCAL_INTEGRATION !== "true","Requires a locally collected live feed.");
+test("Pulse renders the real local Stats response through its API proxy",async({page,request},testInfo)=>{
+  const errors:string[]=[];
+  page.on("pageerror",e=>errors.push(e.message));
+  const response=await request.get("/api/pulse-data");
+  expect(response.status()).toBe(200);
+  const feed=await response.json();
+  expect(feed.mode).toBe("live");
+  expect(feed.metrics.filter((m:{latest:unknown})=>m.latest).length).toBe(13);
+  await page.setViewportSize({width:1500,height:1100});
+  await page.goto("/pulse");
+  await expect(page.getByTestId("pulse-live-card")).toHaveCount(9,{timeout:60000});
+  await page.screenshot({path:testInfo.outputPath("live-desktop.png"),fullPage:true});
+  await page.getByRole("tab",{name:"Peg",exact:true}).click();
+  await page.screenshot({path:testInfo.outputPath("live-peg.png"),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await page.screenshot({path:testInfo.outputPath("live-mobile.png"),fullPage:true});
+  await page.emulateMedia({colorScheme:"dark"});
+  await page.evaluate(()=>document.documentElement.classList.add("dark"));
+  await page.screenshot({path:testInfo.outputPath("live-dark.png"),fullPage:true});
+  await page.setViewportSize({width:750,height:550});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  expect(errors).toEqual([]);
+});

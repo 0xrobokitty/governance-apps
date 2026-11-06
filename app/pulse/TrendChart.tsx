@@ -14,9 +14,9 @@ export interface ChartDetail {
 interface Props {
   label: string; dates: string[]; series: TrendSeries[];
   format: (value: number) => string; height?: number; zero?: boolean;
-  groupBars?: boolean; reference?: { value: number; label: string };
+  detailsHint?: string; groupBars?: boolean; reference?: { value: number; label: string };
 }
-export function TrendChart({ label, dates, series, format, height = 168, zero = false, groupBars = false, reference }: Props) {
+export function TrendChart({ label, dates, series, format, height = 168, zero = false, groupBars = false, reference, detailsHint }: Props) {
   const ref = useRef<SVGSVGElement>(null);
   const [width, setWidth] = useState(400);
   const [active, setActive] = useState<number | null>(null);
@@ -84,6 +84,7 @@ export function TrendChart({ label, dates, series, format, height = 168, zero = 
           : <rect key={i} x={x(i) + barOffset(s) - barWidth / 2} y={value >= 0 ? y(value) : y(0)} width={barWidth} height={Math.max(1, Math.abs(y(value) - y(0)))} rx="1.5" fill={value < 0 ? "#cc7451" : s.color} opacity=".8"><title>{fullDate(dates[i]) + ": " + format(value)}</title></rect>)
           : <path d={path(s.values)} fill="none" stroke={s.color} strokeWidth={index === 0 ? 2.2 : 1.9} strokeDasharray={s.dash ? "5 4" : undefined} strokeLinejoin="round" strokeLinecap="round" />}
       </g>)}
+      {series.map(s => s.kind !== "bar" && s.values.filter(v => v !== null).length === 1 && s.values.map((v, i) => v !== null && <circle key={s.label + i} cx={x(i)} cy={y(v)} r="3" fill={s.color} />))}
       {labels.map((i, index) => <text key={index} x={x(i)} y={height - 5} textAnchor={labels.length === 1 ? "middle" : index === 0 ? "start" : index === labels.length - 1 ? "end" : "middle"} fill="currentColor" fontSize="10" className="text-text-secondary">{shortDate(dates[i])}</text>)}
       {active !== null && <>
         <line x1={x(active)} x2={x(active)} y1={top} y2={bottom} stroke="currentColor" className="text-text-secondary" opacity=".5" strokeDasharray="3 3" />
@@ -91,7 +92,7 @@ export function TrendChart({ label, dates, series, format, height = 168, zero = 
       </>}
     </svg>
     <div id={id} aria-live="polite" className={active === null ? "sr-only" : "pointer-events-none absolute left-16 top-0 z-10 max-w-[calc(100%-4rem)] rounded-box border border-border bg-surface px-3 py-2 text-[11px] shadow-lg"}>
-      {active === null ? "Detailed values are available through the chart's Details button." : <>
+      {active === null ? (detailsHint ?? "Detailed values are available through the chart's Details button.") : <>
         <p className="mb-1 font-bold">{fullDate(dates[active])}</p>
         {series.map(s => <p key={s.label} className="flex justify-between gap-4"><span>{s.label}</span><span className="font-number">{s.values[active] === null ? "No observation" : (s.format ?? format)(s.values[active]! - (s.floor?.[active] ?? 0))}</span></p>)}
       </>}
