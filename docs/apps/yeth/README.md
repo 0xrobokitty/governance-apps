@@ -8,7 +8,8 @@ Scope: yETH recovery experience under `/yeth`.
 - UI/UX spec: [`ui-ux-spec.md`](ui-ux-spec.md)
 - Implementation status: [`implementation-status.md`](implementation-status.md)
 - Production checklist: [`production-readiness-checklist.md`](production-readiness-checklist.md)
-- Telegram alert accounting: [`telegram-alerts.md`](telegram-alerts.md)
+- Telegram alerts and deployment: [`telegram-alerts.md`](telegram-alerts.md)
+- Recovery and auction message catalogue: [`alerts-message-catalogue-proposal.md`](alerts-message-catalogue-proposal.md)
 
 ## Current Delivery Status
 

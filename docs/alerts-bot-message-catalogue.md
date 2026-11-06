@@ -9,6 +9,8 @@ start block.
 The implemented Teams and YBC extension is specified in
 [`alerts-bot-teams-ybc-spec.md`](alerts-bot-teams-ybc-spec.md).
 The DAO extension has its own [catalogue and rollout](apps/dao/telegram-alerts.md).
+The forward-only [yETH Recovery & Auctions catalogue](apps/yeth/alerts-message-catalogue-proposal.md)
+supersedes this document's yETH templates after its saved cutover. Historical messages and receipts remain unchanged.
 
 The examples use fictional accounts, amounts, blocks, dates, and transaction
 hashes. They show the intended visible Telegram output. The implementation may

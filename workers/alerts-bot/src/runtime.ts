@@ -1,5 +1,12 @@
 import { encodeFunctionData } from "viem";
-import { renderCatalogueMessages } from "./catalogue";
+import { renderCatalogueMessages, type RenderedAlertMessage } from "./catalogue";
+import {
+  initializeMessaging,
+  messagingStateSchema,
+  type YethMessagingState,
+} from "./domains/yeth/messaging-state";
+import { readAuctionSnapshot } from "./domains/yeth/auction-chain";
+import { scanMessagingRange } from "./domains/yeth/messaging-scanner";
 import {
   domainConfigs,
   runtimeConfig,
@@ -97,6 +104,9 @@ interface StoredDomainState {
   readonly teamsState: StoredTeamsState | null;
   readonly ybcState: StoredYbcState | null;
   readonly daoState?: DaoAlertState | null;
+  readonly yethMessaging?: YethMessagingState;
+  readonly yethPendingBlock?: number;
+  readonly yethPendingHash?: string;
 }
 
 interface ScanOutcome {
@@ -110,6 +120,8 @@ interface ScanOutcome {
   readonly ybcState: YbcState | null;
   readonly daoState?: DaoAlertState;
   readonly terminalHash?: string;
+  readonly yethMessaging?: YethMessagingState;
+  readonly messages?: readonly RenderedAlertMessage[];
 }
 
 class AlertRunError extends Error {
@@ -264,6 +276,20 @@ function validateStoredState(
     value.cursorBlock < ALERT_DOMAIN_GENESIS_BLOCKS[domainId] - 1 ||
     (value.cursorHash !== null && !/^0x[0-9a-f]{64}$/.test(value.cursorHash))
   ) {
+    throw new AlertRunError("stored_state_invalid");
+  }
+  if (value.yethMessaging) {
+    const messaging = messagingStateSchema.parse(value.yethMessaging);
+    if (domainId !== "yeth" ||
+        messaging.snapshot.block !== Math.max(value.cursorBlock, messaging.cutoverBlock)) {
+      throw new AlertRunError("stored_state_invalid");
+    }
+  }
+  if (value.yethPendingBlock !== undefined && (
+    !value.yethMessaging || !Number.isSafeInteger(value.yethPendingBlock) ||
+    value.yethPendingBlock <= value.cursorBlock ||
+    !/^0x[0-9a-f]{64}$/.test(value.yethPendingHash ?? "")
+  )) {
     throw new AlertRunError("stored_state_invalid");
   }
   return value;
@@ -495,8 +521,24 @@ async function scanRange(params: {
   readonly config: RuntimeConfig;
   readonly state: StoredDomainState;
   readonly requestedToBlock: number;
+  readonly app?: Pick<Fetcher, "fetch">;
 }): Promise<ScanOutcome> {
   const fromBlock = params.state.cursorBlock + 1;
+  if (params.domainId === "yeth" && params.state.yethMessaging &&
+      fromBlock > params.state.yethMessaging.cutoverBlock) {
+    const result = await scanMessagingRange({
+      rpc: params.rpc, fromBlock, toBlock: params.requestedToBlock,
+      ledger: params.state.yethState ? loadYethState(params.state.yethState) : createEmptyYethState(),
+      messaging: messagingStateSchema.parse(params.state.yethMessaging),
+      now: nowSeconds(), app: params.app,
+    });
+    return {
+      terminalBlock: result.terminalBlock, terminalHash: result.terminalHash,
+      actions: [], messages: result.messages, yethMessaging: result.state,
+      yethState: result.ledger, yethMetrics: result.metrics, yethCheckpointMetrics: result.metrics,
+      yethDailyFlow: { ...ZERO_FLOW }, teamsState: null, ybcState: null,
+    };
+  }
   if (params.domainId === "dao") {
     const scan = await scanDaoBlocks({
       rpc: params.rpc, fromBlock, toBlock: params.requestedToBlock,
@@ -746,6 +788,11 @@ export class AlertState implements DurableObject {
       lastSuccessAt: stored.lastSuccessAt,
       lastErrorCode: stored.lastErrorCode,
       telegramRetryAfterUntil: stored.telegramRetryAfterUntil,
+      ...(domainId === "yeth" ? {
+        messagingVersion: stored.yethMessaging ? 2 : 1,
+        messagingCutoverBlock: stored.yethMessaging?.cutoverBlock ?? null,
+        messagingPendingBlock: stored.yethPendingBlock ?? null,
+      } : {}),
     });
   }
 
@@ -810,6 +857,26 @@ export class AlertState implements DurableObject {
           throw new AlertRunError("cursor_reorg_detected");
         }
       }
+      if (domainId === "yeth") {
+        if (stored.yethMessaging && !config.yethUpgradedMessages) {
+          // Once activated, disabling the upgrade pauses this stream instead of
+          // advancing its cursor with the legacy scanner and losing auction events.
+          await this.recordError(stored, "messaging_paused", confirmedHead);
+          return Response.json({ domain: domainId, outcome: "messaging_paused", cursorBlock: stored.cursorBlock });
+        }
+        if (config.yethUpgradedMessages && !stored.yethMessaging) {
+          const activationBlock = await rpc.getBlockByNumber(confirmedHead);
+          if (activationBlock.number !== confirmedHead) throw new AlertRunError("yeth_cutover_block_invalid");
+          const snapshot = await readAuctionSnapshot(rpc, activationBlock);
+          stored = { ...stored, yethMessaging: initializeMessaging(snapshot) };
+          // Persist once before any send. Never reset the existing cursor or sent receipts.
+          await this.state.storage.put(STATE_KEY, stored);
+        }
+        if (stored.yethMessaging && stored.cursorBlock < stored.yethMessaging.cutoverBlock) {
+          const cutover = await rpc.getBlockByNumber(stored.yethMessaging.cutoverBlock);
+          if (cutover.hash !== stored.yethMessaging.snapshot.hash) throw new AlertRunError("yeth_cutover_reorg_detected");
+        }
+      }
       if (stored.cursorBlock >= confirmedHead) {
         stored = withRunMetadata(stored, {
           lastObservedHead: confirmedHead,
@@ -838,10 +905,18 @@ export class AlertState implements DurableObject {
           fromBlock + config.logRangeSize - 1,
         );
         if (domainId === "yeth") {
-          requestedToBlock = Math.min(
-            requestedToBlock,
-            nextYethCheckpoint(stored.cursorBlock, config.yethDailyCheckpointBlocks),
-          );
+          // Legacy backlog still uses its original checkpoint boundaries.
+          if (!stored.yethMessaging || fromBlock <= stored.yethMessaging.cutoverBlock) {
+            requestedToBlock = Math.min(requestedToBlock,
+              nextYethCheckpoint(stored.cursorBlock, config.yethDailyCheckpointBlocks));
+          }
+          if (stored.yethMessaging && fromBlock <= stored.yethMessaging.cutoverBlock) {
+            requestedToBlock = Math.min(requestedToBlock, stored.yethMessaging.cutoverBlock);
+          }
+          if (stored.yethPendingBlock !== undefined) {
+            if (stored.yethPendingBlock > confirmedHead) throw new AlertRunError("yeth_pending_block_unconfirmed");
+            requestedToBlock = stored.yethPendingBlock;
+          }
         }
         stage = "scan";
         const scan = await scanRange({
@@ -850,12 +925,25 @@ export class AlertState implements DurableObject {
           config,
           state: stored,
           requestedToBlock,
+          app: this.env.DAO_APP,
         });
         stage = "terminal";
         const terminal = await rpc.getBlockByNumber(scan.terminalBlock);
         if (terminal.number !== scan.terminalBlock ||
             (scan.terminalHash !== undefined && terminal.hash !== scan.terminalHash)) {
           throw new AlertRunError("terminal_block_invalid");
+        }
+        if (stored.yethPendingBlock !== undefined && (
+          terminal.number !== stored.yethPendingBlock || terminal.hash !== stored.yethPendingHash
+        )) {
+          throw new AlertRunError("yeth_pending_block_changed");
+        }
+        if (scan.yethMessaging && scan.messages?.length && stored.yethPendingBlock === undefined) {
+          // Freeze the range before sending. A retry must not create different
+          // block-based IDs merely because the confirmed head advanced.
+          stored = { ...stored, yethPendingBlock: scan.terminalBlock, yethPendingHash: terminal.hash };
+          stage = "state_commit";
+          await this.state.storage.put(STATE_KEY, stored);
         }
         stage = "render";
         const pendingActions: AlertAction[] = [];
@@ -870,7 +958,7 @@ export class AlertState implements DurableObject {
           } else pendingActions.push(action);
         }
         stage = "render";
-        const rendered = await renderCatalogueMessages({ domainId, actions: pendingActions, rpc, daoContent });
+        const rendered = scan.messages ?? await renderCatalogueMessages({ domainId, actions: pendingActions, rpc, daoContent });
         const unsent = [] as typeof rendered[number][];
         for (const message of rendered) {
           stage = "receipt_read";
@@ -930,6 +1018,9 @@ export class AlertState implements DurableObject {
           ybcState:
             scan.ybcState === null ? stored.ybcState : serializeYbcState(scan.ybcState),
           daoState: scan.daoState ?? stored.daoState ?? null,
+          yethMessaging: scan.yethMessaging ?? stored.yethMessaging,
+          yethPendingBlock: undefined,
+          yethPendingHash: undefined,
         };
         stage = "state_commit";
         await this.state.storage.put(STATE_KEY, stored);
@@ -957,7 +1048,8 @@ export class AlertState implements DurableObject {
         console.warn(JSON.stringify({ event: "alert_run_delayed", domain: domainId, code: "telegram_rate_limited", retryAfterUntil }));
         return Response.json({ domain: domainId, outcome: "telegram_backoff" }, { status: 202 });
       }
-      const code = error instanceof AlertRunError || error instanceof DaoAlertContentError ? error.code : "processing_failed";
+      const code = error instanceof AlertRunError || error instanceof DaoAlertContentError ? error.code
+        : domainId === "yeth" && error instanceof Error && /^yeth_[a-z_]{1,100}$/.test(error.message) ? error.message : "processing_failed";
       const diagnostic = safeFailureDiagnostic(error);
       let errorStateRecorded = true;
       try {

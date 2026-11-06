@@ -60,12 +60,12 @@ function matchingLogs(logs: readonly RpcLog[], filter: Parameters<RpcClient["get
   );
 }
 
-function scan(logs: RpcLog[] = structuredClone(fixture.logs), state = initialYethState()) {
+function scan(logs: RpcLog[] = structuredClone(fixture.logs), state = initialYethState(), includeManualPayouts = false) {
   const rpc = {
     getLogs: vi.fn(async (filter) => matchingLogs(logs, filter)),
     getBlockByNumber: vi.fn(async (number: number) => blockAt(number)),
   } as unknown as RpcClient;
-  return scanYethBlocks({ rpc, fromBlock: tx.blockNumber, toBlock: tx.blockNumber, state });
+  return scanYethBlocks({ rpc, fromBlock: tx.blockNumber, toBlock: tx.blockNumber, state, includeManualPayouts });
 }
 
 afterEach(() => {
@@ -74,6 +74,14 @@ afterEach(() => {
 });
 
 describe("manual yETH recovery payouts", () => {
+  it("exposes verified manual payouts only for the upgraded catalogue", async () => {
+    const result = await scan(structuredClone(fixture.logs), initialYethState(), true);
+    expect(result.actions).toHaveLength(3);
+    expect(result.actions.every(action => action.yethManualPayout === true)).toBe(true);
+    expect(result.actions.reduce((total, action) => total + action.amounts.yethUnderlyingAmount!, 0n)).toBe(payout);
+    expect(result.flow.yieldNetFlowEth).toBe(-payout);
+    expect((await scan()).actions).toHaveLength(0);
+  });
   it("attributes all three withdrawals in transaction 0x171e78…e6052 exactly once", async () => {
     const result = await scan();
     expect(result.failure).toBeNull();

@@ -8,6 +8,8 @@ Each stream owns an independent Durable Object and Telegram destination. It does
 not migrate or adopt the old singleton's cursor.
 
 For the DAO addition, use the [DAO catalogue and rollout](apps/dao/telegram-alerts.md).
+For the forward-only yETH Recovery & Auctions upgrade, use the [yETH deployment guide](apps/yeth/telegram-alerts.md).
+That upgrade keeps the existing channel, object, cursor, and receipts. Do not use the original replay procedure for it.
 All six committed flags are now enabled. New installations must configure destinations before enabling delivery.
 DAO content uses the website's configured feed through a service binding; no duplicate feed URL is required.
 The original singleton cutover instructions below describe the earlier five-stream rollout;
@@ -112,6 +114,9 @@ method, ignored `withLog` option, malformed positional data, or trace above the
 `eth_call`: it cannot recover state at a transaction position within the block.
 
 ## yETH cadence
+
+With `YETH_UPGRADED_MESSAGES_ENABLED=true`, the bot uses the [Recovery & Auctions catalogue](apps/yeth/alerts-message-catalogue-proposal.md): daily auction status, every confirmed take, and weekly recovery summaries.
+The checkpoint cadence below describes the legacy renderer, including any unfinished backlog through the upgrade boundary.
 
 Y1–Y4 are emitted from claim and withdrawal events. Y5 is derived when those
 events reduce outstanding recovery debt. Y6–Y9 are evaluated once per fixed
