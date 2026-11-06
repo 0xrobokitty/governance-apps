@@ -474,6 +474,7 @@ function attributionKey(owner: string, shares: bigint): string {
 function manualRecoveryOutflow(
   state: YethState,
   events: readonly YethDecodedEvent[],
+  actions?: NormalizedAction[],
 ): bigint {
   let outflow = 0n;
   for (const event of events) {
@@ -499,6 +500,14 @@ function manualRecoveryOutflow(
       withdrawals.length === 1
     ) {
       outflow += event.assets;
+      actions?.push({
+        kind: "yeth_claimed_exited", tokenSymbol: "yETH", user: account,
+        principal: { kind: "proven", address: account }, owner: account, receiver: account,
+        yethManualPayout: true,
+        amounts: { yethSnapshotAmount: state.accounts.get(account)!.snapshotEth,
+          yethUnderlyingAmount: event.assets, yethClaimShares: 0n },
+        ...metadata(event.log),
+      });
     }
   }
   return outflow;
@@ -507,10 +516,11 @@ function manualRecoveryOutflow(
 function applyTransactionEvents(
   state: YethState,
   events: readonly YethDecodedEvent[],
+  includeManualPayouts = false,
 ): { readonly actions: NormalizedAction[]; readonly flow: YethFlowSummary } {
   const actions: NormalizedAction[] = [];
   let recoveryNetFlowEth = 0n;
-  let yieldNetFlowEth = -manualRecoveryOutflow(state, events);
+  let yieldNetFlowEth = -manualRecoveryOutflow(state, events, includeManualPayouts ? actions : undefined);
   const deposits = events.filter(
     (event): event is Extract<YethDecodedEvent, { kind: "deposit" }> =>
       event.kind === "deposit",
@@ -838,6 +848,7 @@ export async function scanYethBlocks(params: {
   readonly fromBlock: number;
   readonly toBlock: number;
   readonly state: YethState;
+  readonly includeManualPayouts?: boolean;
   /** Optional preloaded event-block headers. Missing event headers are loaded lazily. */
   readonly verifiedBlocks?: readonly RpcBlock[];
   readonly isBudgetExceeded?: (error: unknown) => boolean;
@@ -1140,6 +1151,7 @@ export async function scanYethBlocks(params: {
         const applied = applyTransactionEvents(
           provisionalState,
           events,
+          params.includeManualPayouts,
         );
         blockActions.push(...applied.actions);
         blockFlow.recoveryNetFlowEth += applied.flow.recoveryNetFlowEth;

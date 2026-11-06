@@ -104,6 +104,8 @@ export interface NormalizedAction {
   /** Distinguishes linkable chain logs from block-level protocol metrics. */
   source: NormalizedActionSource;
   yethWithdrawalType?: YethWithdrawalType;
+  /** Same-transaction manual payout and entitlement clearance, proven by the scanner. */
+  yethManualPayout?: true;
   /** Scanner-proven pre-event stream state for cooldown restart copy. */
   cooldownRestarted?: boolean;
 }
