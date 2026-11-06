@@ -27,6 +27,7 @@ export interface AlertsEnv {
   LOG_RANGE_SIZE?: string;
   YETH_DAILY_CHECKPOINT_BLOCKS?: string;
   YETH_DAILY_MIN_DELTA_ETH?: string;
+  YETH_UPGRADED_MESSAGES_ENABLED?: string;
   ADMIN_TOKEN?: string;
 }
 
@@ -46,6 +47,7 @@ export interface RuntimeConfig {
   readonly yethDailyCheckpointBlocks: number;
   readonly yethDailyMinDeltaWei: bigint;
   readonly daoIncludeVotes: boolean;
+  readonly yethUpgradedMessages: boolean;
 }
 
 const DOMAIN_ENV = {
@@ -154,6 +156,7 @@ export function runtimeConfig(env: AlertsEnv): RuntimeConfig {
     ),
     yethDailyMinDeltaWei: ethToWei(env.YETH_DAILY_MIN_DELTA_ETH),
     daoIncludeVotes: env.DAO_ALERT_VOTES_ENABLED?.trim().toLowerCase() !== "false",
+    yethUpgradedMessages: enabled(env.YETH_UPGRADED_MESSAGES_ENABLED),
   });
 }
 

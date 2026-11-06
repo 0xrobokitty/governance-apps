@@ -25,6 +25,8 @@
     "ALERTS_STYFI_ENABLED": "true",
     "ALERTS_VEYFI_ENABLED": "true",
     "ALERTS_YETH_ENABLED": "true",
+    // In-place messaging upgrade. The first run saves a forward-only cutover.
+    "YETH_UPGRADED_MESSAGES_ENABLED": "true",
     "ALERTS_TEAMS_ENABLED": "true",
     "ALERTS_YBC_ENABLED": "true",
     // Enable DAO after configuring its chat and reviewing private replay.
@@ -34,7 +36,7 @@
     "MAX_MESSAGES_PER_RUN": "5",
     "MAX_RANGES_PER_RUN": "6",
     "LOG_RANGE_SIZE": "10000",
-    // One deterministic checkpoint per roughly 24 hours on Ethereum.
+    // Legacy cadence only, including any backlog before the messaging cutover.
     "YETH_DAILY_CHECKPOINT_BLOCKS": "7200",
     // Review private replay frequency before raising this materiality threshold.
     "YETH_DAILY_MIN_DELTA_ETH": "0.5",
@@ -44,7 +46,8 @@
     "crons": ["* * * * *"],
   },
 
-  // Reuse the website's /api/dao-data route and its existing DAO_DATA_URL.
+  // Reuse the website's /api/dao-data route and optional /api/yeth-recovery-data
+  // forecast enrichment. Missing yETH enrichment does not block payout alerts.
   "services": [
     { "binding": "DAO_APP", "service": "governance-apps" },
   ],
