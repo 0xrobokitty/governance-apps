@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { xSchema, validateX, validateXTransition } from "./x";
 import { readBoundedJson, withFeedRequest, type FeedTransportPolicy } from "@/lib/feed-transport";
 
 const raw = z.string().regex(/^\d{1,78}$/);
@@ -44,7 +45,7 @@ const lockers = z.object({
 });
 const schema = z.object({
   schema: z.literal("pulse/v1"), mode: z.literal("live"), generatedAt: timestamp,
-  metrics: z.array(metric).max(100), reviewedCapital: capital.optional(), yLockers: lockers.optional(),
+  metrics: z.array(metric).max(100), x: xSchema.optional(), reviewedCapital: capital.optional(), yLockers: lockers.optional(),
 });
 export type PulseFeed = z.infer<typeof schema>;
 export type CapitalDay = z.infer<typeof day>;
@@ -56,6 +57,7 @@ export const assetId = (row: {chainId: number; asset: {address: string}}) => row
 export function parsePulseFeed(value: unknown, now = Math.floor(Date.now() / 1000)): PulseFeed {
   const feed = schema.parse(value);
   if (feed.generatedAt > now + 60) throw new Error("Pulse publication is in the future.");
+  if (feed.x) validateX(feed.x, feed.generatedAt);
   const ids = new Set<string>();
   for (const m of feed.metrics) {
     if (ids.has(m.id)) throw new Error("Duplicate Pulse metric.");
@@ -106,6 +108,7 @@ export class PulseFeedReader {
   async read() {
     const next = await this.fetcher();
     if (this.current && (next.generatedAt < this.current.generatedAt || (next.generatedAt === this.current.generatedAt && JSON.stringify(next) !== JSON.stringify(this.current)))) throw new Error("Pulse publication regressed or conflicts.");
+    validateXTransition(this.current?.x, next.x, next.generatedAt);
     this.current = next;
     return next;
   }

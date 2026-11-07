@@ -66,7 +66,7 @@ Resupply is a receivable owed to Yearn.
 
 - TVL and normalized USD or TVL-based capital measures.
 - Complete harvest fees.
-- X metrics until read-only credentials arrive.
+- X metrics until the Stats collector is enabled with read-only credentials.
 - Governance turnout.
 - Combined direct-staking and compounding flows for yLockers.
 
@@ -84,3 +84,34 @@ Unit tests use a recorded live feed.
 Browser tests cover range controls, cards, mobile overflow, errors, and unavailable data.
 The optional PULSE_LOCAL_INTEGRATION test reads a real locally served Stats feed through the API proxy.
 It requires PULSE_DATA_URL and NEXT_PUBLIC_ENABLE_PULSE=true.
+
+## X audience
+
+GovApps Stats 0.12 adds the optional pulse-x/v1 section.
+Older feeds without this section remain usable.
+One card contains Impressions, Link clicks, and Followers tabs.
+Post performance and coverage stay in collapsed details.
+There is no advertising split or product attribution.
+
+Activity charts show observed counter changes on tracked posts under 30 days old.
+The first observation establishes a baseline.
+Missing days and absent counters remain gaps.
+Negative counter corrections are excluded and reported in coverage.
+The seven-day average requires seven consecutive measured observations.
+Snapshots are approximately daily, not exact UTC calendar-day totals.
+Impressions do not measure unique people.
+Link clicks do not prove website visits or deposits.
+
+The details show median impressions for posts observed at seven to eight days old.
+The sample includes observations from the last seven days.
+Link clicks per 1,000 impressions use only link posts with both counters.
+Sample sizes, collection limits, new baselines, and missing posts remain visible.
+
+Credentials belong only to the collector deployment.
+The browser never calls X or receives credentials.
+Disabled collection, missing credentials, budget pauses, and failures have explicit states.
+Historical observations remain visible when collection becomes stale or disabled.
+Live authentication and actual API billing require a separate deployment check.
+
+The X unit and browser fixtures are synthetic.
+They do not claim a successful live API connection.

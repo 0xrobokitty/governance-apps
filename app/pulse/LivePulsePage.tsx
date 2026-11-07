@@ -4,7 +4,8 @@ import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { useLivePulse } from "@/lib/hooks/useLivePulse";
 import { CHAIN_NAMES, type PulseFeed } from "@/lib/clients/pulse/feed";
-import { accountTrend, capitalAssets, capitalTrend, coveredDays, dayAt, metricTrend, windowDays } from "@/lib/clients/pulse/live";
+import { accountTrend, capitalAssets, capitalTrend, coveredDays, dayAt, metricTrend, windowDays, xTrend } from "@/lib/clients/pulse/live";
+import type { XTab } from "@/lib/clients/pulse/x";
 import type { Period } from "@/lib/clients/pulse/types";
 import { TrendChart, type TrendSeries } from "./TrendChart";
 import { MetricTabs } from "./MetricTabs";
@@ -76,6 +77,43 @@ function Lockers({ feed, period }: { feed: PulseFeed; period: Period }) {
     </div>
   </Tile>;
 }
+export function XAudience({ feed, period }: { feed: PulseFeed; period: Period }) {
+  const [tab, setTab] = useState<XTab>("impressions");
+  const data = feed.x;
+  const trend = xTrend(feed, period);
+  const last = trend.latest;
+  const options = [{ value: "impressions", label: c.xImpressions }, { value: "linkClicks", label: c.xClicks }, { value: "followers", label: c.xFollowers }];
+  const label = options.find(o => o.value === tab)!.label;
+  const status = !data ? c.pending : data.status === "disabled" ? c.xDisabled : data.status === "stale" ? c.xStale : data.status === "unavailable" ? c.pending : c.partial;
+  const reason = !data ? c.xNoHistory : data.reason === "x_credentials_missing" ? c.xMissing : data.status === "disabled" ? c.xDisabled : data.reason === "x_budget_limit" ? c.xBudget : data.reason === "x_no_observations" ? c.xNoHistory : data.reason ? c.xFailure : !last ? c.xNoHistory : last.intervalStart === null && tab !== "followers" ? (data.history.length === 1 ? c.xBaseline : c.xGap) : null;
+  const series: TrendSeries[] = [{ label, color: BLUE, values: trend[tab], kind: tab === "followers" ? "line" : "bar" }];
+  if (tab !== "followers") series.push({ label: c.xAverage, color: PURPLE, values: tab === "impressions" ? trend.impressionAverage : trend.clickAverage, dash: true });
+  const headline = last?.[tab] ?? null;
+  return <Tile title={c.x} status={status} note={tab === "followers" ? c.xFollowNote : c.xNote} href="https://x.com/yearnfi">
+    <div className="mt-2"><MetricTabs id="live-x" label={c.x} value={tab} options={options} onChange={value => setTab(value as XTab)} /></div>
+    <div id="live-x-panel" role="tabpanel" aria-labelledby={"live-x-" + tab}>
+      <div className={styles.metric}><strong className="font-number text-2xl" data-testid="pulse-x-headline">{headline === null ? "—" : numeric(headline)}</strong><span className="text-[10px] text-text-secondary">{last ? dayAt(last.observedAt) + " · " + (tab === "followers" ? c.xFollowerCount : c.xInterval) : c.pending}</span></div>
+      <Plot title={c.x + ": " + label} dates={trend.dates} series={series} zero={tab !== "followers"} />
+      {reason && <p className="mt-2 text-xs text-text-secondary" role="status">{reason}</p>}
+      <details className="mt-2 text-xs" data-testid="pulse-x-details"><summary className="cursor-pointer text-text-secondary">{c.xDetails}</summary><div className="mt-3 space-y-3">
+        <p className="font-semibold">{c.xTypical}</p>
+        {last?.medianSevenDayImpressions !== null && last?.medianSevenDayImpressions !== undefined ? <dl className="space-y-1">
+          <div className="flex flex-wrap justify-between gap-2"><dt>{c.xMedian}</dt><dd className="font-number">{numeric(last.medianSevenDayImpressions)}</dd></div>
+          <div className="flex flex-wrap justify-between gap-2"><dt>{c.xClickRate}</dt><dd className="font-number">{last.clicksPerThousandImpressions === null ? "—" : numeric(last.clicksPerThousandImpressions)}</dd></div>
+        </dl> : <p>{c.xPerformancePending}</p>}
+        <p className="text-text-secondary">{last?.performancePosts ?? 0} {c.xPerformanceSamples} · {last?.performanceLinkPosts ?? 0} {c.xPerformanceLinkSamples}. {c.xPerformanceNote}</p>
+        {last && <>
+          <p>{c.xCoverage}: {new Date(last.observedAt * 1000).toISOString().replace("T", " ").slice(0, 19)} UTC.</p>
+          {tab === "followers" && <p>{c.xNetFollowers}: {last.netFollowers === null ? "—" : (last.netFollowers > 0 ? "+" : "") + numeric(last.netFollowers)}</p>}
+          <p>{last.trackedPosts} {c.xTracked} · {last.measuredPosts} {c.xMeasured} · {last.measuredLinkPosts} {c.xLinkMeasured}.</p>
+          <p>{last.baselinedPosts} {c.xBaselineCount} · {last.missingPosts} {c.xMissingPosts} · {last.counterCorrections} {c.xCorrections}.</p>
+          {last.truncated && <p>{c.xTruncated}</p>}
+        </>}
+        <p className="text-text-secondary">{c.xSnapshotNote}</p>
+      </div></details>
+    </div>
+  </Tile>;
+}
 export function LivePulsePage() {
   const query = useLivePulse();
   const [period, setPeriod] = useState<Period>(30);
@@ -118,7 +156,7 @@ export function LivePulsePage() {
         </Tile>
         <Lockers feed={feed} period={period} />
         <Pending title={c.harvests} note={c.harvestNote} />
-        <Pending title={c.x} note={c.xNote} href="https://x.com/yearnfi" />
+        <XAudience feed={feed} period={period} />
         <MetricCard feed={feed} period={period} title={c.governance} note={c.governanceNote} href="https://styfi.yearn.fi" options={[
           {value:"stake",label:c.stake,ids:["yfi.styfi_direct","yfi.styfix"]},
           {value:"rate",label:c.rate,ids:["yfi.staking_rate_bps"],divisor:100,format:percent},

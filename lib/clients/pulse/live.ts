@@ -58,3 +58,20 @@ export function metricTrend(feed: PulseFeed, period: Period, id: string) {
   const points = new Map(metric?.history.map(p => [Math.floor(p.observedAt / 86400) * 86400, Number(p.value)]));
   return { metric, dates: days.map(dayAt), values: days.map(day => points.get(day) ?? null) };
 }
+
+export function xTrend(feed: PulseFeed, period: Period) {
+  const dates = windowDays(feed.generatedAt, period);
+  const all = new Map(feed.x?.history.map(p => [Math.floor(p.observedAt / 86400) * 86400, p]));
+  const rows = dates.map(day => all.get(day));
+  const average = (day: number, field: "impressions" | "linkClicks") => {
+    const values = Array.from({ length: 7 }, (_, i) => all.get(day - i * 86400)?.[field] ?? null);
+    return values.every((n): n is number => n !== null) ? values.reduce((a, b) => a + b, 0) / 7 : null;
+  };
+  return {
+    dates: dates.map(dayAt), latest: rows.findLast(p => p !== undefined),
+    impressions: rows.map(p => p?.impressions ?? null), linkClicks: rows.map(p => p?.linkClicks ?? null),
+    followers: rows.map(p => p?.followers ?? null),
+    impressionAverage: dates.map(day => average(day, "impressions")),
+    clickAverage: dates.map(day => average(day, "linkClicks")),
+  };
+}
