@@ -30,6 +30,12 @@ describe("X audience card", () => {
     fireEvent.click(screen.getByRole("tab",{name:"Followers"}));
     expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("90K");
   });
+  it("explains an empty selected window without claiming collection is disabled", () => {
+    const f=feed(); f.x!.status="stale"; f.generatedAt += 40*86400;
+    render(<XAudience feed={f} period={7} />);
+    expect(screen.queryByText("X history starts after collection is enabled.")).not.toBeInTheDocument();
+    expect(screen.getAllByText("No verified observations in this window.").length).toBeGreaterThan(0);
+  });
   it.each(["x_credentials_missing","x_budget_limit","x_http_401"])("explains %s without substituting data", (reason) => {
     const f=feed(); f.x!.history=[]; f.x!.observedAt=null; f.x!.status="unavailable"; f.x!.reason=reason;
     render(<XAudience feed={f} period={30}/>);

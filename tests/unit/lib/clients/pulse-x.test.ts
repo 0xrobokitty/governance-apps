@@ -11,6 +11,9 @@ describe("Pulse X boundary", () => {
     expect(parsePulseFeed(old, f.generatedAt + 60).x).toBeUndefined();
   });
   it.each([
+    ["observation after check", (f: ReturnType<typeof xFixture>) => { f.x.checkedAt -= 1; }],
+    ["stale partial snapshot", (f: ReturnType<typeof xFixture>) => { f.generatedAt += 37 * 3600; }],
+    ["extreme performance value", (f: ReturnType<typeof xFixture>) => { f.x.history[9].medianSevenDayImpressions = 1e300; }],
     ["future observation", (f: ReturnType<typeof xFixture>) => { f.x.history[9].observedAt += 1000; }],
     ["duplicate day", (f: ReturnType<typeof xFixture>) => { f.x.history[9] = f.x.history[8]; }],
     ["latest mismatch", (f: ReturnType<typeof xFixture>) => { f.x.observedAt! -= 1; }],

@@ -85,7 +85,7 @@ export function XAudience({ feed, period }: { feed: PulseFeed; period: Period })
   const options = [{ value: "impressions", label: c.xImpressions }, { value: "linkClicks", label: c.xClicks }, { value: "followers", label: c.xFollowers }];
   const label = options.find(o => o.value === tab)!.label;
   const status = !data ? c.pending : data.status === "disabled" ? c.xDisabled : data.status === "stale" ? c.xStale : data.status === "unavailable" ? c.pending : c.partial;
-  const reason = !data ? c.xNoHistory : data.reason === "x_credentials_missing" ? c.xMissing : data.status === "disabled" ? c.xDisabled : data.reason === "x_budget_limit" ? c.xBudget : data.reason === "x_no_observations" ? c.xNoHistory : data.reason ? c.xFailure : !last ? c.xNoHistory : last.intervalStart === null && tab !== "followers" ? (data.history.length === 1 ? c.xBaseline : c.xGap) : null;
+  const reason = !data ? c.xNoHistory : data.reason === "x_credentials_missing" ? c.xMissing : data.status === "disabled" ? c.xDisabled : data.reason === "x_budget_limit" ? c.xBudget : data.reason === "x_no_observations" ? c.xNoHistory : data.reason ? c.xFailure : !last ? c.noData : last.intervalStart === null && tab !== "followers" ? (data.history.length === 1 ? c.xBaseline : c.xGap) : null;
   const series: TrendSeries[] = [{ label, color: BLUE, values: trend[tab], kind: tab === "followers" ? "line" : "bar" }];
   if (tab !== "followers") series.push({ label: c.xAverage, color: PURPLE, values: tab === "impressions" ? trend.impressionAverage : trend.clickAverage, dash: true });
   const headline = last?.[tab] ?? null;

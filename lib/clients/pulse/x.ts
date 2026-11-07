@@ -8,8 +8,8 @@ const daily = z.object({
   impressions: count.nullable(), linkClicks: count.nullable(),
   trackedPosts: count.max(500), measuredPosts: count.max(500), measuredLinkPosts: count.max(500),
   baselinedPosts: count.max(500), missingPosts: count.max(500), counterCorrections: count.max(1000),
-  truncated: z.boolean(), medianSevenDayImpressions: finite.nullable(),
-  clicksPerThousandImpressions: finite.nullable(), performancePosts: count.max(3500), performanceLinkPosts: count.max(3500),
+  truncated: z.boolean(), medianSevenDayImpressions: finite.max(Number.MAX_SAFE_INTEGER).nullable(),
+  clicksPerThousandImpressions: finite.max(Number.MAX_SAFE_INTEGER * 1000).nullable(), performancePosts: count.max(3500), performanceLinkPosts: count.max(3500),
   sourceSha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
 export const xSchema = z.object({
@@ -26,6 +26,8 @@ export type XTab = "impressions" | "linkClicks" | "followers";
 
 export function validateX(x: XFeed, generatedAt: number) {
   if (x.checkedAt > generatedAt || x.observedAt !== (x.history.at(-1)?.observedAt ?? null)) throw new Error("X observation time disagrees with history.");
+  if (x.observedAt !== null && x.observedAt > x.checkedAt) throw new Error("X observation is newer than its collection.");
+  if (x.status === "partial" && x.observedAt !== null && generatedAt - x.observedAt > 36 * 3600) throw new Error("X snapshot is stale.");
   if (x.status === "unavailable" && x.history.length || ["partial", "stale"].includes(x.status) && !x.history.length) throw new Error("X availability disagrees with history.");
   let previous: XDaily | undefined;
   for (const p of x.history) {

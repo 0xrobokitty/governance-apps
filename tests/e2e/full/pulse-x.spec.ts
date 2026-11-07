@@ -33,6 +33,7 @@ test("X baseline is not interpreted as daily views",async({page})=>{
   const f=xFixture();
   f.x.history=f.x.history.slice(0,1);
   f.x.observedAt=f.x.history[0].observedAt;
+  f.x.status="stale";
   await page.route("**/api/pulse-data",route=>route.fulfill({json:f}));
   await page.goto("/pulse");
   await expect(page.getByTestId("pulse-x-headline")).toHaveText("—");
