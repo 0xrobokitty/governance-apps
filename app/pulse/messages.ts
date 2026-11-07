@@ -219,6 +219,7 @@ export const liveCopy = {
   harvestNote: "Protocol settlements are excluded from customer flows. A complete, consistently valued fee series is not yet available.",
   x: "X audience", xNote: "Observed changes on tracked @yearnfi posts less than 30 days old. Impressions are not unique people. Clicks are not confirmed website visits.",
   xImpressions: "Impressions", xClicks: "Link clicks", xFollowers: "Followers", xAverage: "7D average",
+  xProfile: "Open @yearnfi", xStaleNote: "X observations are stale. Showing the last collected data.",
   xDisabled: "Collection disabled", xMissing: "Awaiting X credentials", xStale: "Stale", xUnavailable: "X data unavailable",
   xBudget: "Collection paused at the request budget.", xFailure: "The latest X collection failed. Previous observations remain visible.",
   xBaseline: "The first observation establishes a baseline. Activity appears after the next daily collection.",

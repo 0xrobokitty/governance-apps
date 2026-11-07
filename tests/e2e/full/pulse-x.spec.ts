@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import producer from "../../fixtures/pulse-x-producer.json";
 import { xFixture } from "../../fixtures/pulse-x";
 test.skip(process.env.NEXT_PUBLIC_ENABLE_PULSE !== "true", "Pulse live review is opt-in.");
 test("X stays in one card with accessible tabs and expandable post performance", async({page},testInfo)=>{
@@ -40,4 +41,25 @@ test("X baseline is not interpreted as daily views",async({page})=>{
   await expect(page.getByText(/first observation establishes/)).toBeVisible();
   await page.getByRole("tab",{name:"Followers",exact:true}).click();
   await expect(page.getByTestId("pulse-x-headline")).toHaveText("90K");
+});
+
+test("Pulse renders the actual producer X contract in light and dark themes",async({page},testInfo)=>{
+  const f={...xFixture(),generatedAt:producer.checkedAt,x:producer};
+  await page.route("**/api/pulse-data",route=>route.fulfill({json:f}));
+  await page.setViewportSize({width:1500,height:1100});
+  await page.goto("/pulse");
+  await expect(page.getByTestId("pulse-x-headline")).toHaveText("620");
+  await page.screenshot({path:testInfo.outputPath("producer-x-desktop.png"),fullPage:true});
+  await page.getByRole("tab",{name:"Link clicks",exact:true}).click();
+  await expect(page.getByTestId("pulse-x-headline")).toHaveText("41");
+  await page.getByText("Post performance & coverage").click();
+  await expect(page.getByText("60.53",{exact:true})).toBeVisible();
+  await page.getByRole("button",{name:"Switch to Dark Mode",exact:true}).click();
+  await expect(page.locator("html")).toHaveAttribute("data-theme","soft-dark");
+  const card=page.getByTestId("pulse-live-card").filter({has:page.getByRole("heading",{name:"X audience",exact:true})});
+  await expect(card).toHaveCSS("background-color","rgb(26, 26, 26)");
+  await page.screenshot({path:testInfo.outputPath("producer-x-dark.png"),fullPage:true});
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await card.screenshot({path:testInfo.outputPath("producer-x-card-mobile.png")});
 });

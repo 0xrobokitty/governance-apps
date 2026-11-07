@@ -26,11 +26,11 @@ function Plot({ title, dates, series, format = numeric, zero, reference }: Chart
     {any && <details className="mt-2 text-xs"><summary className="cursor-pointer text-text-secondary">{c.values}</summary><div className="mt-2 max-h-48 overflow-auto"><table className="w-full text-left"><caption className="sr-only">{title}</caption><thead><tr><th>{c.date}</th>{series.map(s => <th key={s.label} className="px-2">{s.label}</th>)}</tr></thead><tbody>{dates.map((date, i) => <tr key={date}><td className="whitespace-nowrap py-1">{date}</td>{series.map(s => <td key={s.label} className="px-2 font-number">{s.values[i] === null ? "—" : precise(s.values[i]!)}</td>)}</tr>)}</tbody></table></div></details>}
   </>;
 }
-function Tile({ title, status = c.partial, children, note, href }: { title: string; status?: string; children: React.ReactNode; note: string; href?: string }) {
+function Tile({ title, status = c.partial, children, note, href, hrefLabel = c.methodLink }: { title: string; status?: string; children: React.ReactNode; note: string; href?: string; hrefLabel?: string }) {
   return <Card className={styles.tile} data-testid="pulse-live-card">
     <div className={styles.tileTop}><h2 className="text-sm font-bold">{title}</h2><span className="text-[10px] text-text-secondary">{status}</span></div>
     {children}
-    <p className={styles.foot + " text-text-secondary"}>{note}{href && <> <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">{c.methodLink} ↗</a></>}</p>
+    <p className={styles.foot + " text-text-secondary"}>{note}{href && <> <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">{hrefLabel} ↗</a></>}</p>
   </Card>;
 }
 function Pending({ title, note, href }: { title: string; note: string; href?: string }) {
@@ -85,11 +85,11 @@ export function XAudience({ feed, period }: { feed: PulseFeed; period: Period })
   const options = [{ value: "impressions", label: c.xImpressions }, { value: "linkClicks", label: c.xClicks }, { value: "followers", label: c.xFollowers }];
   const label = options.find(o => o.value === tab)!.label;
   const status = !data ? c.pending : data.status === "disabled" ? c.xDisabled : data.status === "stale" ? c.xStale : data.status === "unavailable" ? c.pending : c.partial;
-  const reason = !data ? c.xNoHistory : data.reason === "x_credentials_missing" ? c.xMissing : data.status === "disabled" ? c.xDisabled : data.reason === "x_budget_limit" ? c.xBudget : data.reason === "x_no_observations" ? c.xNoHistory : data.reason ? c.xFailure : !last ? c.noData : last.intervalStart === null && tab !== "followers" ? (data.history.length === 1 ? c.xBaseline : c.xGap) : null;
+  const reason = !data ? c.xNoHistory : data.reason === "x_observation_stale" ? c.xStaleNote : data.reason === "x_credentials_missing" ? c.xMissing : data.status === "disabled" ? c.xDisabled : data.reason === "x_budget_limit" ? c.xBudget : data.reason === "x_no_observations" ? c.xNoHistory : data.reason ? c.xFailure : !last ? c.noData : last.intervalStart === null && tab !== "followers" ? (data.history.length === 1 ? c.xBaseline : c.xGap) : null;
   const series: TrendSeries[] = [{ label, color: BLUE, values: trend[tab], kind: tab === "followers" ? "line" : "bar" }];
   if (tab !== "followers") series.push({ label: c.xAverage, color: PURPLE, values: tab === "impressions" ? trend.impressionAverage : trend.clickAverage, dash: true });
   const headline = last?.[tab] ?? null;
-  return <Tile title={c.x} status={status} note={tab === "followers" ? c.xFollowNote : c.xNote} href="https://x.com/yearnfi">
+  return <Tile title={c.x} status={status} note={tab === "followers" ? c.xFollowNote : c.xNote} href="https://x.com/yearnfi" hrefLabel={c.xProfile}>
     <div className="mt-2"><MetricTabs id="live-x" label={c.x} value={tab} options={options} onChange={value => setTab(value as XTab)} /></div>
     <div id="live-x-panel" role="tabpanel" aria-labelledby={"live-x-" + tab}>
       <div className={styles.metric}><strong className="font-number text-2xl" data-testid="pulse-x-headline">{headline === null ? "—" : numeric(headline)}</strong><span className="text-[10px] text-text-secondary">{last ? dayAt(last.observedAt) + " · " + (tab === "followers" ? c.xFollowerCount : c.xInterval) : c.pending}</span></div>

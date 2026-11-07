@@ -36,6 +36,13 @@ describe("X audience card", () => {
     expect(screen.queryByText("X history starts after collection is enabled.")).not.toBeInTheDocument();
     expect(screen.getAllByText("No verified observations in this window.").length).toBeGreaterThan(0);
   });
+  it("distinguishes stale observations from a failed request", () => {
+    const f=feed(); f.x!.status="stale"; f.x!.reason="x_observation_stale";
+    render(<XAudience feed={f} period={30} />);
+    expect(screen.getByRole("status")).toHaveTextContent("X observations are stale.");
+    expect(screen.queryByText(/latest X collection failed/)).not.toBeInTheDocument();
+    expect(screen.getByRole("link",{name:/Open @yearnfi/})).toHaveAttribute("href","https://x.com/yearnfi");
+  });
   it.each(["x_credentials_missing","x_budget_limit","x_http_401"])("explains %s without substituting data", (reason) => {
     const f=feed(); f.x!.history=[]; f.x!.observedAt=null; f.x!.status="unavailable"; f.x!.reason=reason;
     render(<XAudience feed={f} period={30}/>);

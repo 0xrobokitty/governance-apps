@@ -115,3 +115,7 @@ Live authentication and actual API billing require a separate deployment check.
 
 The X unit and browser fixtures are synthetic.
 They do not claim a successful live API connection.
+
+The consumer also tests the actual Rust reducer output in pulse-x-producer.json.
+That file contains 14 synthetic observations, not live account measurements.
+The integration test checks impressions, clicks, and the seven-day performance sample.

@@ -9,7 +9,7 @@ const daily = z.object({
   trackedPosts: count.max(500), measuredPosts: count.max(500), measuredLinkPosts: count.max(500),
   baselinedPosts: count.max(500), missingPosts: count.max(500), counterCorrections: count.max(1000),
   truncated: z.boolean(), medianSevenDayImpressions: finite.max(Number.MAX_SAFE_INTEGER).nullable(),
-  clicksPerThousandImpressions: finite.max(Number.MAX_SAFE_INTEGER * 1000).nullable(), performancePosts: count.max(3500), performanceLinkPosts: count.max(3500),
+  clicksPerThousandImpressions: finite.max(Number.MAX_SAFE_INTEGER * 3500 * 1000).nullable(), performancePosts: count.max(3500), performanceLinkPosts: count.max(3500),
   sourceSha256: z.string().regex(/^[0-9a-f]{64}$/),
 });
 export const xSchema = z.object({

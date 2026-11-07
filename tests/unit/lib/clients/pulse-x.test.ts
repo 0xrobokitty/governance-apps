@@ -1,9 +1,20 @@
 import { describe, expect, it } from "vitest";
 import { parsePulseFeed, PulseFeedReader } from "@/lib/clients/pulse/feed";
 import { xTrend } from "@/lib/clients/pulse/live";
+import producer from "../../../fixtures/pulse-x-producer.json";
 import { xFixture } from "../../../fixtures/pulse-x";
 const parse = (f = xFixture()) => parsePulseFeed(f, f.generatedAt + 60);
 describe("Pulse X boundary", () => {
+  it("accepts actual Stats 0.12 reducer output from synthetic observations", () => {
+    const f = { ...xFixture(), generatedAt: producer.checkedAt, x: producer };
+    const parsed=parsePulseFeed(f, producer.checkedAt + 60);
+    const trend=xTrend(parsed,30);
+    expect(parsed.x?.history).toHaveLength(14);
+    expect(trend.impressions.at(-1)).toBe(620);
+    expect(trend.linkClicks.at(-1)).toBe(41);
+    expect(trend.latest?.medianSevenDayImpressions).toBe(380);
+    expect(trend.latest?.clicksPerThousandImpressions).toBeCloseTo(60.526315789473685);
+  });
   it("accepts additive X observations while preserving old feeds", () => {
     const f = xFixture();
     expect(parse(f).x?.history).toHaveLength(10);
