@@ -12,13 +12,13 @@ describe("X audience card", () => {
     expect(screen.getAllByRole("tab")).toHaveLength(3);
     expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("1,900");
     expect(screen.getByTestId("pulse-x-details")).not.toHaveAttribute("open");
-    fireEvent.click(screen.getByRole("tab",{name:"Link clicks"}));
+    fireEvent.click(screen.getByRole("tab",{name:"Observed link clicks"}));
     expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("19");
     fireEvent.click(screen.getByRole("tab",{name:"Followers"}));
     expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("90.02K");
     fireEvent.click(screen.getByText("Post performance & coverage"));
     expect(screen.getByText("Median impressions per post")).toBeVisible();
-    expect(screen.getByText("Link clicks / 1,000 impressions")).toBeVisible();
+    expect(screen.getByText("Sample clicks / 1,000 impressions")).toBeVisible();
     expect(screen.getByText(/collection limit was reached/)).toBeVisible();
     expect(screen.getByText(/Net follower change:/)).toHaveTextContent("+2");
   });
@@ -29,6 +29,44 @@ describe("X audience card", () => {
     expect(screen.getByText(/first observation establishes/)).toBeVisible();
     fireEvent.click(screen.getByRole("tab",{name:"Followers"}));
     expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("90K");
+  });
+  it("shows the measured subset beside clicks without inventing a missing-counter denominator", () => {
+    render(<XAudience feed={feed()} period={30} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Observed link clicks" }));
+    const coverage = screen.getByTestId("pulse-x-click-coverage");
+    expect(coverage).toBeVisible();
+    expect(coverage).toHaveTextContent("8 posts contributed comparable click counts.");
+    expect(coverage).toHaveTextContent("Missing click values are unknown, not zero.");
+    expect(coverage).toHaveTextContent("Changes in coverage can affect the trend and its average.");
+    expect(coverage).not.toHaveTextContent("12");
+    expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("19");
+    expect(screen.getAllByText("7D observed average")[0]).toBeVisible();
+    fireEvent.click(screen.getByRole("tab", { name: "Followers" }));
+    expect(screen.queryByTestId("pulse-x-click-coverage")).not.toBeInTheDocument();
+  });
+  it("keeps unknown click activity distinct from a measured zero", () => {
+    const f = feed();
+    f.x!.history.at(-1)!.linkClicks = null;
+    f.x!.history.at(-1)!.measuredLinkPosts = 0;
+    const { rerender } = render(<XAudience feed={f} period={30} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Observed link clicks" }));
+    expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("—");
+    expect(screen.getByTestId("pulse-x-click-coverage")).toHaveTextContent("0 posts contributed");
+    f.x!.history.at(-1)!.linkClicks = 0;
+    f.x!.history.at(-1)!.measuredLinkPosts = 8;
+    rerender(<XAudience feed={f} period={30} />);
+    expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("0");
+    expect(screen.getByTestId("pulse-x-click-coverage")).toHaveTextContent("8 posts contributed");
+  });
+  it("does not describe a first-day baseline as missing click counters", () => {
+    const f = feed();
+    f.x!.history = f.x!.history.slice(0, 1);
+    f.x!.observedAt = f.x!.history[0].observedAt;
+    render(<XAudience feed={f} period={30} />);
+    fireEvent.click(screen.getByRole("tab", { name: "Observed link clicks" }));
+    expect(screen.getByTestId("pulse-x-headline")).toHaveTextContent("—");
+    expect(screen.getByTestId("pulse-x-click-coverage")).toHaveTextContent("Daily click coverage starts after two consecutive observations.");
+    expect(screen.getByTestId("pulse-x-click-coverage")).not.toHaveTextContent("0 posts");
   });
   it("explains an empty selected window without claiming collection is disabled", () => {
     const f=feed(); f.x!.status="stale"; f.generatedAt += 40*86400;

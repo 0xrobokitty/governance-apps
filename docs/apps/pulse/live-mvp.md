@@ -119,3 +119,22 @@ They do not claim a successful live API connection.
 The consumer also tests the actual Rust reducer output in pulse-x-producer.json.
 That file contains 14 synthetic observations, not live account measurements.
 The integration test checks impressions, clicks, and the seven-day performance sample.
+
+## Partial X click coverage
+
+The click tab shows **Observed link clicks** and the number of posts that contributed comparable counters to the latest interval.
+Missing counters remain unknown. The interface does not replace them with zero or estimate a complete account total.
+The seven-day average uses observed totals. A different post subset can affect that average even when audience behavior is unchanged.
+
+A baseline needs a second consecutive observation before daily click activity is available.
+A later missing counter also needs two comparable observations before its change can contribute.
+The performance rate uses impressions and clicks from the same measured link-post sample.
+It does not describe every tracked post or verified website visits.
+
+Stats 0.12.0 does not publish current available/missing click-field counts.
+The dashboard therefore does not infer a missing count from tracked posts minus contributing posts.
+Tracked posts include posts without links and new baselines.
+The Ansible acceptance report separately records exact field availability from the retained capture.
+
+This UI change uses the existing 0.12.0 contract and requires no producer release or history rewrite.
+Pulse remains opt-in through the existing NEXT_PUBLIC_ENABLE_PULSE flag.

@@ -12,8 +12,10 @@ test("X stays in one card with accessible tabs and expandable post performance",
   const card=page.getByTestId("pulse-live-card").filter({has:page.getByRole("heading",{name:"X audience",exact:true})});
   await expect(card.getByTestId("pulse-x-headline")).toHaveText("1,900");
   await expect(card.getByTestId("pulse-x-details")).not.toHaveAttribute("open","");
-  await card.getByRole("tab",{name:"Link clicks",exact:true}).click();
+  await card.getByRole("tab",{name:"Observed link clicks",exact:true}).click();
   await expect(card.getByTestId("pulse-x-headline")).toHaveText("19");
+  await expect(card.getByTestId("pulse-x-click-coverage")).toHaveText(/8 posts contributed comparable click counts/);
+  await expect(card.getByTestId("pulse-x-click-coverage")).toHaveText(/Missing click values are unknown, not zero/);
   await card.getByRole("tab",{name:"Followers",exact:true}).click();
   await expect(card.getByTestId("pulse-x-headline")).toHaveText("90.02K");
   await card.getByText("Post performance & coverage").click();
@@ -25,9 +27,9 @@ test("X stays in one card with accessible tabs and expandable post performance",
   await page.screenshot({path:testInfo.outputPath("x-mobile.png"),fullPage:true});
   await card.getByRole("tab",{name:"Impressions",exact:true}).focus();
   await page.keyboard.press("ArrowRight");
-  await expect(card.getByRole("tab",{name:"Link clicks",exact:true})).toBeFocused();
+  await expect(card.getByRole("tab",{name:"Observed link clicks",exact:true})).toBeFocused();
   await page.getByRole("button",{name:"365D",exact:true}).click();
-  await expect(card.getByRole("img",{name:/X audience: Link clicks/})).toBeVisible();
+  await expect(card.getByRole("img",{name:/X audience: Observed link clicks/})).toBeVisible();
   expect(errors).toEqual([]);
 });
 test("X baseline is not interpreted as daily views",async({page})=>{
@@ -50,7 +52,7 @@ test("Pulse renders the actual producer X contract in light and dark themes",asy
   await page.goto("/pulse");
   await expect(page.getByTestId("pulse-x-headline")).toHaveText("620");
   await page.screenshot({path:testInfo.outputPath("producer-x-desktop.png"),fullPage:true});
-  await page.getByRole("tab",{name:"Link clicks",exact:true}).click();
+  await page.getByRole("tab",{name:"Observed link clicks",exact:true}).click();
   await expect(page.getByTestId("pulse-x-headline")).toHaveText("41");
   await page.getByText("Post performance & coverage").click();
   await expect(page.getByText("60.53",{exact:true})).toBeVisible();
@@ -61,5 +63,6 @@ test("Pulse renders the actual producer X contract in light and dark themes",asy
   await page.screenshot({path:testInfo.outputPath("producer-x-dark.png"),fullPage:true});
   await page.setViewportSize({width:390,height:844});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
+  await expect(card.getByTestId("pulse-x-click-coverage")).toBeVisible();
   await card.screenshot({path:testInfo.outputPath("producer-x-card-mobile.png")});
 });
