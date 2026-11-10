@@ -6,16 +6,51 @@ The browser does not query chains, Envio, Kong, or paid analytics.
 
 ## Activation
 
-For a local review, set these environment values:
+Use Node 24 and npm 11.14.0 for the local build.
 
-    NEXT_PUBLIC_RUNTIME_MODE=preview
-    NEXT_PUBLIC_ENABLE_PULSE=true
-    NEXT_PUBLIC_USE_MOCKS=false
-    PULSE_DATA_URL=https://data.dao-ops.com/prod/pulse.json
+1. Add these values to the ignored `.env.local` file in the repository root:
 
-Then run npm run dev and open /pulse.
+   ```dotenv
+   NEXT_PUBLIC_RUNTIME_MODE=preview
+   NEXT_PUBLIC_ENABLE_PULSE=true
+   NEXT_PUBLIC_USE_MOCKS=false
+   NEXT_PUBLIC_E2E=false
+   NEXT_PUBLIC_RPC_URLS=https://ethereum-rpc.publicnode.com
+   PULSE_DATA_URL=https://data.dao-ops.com/prod/pulse.json
+   ```
+
+2. Install the dependencies:
+
+   ```sh
+   npm ci
+   ```
+
+3. Build the application:
+
+   ```sh
+   npm run build
+   ```
+
+4. Start the local server:
+
+   ```sh
+   npm run start -- --hostname 127.0.0.1 --port 3000
+   ```
+
+5. Open <http://127.0.0.1:3000/pulse>.
+
+For development with automatic reload, use `npm run dev` instead of steps 3 and 4.
+The optimized build still uses the preview runtime for this local review.
+
+The shared wallet shell requires `NEXT_PUBLIC_RPC_URLS` during an optimized build, even in preview mode.
+This public Ethereum endpoint is sufficient for local Pulse review.
+The dashboard reads the Stats feed and does not require a connected wallet.
+A missing WalletConnect project ID only disables that connector in this configuration.
+X credentials belong to GovApps Stats and are not required in this repository.
+
 The producer must publish the feed first.
-The feature remains disabled unless NEXT_PUBLIC_ENABLE_PULSE equals true.
+The feature remains disabled unless `NEXT_PUBLIC_ENABLE_PULSE` equals `true`.
+Changes to `NEXT_PUBLIC_*` values require a new build.
 
 The proxy accepts the production or staging Pulse object on data.dao-ops.com.
 A nonproduction runtime also accepts a loopback HTTP source.
@@ -66,7 +101,6 @@ Resupply is a receivable owed to Yearn.
 
 - TVL and normalized USD or TVL-based capital measures.
 - Complete harvest fees.
-- X metrics until the Stats collector is enabled with read-only credentials.
 - Governance turnout.
 - Combined direct-staking and compounding flows for yLockers.
 
@@ -89,7 +123,7 @@ It requires PULSE_DATA_URL and NEXT_PUBLIC_ENABLE_PULSE=true.
 
 GovApps Stats 0.12 adds the optional pulse-x/v1 section.
 Older feeds without this section remain usable.
-One card contains Impressions, Link clicks, and Followers tabs.
+One card contains Impressions, Observed link clicks, and Followers tabs.
 Post performance and coverage stay in collapsed details.
 There is no advertising split or product attribution.
 
@@ -138,3 +172,31 @@ The Ansible acceptance report separately records exact field availability from t
 
 This UI change uses the existing 0.12.0 contract and requires no producer release or history rewrite.
 Pulse remains opt-in through the existing NEXT_PUBLIC_ENABLE_PULSE flag.
+
+## Local review and rollout
+
+A successful local build does not establish complete data coverage.
+The feed header describes publication freshness. Each source has its own coverage and collection history.
+A fresh publication can contain stale capital observations.
+Missing history remains visible in every range.
+
+For the local acceptance review:
+
+1. Open `/api/pulse-data` and verify that it returns HTTP 200 with `mode: "live"`.
+2. Open `/pulse` and verify that all nine cards appear.
+3. Select each range and verify that missing dates remain gaps.
+4. Open the X Followers tab and compare its value with the latest X observation.
+5. Open the X coverage details and review the baseline and sample counts.
+6. Open Coverage & methods and review each chain's status.
+
+The first X observation provides a follower count and a baseline for post counters.
+Daily activity requires a second consecutive observation.
+A missing activity value is not zero.
+The seven-day average requires seven consecutive measured observations.
+
+Preprod and production activation remain separate work.
+The deployment workflows do not yet pass the Pulse build flag or feed URL.
+Pulse also has no dedicated public host mapping.
+The rollout must configure the build flag, the runtime feed URL, and the intended route.
+A preprod browser review must use the deployed Worker and its actual feed.
+Production readiness also requires an explicit decision about incomplete capital history and unavailable series.
