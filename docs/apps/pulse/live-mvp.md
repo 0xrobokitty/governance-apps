@@ -66,14 +66,15 @@ DNS and public host routing remain separate deployment work.
 | Row | Left | Center | Right |
 | --- | --- | --- | --- |
 | 1 | Vault TVL | Net vault flows | Depositing and withdrawing accounts |
-| 2 | yLockers | Flex | X audience |
-| 3 | YFI governance | Treasury reserves | Product movers |
+| 2 | yLockers | Flex | Product movers |
+| 3 | X audience | YFI governance | Treasury reserves |
 
-Recovery and loans appear below the main grid.
-The toolbar also opens these charts in a dialog, including in wall view.
+Recovery and loans form a tenth card below the main grid, at the same responsive column width.
+In wall view, the first nine cards keep their viewport height. Recovery remains below the fold.
+There is no recovery toolbar button or chart dialog.
 Sources and methods open accessible dialogs. They do not expand the cards.
 The shared dialog traps focus, closes with Escape, and restores its trigger.
-Recovery methods remain inside its chart dialog; dialogs do not nest.
+Recovery methods use the same source dialog as the other cards.
 
 Capital uses only reviewed vault-boundary routes. It never adds registryCapital or scopedCapital totals.
 USD estimates use reference prices near each day's UTC opening.
@@ -103,9 +104,14 @@ Treasury values exclude YFI. Operating holdings do not subtract commitments.
 Dots mark observed treasury and recovery balances. Dashed segments connect sparse observations only.
 Hover values remain unavailable on missing dates.
 
-The yETH shortfall excludes unclaimed eligibility.
-Cash paid and original principal settled are different measurements.
-A 1 WETH claim settled for 0.3 WETH records 1 WETH principal settled and 0.3 WETH cash paid.
+The yETH recovery tab overlays three lines on one WETH axis. The lines are never stacked or added.
+Remaining principal is the only headline. It uses yeth.remaining_principal_weth from the producer.
+It equals allocated original programme principal minus settled principal, including unclaimed eligibility.
+It is not a cash funding gap. A missing remaining-principal metric stays unavailable.
+The other lines show original principal settled and cumulative WETH paid.
+A 1 WETH claim settled for 0.3 WETH records 1 WETH principal settled and 0.3 WETH paid.
+The old issued-share contract target gap remains in methods with its value, date, status, and formula.
+It is not relabeled or substituted for remaining principal.
 Resupply is a receivable owed to Yearn, including interest.
 
 All ranges remain available: 7D, 30D, 90D, and 365D.
@@ -248,8 +254,12 @@ It holds up to 365 closed dates of YFI/USD and same-source YFI/WETH reference pr
 Quotes must be within four hours of UTC opening, with confidence at least 0.9.
 The consumer verifies the fixed-point YFI/WETH ratio and every missing date.
 This history uses separate metric IDs from the current Chainlink quote. The sources are not spliced.
-The governance price tabs show USD and ETH references. Methods expose their meaning and latest quote times.
+The YFI price tab overlays the paired USD and ETH references on aligned dates.
+USD uses a labeled left axis; ETH uses a labeled right axis. Both use independent zero-based scales and readable ticks.
+Line colors match their axes, and hover values retain their currency units.
+The headline shows two separate latest values. It never adds different currencies.
+Methods explain the separate scales and latest quote times.
 
 Historical peg samples can contain only the products deployed at that block. Missing product quotes stay unavailable; they are never zero or forward-filled. Unknown product keys and empty quote maps are rejected.
 
-If daily reference history is empty, the USD tab retains the separate Chainlink observations. The ETH tab appears only when reference history exists. A removed tab falls back to the first available view during refresh.
+If daily reference history is empty, YFI price retains the separate Chainlink USD observations with one axis. It never splices Chainlink into paired market history. A removed optional tab falls back to the first available view during refresh.

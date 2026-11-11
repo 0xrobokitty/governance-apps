@@ -2,7 +2,6 @@
 import { createContext, useContext, useId, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
-import {Modal} from "@/components/ui/Modal";
 import {SourceDetails} from "./SourceDetails";
 import { useLivePulse } from "@/lib/hooks/useLivePulse";
 import {MARKET_METRIC_IDS,marketMetrics} from "@/lib/clients/pulse/market-history";
@@ -21,13 +20,14 @@ const COLORS = [BLUE, PURPLE, "#42a68c", ORANGE, "#c8a444", "#7489a3", "#cb79a8"
 const numeric = (v: number) => new Intl.NumberFormat("en", { maximumFractionDigits: 2, notation: Math.abs(v) >= 10000 ? "compact" : "standard" }).format(v);
 const percent = (v: number) => numeric(v) + "%";
 const usd = (v: number) => "$" + numeric(v);
+const eth = (v:number) => new Intl.NumberFormat("en",{maximumFractionDigits:4}).format(v)+" ETH";
 const PlotHeight = createContext(140);
-type Chart = { integerAxis?:boolean; domain?:[number,number]; dates: string[]; series: TrendSeries[]; format?: (value: number) => string; zero?: boolean; reference?: { value: number; label: string }; markers?: {date: string; label: string}[]; provisional?: boolean[] };
-export function Plot({ title, dates, series, format = numeric, zero, reference, markers, domain, integerAxis }: Chart & { title: string }) {
+type Chart = { axisLabel?:string;rightAxis?:{label:string;format:(value:number)=>string};integerAxis?:boolean; domain?:[number,number]; dates: string[]; series: TrendSeries[]; format?: (value: number) => string; zero?: boolean; reference?: { value: number; label: string }; markers?: {date: string; label: string}[]; provisional?: boolean[] };
+export function Plot({ title, dates, series, format = numeric, zero, reference, markers, domain, integerAxis, axisLabel, rightAxis }: Chart & { title: string }) {
   const height = useContext(PlotHeight);
   const any = series.some(s => s.values.some(v => v !== null));
   return <div className={styles.plot}>
-    {any ? <TrendChart label={title} dates={dates} series={series} format={format} zero={zero} reference={reference} markers={markers} height={height} domain={domain} integerAxis={integerAxis} groupBars detailsHint={c.chartHint} /> : <div style={{height}} className="flex items-center justify-center text-center text-sm text-text-secondary">{c.noData}</div>}
+    {any ? <TrendChart label={title} dates={dates} series={series} format={format} zero={zero} reference={reference} markers={markers} height={height} domain={domain} integerAxis={integerAxis} axisLabel={axisLabel} rightAxis={rightAxis} groupBars detailsHint={c.chartHint} /> : <div style={{height}} className="flex items-center justify-center text-center text-sm text-text-secondary">{c.noData}</div>}
     <div className={styles.legend}>{series.filter(s=>!s.tooltipOnly).map(s => <span key={s.label} className="inline-flex items-center gap-1.5 text-text-secondary"><span className="h-0.5 w-3" style={{ background: s.color }} />{s.label}</span>)}</div>
 
   </div>;
@@ -61,7 +61,7 @@ function MiniTrend({ values, label }: { values: (number | null)[]; label: string
   </svg>;
 }
 
-export function MetricCard({ feed, period, title, options, note, href, scopeLabel,embedded=false,metricSource,methodDetails }: { feed: PulseFeed; period: Period; title: string; options: { value: string; label: string; ids: string[]; format?: (v: number) => string; divisor?: number; headlineId?: string; stacked?:boolean; labels?:string[]; connectGaps?:boolean;href?:string;closed?:boolean }[]; note: string; href: string; scopeLabel?:string;embedded?:boolean;metricSource?:LiveMetric[];methodDetails?:React.ReactNode }) {
+export function MetricCard({ feed, period, title, options, note, href, scopeLabel,embedded=false,metricSource,methodDetails }: { feed: PulseFeed; period: Period; title: string; options: { value: string; label: string; ids: string[]; format?: (v: number) => string; divisor?: number; headlineId?: string; stacked?:boolean; labels?:string[]; connectGaps?:boolean;href?:string;closed?:boolean;axisLabel?:string;rightAxis?:{index:number;label:string;format:(value:number)=>string};headlineLabel?:string }[]; note: string; href: string; scopeLabel?:string;embedded?:boolean;metricSource?:LiveMetric[];methodDetails?:React.ReactNode }) {
   const instance=useId();
   const tabsId="live-"+title.replaceAll(" ","-")+instance;
   const [tab, setTab] = useState(options[0].value);
@@ -69,9 +69,10 @@ export function MetricCard({ feed, period, title, options, note, href, scopeLabe
   const source={generatedAt:feed.generatedAt,metrics:metricSource??feed.metrics};
   const trends = option.ids.map(id => metricTrend(source, period, id,option.closed));
   const format = option.format ?? numeric;
-  const series = trends.map((t, i) => ({ label: option.labels?.[i] ?? t.metric?.label ?? option.label, color: COLORS[i % COLORS.length], connectGaps:option.connectGaps,values: t.values.map(v => v === null ? null : v / (option.divisor ?? 1)) }));
+  const series:TrendSeries[] = trends.map((t, i) => ({ axis:option.rightAxis?.index===i?"right":"left",format:option.rightAxis?.index===i?option.rightAxis.format:format,label: option.labels?.[i] ?? t.metric?.label ?? option.label, color: COLORS[i % COLORS.length], connectGaps:option.connectGaps,values: t.values.map(v => v === null ? null : v / (option.divisor ?? 1)) }));
   const headline = option.headlineId ? metricTrend(source, period, option.headlineId,option.closed) : trends[0];
   const latest = headline?.metric?.latest;
+  const secondaryValue=option.rightAxis?trends[option.rightAxis.index]?.values.findLast(v=>v!==null):undefined;
   const selectedValues = (headline?.values ?? []).map(v => v === null ? null : v / (option.divisor ?? 1)).filter((v): v is number => v !== null) ?? [];
   const sourceStatus = metricStatus([...trends.map(t => t.metric), headline?.metric]);
   const status = scopeLabel && sourceStatus !== "stale" && sourceStatus !== "unavailable" ? scopeLabel : statusLabel(sourceStatus);
@@ -79,8 +80,8 @@ export function MetricCard({ feed, period, title, options, note, href, scopeLabe
   return <Tile title={title} status={status} note={note} href={option.href??href} embedded={embedded} details={<>{methodDetails}{trends.map(t => t.metric && <p key={t.metric.id}>{t.metric.label}: {t.metric.basis}{t.metric.reason ? " · " + t.metric.reason : ""}</p>)}</>}>
     <div className="mt-2"><MetricTabs id={tabsId} label={title} value={option.value} options={options} onChange={setTab} /></div>
     <div id={tabsId+"-panel"} role="tabpanel" aria-labelledby={tabsId+"-"+option.value}>
-      <div className={styles.metric}><strong className="font-number text-2xl">{selectedValues.length ? format(selectedValues.at(-1)!) : "—"}</strong><span className="text-[10px] text-text-secondary">{latest ? dayAt(latest.observedAt) + " · " + (option.divisor ? "%" : trends[0]?.metric?.unit ?? "") : c.pending} · {observed}/{period} {c.observedDays}</span></div>
-      <Plot title={title + ": " + option.label} dates={trends[0]?.dates ?? []} series={option.stacked ? stackSeries(series) : series} format={format} integerAxis={trends[0]?.metric?.unit==="accounts"} zero />
+      <div className={styles.metric}>{option.headlineLabel&&<span className="w-full text-[10px] text-text-secondary">{option.headlineLabel}</span>}<strong className="font-number text-2xl">{selectedValues.length ? format(selectedValues.at(-1)!) : "—"}</strong>{option.rightAxis&&<strong className="font-number text-base">{secondaryValue===undefined||secondaryValue===null?"—":option.rightAxis.format(secondaryValue)}</strong>}<span className="text-[10px] text-text-secondary">{latest ? dayAt(latest.observedAt) + " · " + (option.divisor ? "%" : trends[0]?.metric?.unit ?? "") : c.pending} · {observed}/{period} {c.observedDays}</span></div>
+      <Plot title={title + ": " + option.label} dates={trends[0]?.dates ?? []} series={option.stacked ? stackSeries(series) : series} format={format} integerAxis={trends[0]?.metric?.unit==="accounts"} axisLabel={option.axisLabel} rightAxis={option.rightAxis} zero />
     </div>
   </Tile>;
 }
@@ -211,7 +212,6 @@ export function LivePulsePage() {
   const query = useLivePulse();
   const [period, setPeriod] = useState<Period>(30);
   const [wall, setWall] = useState(false);
-  const [recoveryOpen,setRecoveryOpen]=useState(false);
   const feed = query.data;
   const hasMarketHistory=(feed?.marketHistory?.history.length??0)>0;
   const publishedDays=feed?.reviewedCapital?.coverage.publishedHistory?.days;
@@ -219,10 +219,10 @@ export function LivePulsePage() {
   const windowExceedsPublication=publishedDays!==undefined&&period>publishedDays;
   const accounts=feed?accountTrend(feed,period):null;
   const chains=feed?capitalChains(feed):[];
-  return <PlotHeight.Provider value={wall?108:140}><section aria-label="Pulse dashboard" className={styles.page+(wall?" "+styles.wall:"")}>
+  return <PlotHeight.Provider value={wall?108:140}><section aria-label="Pulse dashboard" className={styles.page+(wall?" "+styles.wall:"")}><div className={styles.overview}>
     <div className={styles.liveHeader+" flex flex-wrap items-center justify-between gap-3"}>
       <div><h1 className="text-2xl font-bold">{c.title}</h1><p className="mt-1 text-sm text-text-secondary">{c.subtitle}</p></div>
-      <div className="flex flex-wrap items-center gap-2"><div role="group" aria-label={c.ranges} className="flex rounded-box bg-surface-secondary p-1">{([7,30,90,365] as const).map(p=><button type="button" key={p} aria-pressed={period===p} onClick={()=>setPeriod(p)} className={"min-h-8 rounded px-3 text-xs "+(period===p?"bg-surface font-bold":"text-text-secondary")}>{p}D</button>)}</div><Button variant="secondary" onClick={()=>setWall(!wall)}>{wall?c.exitWall:c.wall}</Button><Button variant="secondary" onClick={()=>setRecoveryOpen(true)}>{c.recovery}</Button><Button variant="secondary" onClick={()=>void query.refetch()}>{c.retry}</Button></div>
+      <div className="flex flex-wrap items-center gap-2"><div role="group" aria-label={c.ranges} className="flex rounded-box bg-surface-secondary p-1">{([7,30,90,365] as const).map(p=><button type="button" key={p} aria-pressed={period===p} onClick={()=>setPeriod(p)} className={"min-h-8 rounded px-3 text-xs "+(period===p?"bg-surface font-bold":"text-text-secondary")}>{p}D</button>)}</div><Button variant="secondary" onClick={()=>setWall(!wall)}>{wall?c.exitWall:c.wall}</Button><Button variant="secondary" onClick={()=>void query.refetch()}>{c.retry}</Button></div>
     </div>
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary"><span data-testid={windowExceedsPublication?"pulse-capital-horizon":undefined}>{windowExceedsPublication?publicationNote:c.live}</span><span>{feed?c.updated+" "+new Date(feed.generatedAt*1000).toISOString().replace("T"," ").slice(0,19)+" UTC":c.loading}</span></div>
     {(query.stale||query.isError)&&<p role="status" className="mb-3 rounded-box border border-border p-2 text-sm text-text-secondary">{query.stale?c.stale:c.failed}</p>}
@@ -243,31 +243,32 @@ export function LivePulsePage() {
           {value:"accounts",label:c.flexAccounts,ids:["flex.borrower_accounts"]},
           {value:"fees",label:c.flexFees,ids:["flex.claimable_fees_usd"],format:usd}]}/>
 
+        <Movers feed={feed} period={period}/>
         <XAudience feed={feed} period={period}/>
-        <MetricCard feed={feed} period={period} title={c.governance} metricSource={[...feed.metrics.filter(m=>!MARKET_METRIC_IDS.some(id=>id===m.id)),...marketMetrics(feed.marketHistory)]} methodDetails={hasMarketHistory&&feed.marketHistory&&<><p>{c.marketNote}</p>{feed.marketHistory.history.at(-1)&&<p>{c.marketSamples(new Date(feed.marketHistory.history.at(-1)!.yfiQuoteAt*1000).toISOString(),new Date(feed.marketHistory.history.at(-1)!.wethQuoteAt*1000).toISOString())}</p>}</>} note={c.governanceNote} href="https://styfi.yearn.fi" options={[
+        <MetricCard feed={feed} period={period} title={c.governance} metricSource={[...feed.metrics.filter(m=>!MARKET_METRIC_IDS.some(id=>id===m.id)),...marketMetrics(feed.marketHistory)]} methodDetails={hasMarketHistory&&feed.marketHistory&&<><p>{c.marketNote}</p><p>{c.priceAxesNote}</p>{feed.marketHistory.history.at(-1)&&<p>{c.marketSamples(new Date(feed.marketHistory.history.at(-1)!.yfiQuoteAt*1000).toISOString(),new Date(feed.marketHistory.history.at(-1)!.wethQuoteAt*1000).toISOString())}</p>}</>} note={c.governanceNote} href="https://styfi.yearn.fi" options={[
           {value:"stake",label:c.stake,ids:["yfi.veyfi_migrated","yfi.liquid_lockers_backing","yfi.styfix","yfi.styfi_direct"],labels:["Migrated veYFI","Liquid lockers","stYFIx","Direct stYFI"],headlineId:"yfi.participating",stacked:true},
           {value:"rate",label:c.rate,ids:["yfi.participation_rate_bps"],divisor:100,format:percent},
           {value:"apr",label:c.apr,ids:["yfi.styfix_apr_bps"],divisor:100,format:percent},
-          {value:"price",label:c.priceUsd,ids:[hasMarketHistory?"yfi.market_price_usd":"yfi.price_usd"],labels:[hasMarketHistory?c.marketUsdLabel:c.chainlinkUsdLabel],format:usd,closed:hasMarketHistory,href:hasMarketHistory?feed.marketHistory?.sourceUrl:undefined},
-          ...(hasMarketHistory?[{value:"price-eth",label:c.priceEth,ids:["yfi.market_price_eth"],closed:true,href:feed.marketHistory?.sourceUrl}]:[]),
+          {value:"price",label:c.price,ids:hasMarketHistory?["yfi.market_price_usd","yfi.market_price_eth"]:["yfi.price_usd"],labels:hasMarketHistory?[c.marketUsdLabel,c.marketEthLabel]:[c.chainlinkUsdLabel],format:usd,closed:hasMarketHistory,href:hasMarketHistory?feed.marketHistory?.sourceUrl:undefined,axisLabel:hasMarketHistory?"USD":undefined,rightAxis:hasMarketHistory?{index:1,label:"ETH",format:eth}:undefined},
           ...(feed.metrics.some(m=>m.id==="yfi.turnout_bps"&&m.history.length)?[{value:"votes",label:c.turnout,ids:["yfi.turnout_bps"],divisor:100,format:percent}]:[]),
         ]}/>
         <MetricCard feed={feed} period={period} title={c.treasury} scopeLabel={c.pricedHoldings} note={c.treasuryNote} href="https://treasury.yearn.fi" options={[
           {value:"operating",label:c.operating,ids:["treasury.available_operating_ex_yfi_usd"],format:usd,connectGaps:true},
           {value:"holdings",label:c.holdings,ids:["treasury.priced_ex_yfi_usd"],format:usd,connectGaps:true},
         ]}/>
-        <Movers feed={feed} period={period}/>
-
       </div>
-      {!wall&&<div className="mt-4" data-testid="pulse-recovery-section"><RecoveryCard feed={feed} period={period}/></div>}
-      <Modal isOpen={recoveryOpen} onClose={()=>setRecoveryOpen(false)} title={c.recovery} className="max-w-3xl" fitVisualViewport><div className="max-h-[75dvh] overflow-auto"><RecoveryCard feed={feed} period={period} embedded/></div></Modal>
     </>}
+    </div>
+    {feed&&<div className={styles.grid+" mt-4"} data-testid="pulse-recovery-section"><RecoveryCard feed={feed} period={period}/></div>}
   </section></PlotHeight.Provider>;
 }
 
-function RecoveryCard({feed,period,embedded=false}:{feed:PulseFeed;period:Period;embedded?:boolean}) {
- return <MetricCard feed={feed} period={period} title={c.recovery} note={c.recoveryNote} href="https://yeth.yearn.fi" embedded={embedded} options={[
-  {value:"gap",label:c.gap,ids:["recovery.target_gap_weth"],connectGaps:true},{value:"paid",label:c.paid,ids:["recovery.cash_paid_weth"],connectGaps:true},
-  {value:"principal",label:c.principal,ids:["recovery.principal_settled_weth"],connectGaps:true},{value:"loans",label:c.loans,ids:["loans.resupply_crvusd"],connectGaps:true,href:"https://treasury.yearn.fi"},
- ]}/>;
+function RecoveryCard({feed,period}:{feed:PulseFeed;period:Period}) {
+ const target=feed.metrics.find(m=>m.id==="recovery.target_gap_weth");
+ return <MetricCard feed={feed} period={period} title={c.recovery} note={c.recoveryProgrammeNote} href="https://yeth.yearn.fi"
+  methodDetails={<><p>{c.recoveryPaymentsNote}</p><p>{c.recoveryExample}</p><p>{c.issuedGapLabel}: {target?.latest?numeric(Number(target.latest.value))+" WETH · "+dayAt(target.latest.observedAt)+" · "+statusLabel(target.status):c.pending}.</p><p>{c.issuedGapNote}</p></>}
+  options={[
+   {value:"yeth",label:c.recoverySeries,ids:["yeth.remaining_principal_weth","recovery.principal_settled_weth","recovery.cash_paid_weth"],labels:[c.remainingPrincipal,c.settledPrincipal,c.wethPaid],headlineLabel:c.remainingPrincipal,connectGaps:true},
+   {value:"loans",label:c.loans,ids:["loans.resupply_crvusd"],connectGaps:true,href:"https://treasury.yearn.fi"},
+  ]}/>;
 }

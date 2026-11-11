@@ -41,3 +41,27 @@ describe("Pulse stacked trend gaps",()=>{
     fireEvent.keyDown(screen.getByRole("img"),{key:"ArrowLeft"});
     expect(screen.getByText("No observation")).toBeVisible();
   });
+
+describe("Pulse currency axes",()=>{
+ it("uses independent zero-based scales, aligned dates and currency-specific hover values",()=>{
+  vi.stubGlobal("ResizeObserver",class {observe(){} disconnect(){}});
+  const {container}=render(<TrendChart label="YFI price" dates={["2026-11-01","2026-11-02"]}
+   series={[{label:"YFI / USD",color:"blue",values:[1000,2000]},{label:"YFI / ETH",color:"purple",values:[1,2],axis:"right"}]}
+   format={v=>"$"+v} axisLabel="USD" rightAxis={{label:"ETH",format:v=>v+" ETH"}} zero/>);
+  const left=container.querySelector('g[data-axis="left"] > path')!,right=container.querySelector('g[data-axis="right"] > path')!;
+  expect(left.getAttribute("d")).toBe(right.getAttribute("d"));
+  expect(screen.getByText("$0")).toBeVisible();expect(screen.getByText("0 ETH")).toBeVisible();
+  expect(screen.getByText("USD")).toHaveAttribute("fill","blue");expect(screen.getByText("ETH")).toHaveAttribute("fill","purple");
+  expect(screen.getByRole("img")).toHaveAccessibleName(/USD uses the left axis; ETH uses the right axis/);
+  fireEvent.keyDown(screen.getByRole("img"),{key:"ArrowRight"});
+  expect(screen.getAllByText("$2000").at(-1)).toBeVisible();expect(screen.getAllByText("2 ETH").at(-1)).toBeVisible();
+  fireEvent.keyDown(screen.getByRole("img"),{key:"ArrowLeft"});
+  expect(screen.getAllByText("$1000").at(-1)).toBeVisible();expect(screen.getAllByText("1 ETH").at(-1)).toBeVisible();
+ });
+ it("does not add an ETH scale to a USD-only fallback or fill a missing quote",()=>{
+  vi.stubGlobal("ResizeObserver",class {observe(){} disconnect(){}});
+  render(<TrendChart label="YFI price" dates={["2026-11-01","2026-11-02"]} series={[{label:"Chainlink USD",color:"blue",values:[2000,null]}]} format={v=>"$"+v} zero/>);
+  expect(screen.queryByTestId("pulse-right-axis")).not.toBeInTheDocument();
+  fireEvent.keyDown(screen.getByRole("img"),{key:"ArrowRight"});expect(screen.getByText("No observation")).toBeVisible();
+ });
+});

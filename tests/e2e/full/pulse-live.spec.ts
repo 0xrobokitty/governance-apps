@@ -33,7 +33,7 @@ test("Pulse live feed uses nine cards, real observations and visible gaps", asyn
   await expect(page.getByRole("tab",{name:"Net flows",exact:true})).toHaveCount(0);
   await page.setViewportSize({width:1920,height:1080});
   await page.getByRole("button", {name:"Wall view",exact:true}).click();
-  const lastCard = page.getByTestId("pulse-live-card").last();
+  const lastCard = page.getByTestId("pulse-main-grid").getByTestId("pulse-live-card").last();
   expect((await lastCard.boundingBox())!.y + (await lastCard.boundingBox())!.height).toBeLessThanOrEqual(1080);
   const moversCard=page.getByTestId("pulse-live-card").filter({has:page.getByRole("heading",{name:"Product movers",exact:true})});
   const moversBody=await moversCard.getByRole("table").boundingBox();
@@ -81,7 +81,7 @@ test("Pulse global overview keeps chain and price detail inside compact cards",a
   await page.getByRole("tab",{name:"Net flows",exact:true}).click();
   await expect(page.getByRole("tabpanel",{name:"Net flows",exact:true})).toContainText("$");
   await page.getByRole("button",{name:"Wall view",exact:true}).click();
-  const last=await page.getByTestId("pulse-live-card").last().boundingBox();
+  const last=await page.getByTestId("pulse-main-grid").getByTestId("pulse-live-card").last().boundingBox();
   expect(last!.y+last!.height).toBeLessThanOrEqual(1080);
   await page.screenshot({path:testInfo.outputPath("pulse-global-wall.png")});
   await page.getByRole("button",{name:"Exit wall view",exact:true}).click();
@@ -90,7 +90,7 @@ test("Pulse global overview keeps chain and price detail inside compact cards",a
   await page.screenshot({path:testInfo.outputPath("pulse-global-mobile.png"),fullPage:true});
 });
 
-test("Flex stays separate and source dialogs keep recovery accessible in wall view",async({page},testInfo)=>{
+test("Flex stays separate, paired prices share a tab, and recovery stays below the wall grid",async({page},testInfo)=>{
  const f={...flexFixture(),marketHistory:marketFixture().marketHistory};
  await page.route("**/api/pulse-data",route=>route.fulfill({json:f}));
  await page.setViewportSize({width:1920,height:1080});await page.goto("/pulse");
@@ -104,21 +104,34 @@ test("Flex stays separate and source dialogs keep recovery accessible in wall vi
  await expect(page.getByRole("dialog")).toContainText("not added to Yearn TVL");
  await page.keyboard.press("Escape");
  await expect(flex.getByRole("button",{name:"Details: Flex",exact:true})).toBeFocused();
- await page.getByRole("tab",{name:"YFI / ETH",exact:true}).click();
- await expect(page.getByRole("tabpanel",{name:"YFI / ETH",exact:true})).toContainText("0.7");
+ await page.getByRole("tab",{name:"YFI price",exact:true}).click();
+ await expect(page.getByRole("tabpanel",{name:"YFI price",exact:true})).toContainText("0.7");
  await page.getByRole("button",{name:"Wall view",exact:true}).click();
- await expect(page.getByTestId("pulse-live-card")).toHaveCount(9);
- const recovery=page.getByRole("button",{name:"Recovery & loans",exact:true});
- await recovery.click();
- await expect(page.getByRole("dialog")).toHaveCount(1);
- await expect(page.getByRole("dialog").getByRole("button",{name:/Details:/})).toHaveCount(0);
- await expect(page.getByRole("tab",{name:"yETH shortfall",exact:true})).toBeVisible();
- await page.getByRole("tab",{name:"Resupply receivable",exact:true}).click();
- await expect(page.getByRole("dialog")).toContainText("owed to Yearn");
- await page.keyboard.press("Tab");
- await expect(page.getByRole("dialog")).toHaveCount(1);
- await page.keyboard.press("Escape");await expect(recovery).toBeFocused();
+ await expect(page.getByTestId("pulse-live-card")).toHaveCount(10);
+ await expect(grid.getByTestId("pulse-live-card")).toHaveCount(9);
+ await expect(grid.getByRole("heading")).toHaveText(["Vault TVL","Net vault flows","Depositing & withdrawing accounts","yLockers","Flex","Product movers","X audience","YFI governance","Treasury reserves"]);
+ await expect(page.getByTestId("pulse-right-axis")).toHaveCount(1);
+ await expect(page.getByRole("tabpanel",{name:"YFI price",exact:true})).toContainText("$2,100");
+ await expect(page.getByRole("tabpanel",{name:"YFI price",exact:true})).toContainText("0.7 ETH");
+ await expect(page.getByRole("button",{name:"Recovery & loans",exact:true})).toHaveCount(0);
+ await page.evaluate(()=>scrollTo(0,0));
+ const ninth=await grid.getByTestId("pulse-live-card").last().boundingBox();
+ expect(ninth!.y+ninth!.height).toBeLessThanOrEqual(1080);
+ const recovery=page.getByTestId("pulse-recovery-section");
+ const recoveryBox=await recovery.boundingBox(),firstBox=await grid.getByTestId("pulse-live-card").first().boundingBox();
+ expect(recoveryBox!.y).toBeGreaterThanOrEqual(1080);
+ const recoveryCard=await recovery.getByTestId("pulse-live-card").boundingBox();
+ expect(Math.abs(recoveryCard!.width-firstBox!.width)).toBeLessThan(1);
  await page.screenshot({path:testInfo.outputPath("pulse-flex-wall.png")});
+ await recovery.getByRole("tab",{name:"Resupply receivable",exact:true}).click();
+ await recovery.getByRole("button",{name:"Details: Recovery & loans",exact:true}).click();
+ await expect(page.getByRole("dialog")).toHaveCount(1);
+ await expect(page.getByRole("dialog")).toContainText("owed to Yearn");
+ await page.keyboard.press("Escape");
+ await expect(recovery.getByRole("button",{name:"Details: Recovery & loans",exact:true})).toBeFocused();
+ await recovery.getByRole("tab",{name:"yETH recovery",exact:true}).click();
+ await expect(recovery.getByText("Remaining principal",{exact:true}).first()).toBeVisible();
+ await page.screenshot({path:testInfo.outputPath("pulse-recovery-below-wall.png")});
  await page.setViewportSize({width:390,height:844});
  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
 });

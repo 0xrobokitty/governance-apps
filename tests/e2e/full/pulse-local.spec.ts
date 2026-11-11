@@ -63,7 +63,7 @@ test("Pulse renders the real local Stats response through its API proxy",async({
   await page.screenshot({path:testInfo.outputPath("live-desktop.png"),fullPage:true});
   await page.setViewportSize({width:1920,height:1080});
   await page.getByRole("button",{name:"Wall view",exact:true}).click();
-  const last=await page.getByTestId("pulse-live-card").last().boundingBox();
+  const last=await page.getByTestId("pulse-main-grid").getByTestId("pulse-live-card").last().boundingBox();
   expect(last!.y+last!.height).toBeLessThanOrEqual(1080);
   await page.screenshot({path:testInfo.outputPath("live-wall.png")});
   await page.getByRole("button",{name:"Exit wall view",exact:true}).click();

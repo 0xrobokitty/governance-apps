@@ -200,6 +200,16 @@ export const finance = {
 } as const;
 
 export const liveCopy = {
+  recoverySeries:"yETH recovery",remainingPrincipal:"Remaining principal",settledPrincipal:"Principal settled",wethPaid:"WETH paid",
+  recoveryProgrammeNote:"Remaining principal is original programme principal not yet settled, including unclaimed eligibility. It is not the cash required to settle claims. The three lines share one WETH axis; they are not stacked or added.",
+  recoveryPaymentsNote:"Principal settled is original principal retired through verified exits or settlements. WETH paid is cumulative WETH actually paid to claimants, with internal transfers counted once. Discounted payouts can settle a larger principal amount. Dashed spans join actual observations; they do not create daily measurements.",
+  recoveryExample:"On 8 November, 25.6135 WETH of principal was settled for 8.3690 WETH paid. Remaining principal fell by 25.6135 WETH.",
+  issuedGapLabel:"Issued-share contract target gap",
+  issuedGapNote:"This separate contract measure is max(issued recovery shares × 3.12883 WETH per share − accounted assets, 0). It excludes unclaimed eligibility and can move with profit-locking supply. It is not remaining original principal or cash required.",
+
+  marketEthLabel:"YFI / ETH · daily reference",
+  priceAxesNote:"USD uses the left axis and ETH uses the right axis. The two currencies use separate zero-based scales; their line heights do not compare amounts.",
+
   marketUsdLabel:"YFI / USD · daily reference",chainlinkUsdLabel:"YFI / USD · Chainlink",
   priceUsd:"YFI / USD",priceEth:"YFI / ETH",marketNote:"Price history uses DeFiLlama reference prices near UTC opening. YFI/ETH uses YFI and WETH prices from that same source. Quotes can differ by up to four hours from the daily boundary; these are not exact closing prices.",marketSamples:(yfi:string,weth:string)=>"Latest quote times: YFI "+yfi+" · WETH "+weth+".",
   parity:"100% parity",
@@ -258,7 +268,7 @@ export const liveCopy = {
   governanceNote: "Matches the staking app: direct stYFI + stYFIx + migrated veYFI + liquid-locker YFI backing. stYFIx is removed from direct stYFI to avoid double counting. Cooldown is excluded. Supply share divides this total by YFI supply. APR is the value reported by Stats; it is not a compounded APY.",
   treasury: "Treasury reserves", operating: "Operating", holdings: "All priced, ex-YFI",
   treasuryNote: "Priced holdings excluding YFI. Available operating holdings do not subtract commitments. Market prices can change these amounts. Dots are observed balances; dashed lines only connect observations across missing dates. They do not supply daily values.",
-  recovery: "Recovery & loans", gap: "yETH shortfall", paid: "yETH cash paid", principal: "yETH principal settled", loans: "Resupply receivable",
+  recovery: "Recovery & loans", gap: "yETH shortfall", paid: "yETH paid", principal: "yETH principal settled", loans: "Resupply receivable",
   recoveryNote: "yETH shortfall is the 3.12883 WETH target per issued recovery share, less accounted assets. Unclaimed eligibility is excluded. Cash paid counts verified payouts. Principal settled is original claim principal retired, including discounted exits. For example, settling a 1 WETH claim for 0.3 WETH records 1 WETH principal settled and 0.3 WETH cash paid. Resupply is the receivable owed to Yearn, including interest. Dashed lines join observations across missing dates; they do not supply daily values.",
   methodLink: "Open source dashboard", liveHistory: "Each series shows only verified observations. Historical coverage can differ by source. 7D / 30D / 90D / 365D never fill missing dates.",
   chartHint: "Hover the chart or use left and right arrow keys to inspect daily values. Details explains the source and coverage.",
