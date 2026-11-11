@@ -56,7 +56,12 @@ A failed or stale chain read cannot authorize a transaction from the Stats feed.
 | Claims settled | Settled principal divided by original allocated principal, including verified manual settlements |
 | Auction fills | Verified receipts, with personal or reference recovery labelled separately |
 
-Personal principal requires complete, current accounting and a matching onchain share balance.
+Holder counts require a current share supply reconciliation. Represented claims also require the issued principal reconciliation. Personal claims require a matching onchain share balance.
+Settled claims require the current programme reconciliation and manual evidence.
+The funding panel shows classified amounts and reports unclassified allocations with transaction evidence when available.
+The percentage split requires complete funding classification.
+Yearn revenue share contributes to auction funding. The vault income forecast uses the current capital and supply and a reconciled income window.
+Measured prices remain available when the producer has verified the price observations.
 The application also checks for transfers after the indexed block.
 Without that proof, it shows executable WETH amounts and leaves personal percentages unavailable.
 Unrelated WETH in the wallet never counts as recovered principal.

@@ -111,13 +111,13 @@ beforeEach(() => {
       shares: options.chain?.shares ?? 0n, asOf: options.chain?.blockTimestamp ?? NOW,
       live: {
         principalKnown: false, principalUnavailableReason: null,
-        accountingComplete: true, historyCurrent: true, feedFresh: true, chainFresh,
+        historyCurrent: true, feedFresh: true, chainFresh,
         chainAsOf: options.chain?.blockTimestamp ?? null, feedAsOf: NOW, indexedAt: NOW - 12,
         directAssets: chainFresh ? options.chain?.directAssets ?? null : null,
         maxRedeem: chainFresh ? options.chain?.maxRedeem ?? null : null,
         targetAssetsPerShare: parseEther("3"), dailyAssetsPerShareGrowth: null,
         publicReferenceRecovery: .34, measuredPerformance: [], ppsHistory: [],
-        fundingTotals: null, holderDataCurrent: true, programmeCurrent: true, producerVersion: "0.10.0",
+        fundingTotals: null, holderDataCurrent: true, holderPrincipalCurrent: true, programmeCurrent: true, producerVersion: "0.10.0",
       },
     };
   });

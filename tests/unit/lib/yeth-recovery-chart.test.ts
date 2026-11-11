@@ -13,7 +13,7 @@ export function chartSnapshot() {
   s.live = {
     targetAssetsPerShare: parseEther("3.12883"),
     dailyAssetsPerShareGrowth: parseEther("0.000172349697541250"),
-    feedFresh: true, historyCurrent: true, accountingComplete: true,
+    feedFresh: true, historyCurrent: true,
     ppsHistory: [{ at: s.now - 253 * 86400, pps: 1 }, { at: s.now - 86400, pps: 1.0732 }],
   } as RecoveryLiveMetadata;
   return s;
@@ -32,7 +32,7 @@ describe("recovery PPS chart domain", () => {
     expect(data.history.every(p => p.kind === "observed")).toBe(true);
     expect((data.current.at - data.startAt) / (data.endAt - data.startAt)).toBeLessThan(.03);
   });
-  it.each(["feedFresh", "historyCurrent", "accountingComplete"] as const)("withholds extrapolation when %s is false but retains the target scale", key => {
+  it.each(["feedFresh", "historyCurrent"] as const)("withholds extrapolation when %s is false but retains the target scale", key => {
     const s = chartSnapshot(); s.live![key] = false;
     const data = recoveryPpsChart(s)!;
     expect(data.projected).toEqual([]);
