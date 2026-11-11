@@ -14,7 +14,7 @@ describe("Pulse history cards", () => {
     expect(screen.getByTestId("pulse-tvl-annotation")).toHaveTextContent("16 Oct · TVL accounting changed");
     expect(screen.getAllByText(/Latest quote · provisional/)[0]).toBeVisible();
     fireEvent.click(screen.getByTestId("pulse-tvl-annotation"));
-    expect(await screen.findByRole("dialog")).toHaveTextContent("cannot establish how much was withdrawals versus accounting");
+    expect(await screen.findByRole("dialog")).toHaveTextContent(feed().tvlHistory!.annotations[0].detail);
   });
   it("shows absence instead of silently substituting Kong TVL", () => {
     const f=feed(); delete f.tvlHistory;
