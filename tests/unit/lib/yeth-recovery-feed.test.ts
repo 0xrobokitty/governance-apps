@@ -43,6 +43,10 @@ function fixture() {
     capital: { complete: true, block },
     accounting: { complete: true, historyComplete: true },
     programme: { block, complete: true, current: true, source: { observedAt: NOW, maxAgeSeconds: 900 }, principal: { allocatedWei: amount(500), totalSettledWei: amount(100), activeHolderWei: amount(400), unsettledCustodyWei: "0", unclaimedEligibilityWei: "0", unattributedAdministrativeDebitsWei: "0", claimBookResidualWei: "0" } },
+    claimExitCohort: { basis: "original-claim-window/v1", principalMethod: "claim-event-proportional-transfers/v1",
+      block, complete: true, current: true, claimedPrincipalWei: amount(450), exitedPrincipalWei: amount(50),
+      remainingHolderPrincipalWei: amount(400), unsettledCustodyPrincipalWei: "0", unattributedRetiredPrincipalWei: "0",
+      unresolvedPrincipalWei: "0" },
     quality: { snapshotMaxAgeSeconds: 300, historyMaxAgeSeconds: 1800, historyStatus: "current", finalizedHead: block, unindexedFinalizedBlocks: 0 },
     baseline: { block: { ...block, timestamp: NOW - 86400 }, normalizedRecoveryWad: "300000000000000000" },
     history, holders, auctionHistory,
@@ -52,7 +56,7 @@ function fixture() {
     forecast: { method: "current-capital-net-recovery-income/v2", forecastFrom: NOW, basis: { windowDays: 90, historySha256: history.sha256 }, dailyAssetsPerShareGrowthWad: "1000000000000000", fullRecoveryWad: "900000000000000000", targets: [{ targetBps: 10000, status: "estimated", days: 1500 }] },
     performance: { basis: "observed-pps/v1", notAForecast: true, windows: [{ windowDays: 30, status: "measured", periodReturnWad: "10000000000000000", annualizedReturn: .128, closingBlock: block }] },
   };
-  return { head, documents, bodies };
+  return { head, documents, bodies, add, pages };
 }
 function chain() {
   return { address: ADDRESS, blockTimestamp: NOW, shares: 100n * WAD, allowance: 0n, wethBalance: 999n * WAD, directAssets: 150n * WAD, maxRedeem: 100n * WAD, vaultPps: 1500000000000000000n, recoveryRate: 300000000000000000n, auction: null, positionTransfersSinceIndexed: false };
@@ -110,23 +114,75 @@ describe("live recovery accounting", () => {
     f.head.accounting.complete = false;
     f.head.programme.complete = false;
     const s = buildRecoverySnapshot(parseRecoveryFeed(f, NOW), { now: NOW, address: ADDRESS, chain: chain() });
-    expect(s.live?.principalKnown).toBe(false);
-    expect(s.live?.fundingTotals).toBeNull();
+    expect(s.live?.principalKnown).toBe(true);
+    expect(s.live?.fundingTotals?.complete).toBe(true);
     expect(exitedClaims(s)).toBeNull();
-    expect(holderDistribution(s)).toBeNull();
+    expect(holderDistribution(s)?.accounts).toBe(1);
     expect(recoveryChoices(s).directValue).toBe(150n * WAD);
+  });
+  it("retains reconciled holder and claim principal when new auction funding is unclassified", () => {
+    const f = fixture();
+    f.head.accounting.complete = false;
+    f.head.funding.complete = false;
+    f.head.funding.unknownWei = amount(1);
+    const transaction = "0x" + "b".repeat(64);
+    Object.assign(f.head.funding, { evidence: f.pages([
+      f.add("yeth-recovery-funding-page/v1", { values: [{
+        id: "deposit:allocation", economicFlowId: "1:" + transaction + ":356:v1",
+        block, destination: "auction", source: "unknown", amountWei: amount(1),
+      }] }, 1),
+    ]) });
+    const s = buildRecoverySnapshot(parseRecoveryFeed(f, NOW), { now: NOW, address: ADDRESS, chain: chain() });
+    expect(holderDistribution(s)?.representedClaim).toBe(400n * WAD);
+    expect(recoveryChoices(s).claimValue).toBe(400n * WAD);
+    expect(exitedClaims(s)?.fraction).toBe(.2);
+    expect(recoveryFunding(s)).toMatchObject({
+      total: 30n * WAD, complete: false, vaultPercent: null, unclassified: WAD,
+      pendingSources: [{ amount: WAD, destination: "auction", transactionHash: transaction }],
+    });
+    expect(recoveryProjectionYears(s)).toBeCloseTo(1500 / 365);
+    expect(poolProgress(s).milestones.some(m => m.years !== null)).toBe(true);
   });
   it("withholds future-dated manual ledger observations", () => {
     const f = fixture(); f.head.programme.source.observedAt = NOW + 61;
     const s = buildRecoverySnapshot(parseRecoveryFeed(f, NOW), { now: NOW, address: ADDRESS, chain: chain() });
     expect(s.live?.programmeCurrent).toBe(false);
-    expect(recoveryTarget(s,50).status).toBe("unavailable");
+    expect(exitedClaims(s)).toBeNull();
+    expect(recoveryTarget(s, 50).status).toBe("estimated");
   });
-  it("withholds programme/personal metrics for stale manual settlement evidence", () => {
+  it("withholds settled-claim totals for stale manual evidence and keeps verified share principal", () => {
     const f = fixture(); f.head.programme.source.observedAt = NOW - 901;
     const s = buildRecoverySnapshot(parseRecoveryFeed(f, NOW), { now: NOW, address: ADDRESS, chain: chain() });
-    expect(s.live?.principalKnown).toBe(false);
+    expect(s.live?.principalKnown).toBe(true);
     expect(exitedClaims(s)).toBeNull();
+    expect(holderDistribution(s)?.accounts).toBe(1);
+  });
+  it("shows holder balances when issued principal has not reconciled", () => {
+    const f = fixture();
+    f.head.claimExitCohort.complete = false;
+    const s = buildRecoverySnapshot(parseRecoveryFeed(f, NOW), { now: NOW, address: ADDRESS, chain: chain() });
+    expect(holderDistribution(s)).toMatchObject({ accounts: 1, representedClaim: null });
+    expect(s.live?.principalKnown).toBe(false);
+    expect(exitedClaims(s)?.fraction).toBe(.2);
+  });
+  it("includes Yearn revenue share in auction funding and keeps yield separate", () => {
+    const f = fixture();
+    Object.assign(f.head.funding.auctions, { yearnRevenueShareWei: amount(10) });
+    const s = buildRecoverySnapshot(parseRecoveryFeed(f, NOW), { now: NOW });
+    expect(recoveryFunding(s)).toMatchObject({
+      total: 40n * WAD, auctions: 15n * WAD, yearnRevenueShare: 10n * WAD,
+      yieldReceived: 23n * WAD, vaultPercent: 62.5, complete: true,
+    });
+  });
+  it("withholds a forecast whose capital inputs disagree with the observation", () => {
+    const f = fixture();
+    Object.assign(f.head.forecast, { inputs: {
+      status: "estimated", windowDays: 90, currentEarningCapitalWei: amount(999), currentRecoverySharesWei: amount(100),
+    } });
+    const s = buildRecoverySnapshot(parseRecoveryFeed(f, NOW), { now: NOW });
+    expect(recoveryProjectionYears(s)).toBeNull();
+    expect(recoveryFunding(s).vaultPercent).not.toBeNull();
+    expect(holderDistribution(s)?.accounts).toBe(1);
   });
   it("does not publish dates beyond the producer's 100-year horizon", () => {
     const s = snapshot(); s.live!.dailyAssetsPerShareGrowth = 1n;
@@ -176,7 +232,7 @@ describe("recovery feed boundaries", () => {
   it.skipIf(!process.env.YETH_AUDIT_JSON)("accepts the verified public production graph", () => {
     const raw = JSON.parse(readFileSync(process.env.YETH_AUDIT_JSON!,"utf8"));
     const data = parseRecoveryFeed(raw,raw.head.generatedAt);
-    expect(data.head.accounting.complete).toBe(true);
+    expect(data.head.schema).toBe("yeth-recovery/v3");
     expect(data.days.length).toBeGreaterThan(250);
   });
 });

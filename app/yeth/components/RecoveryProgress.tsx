@@ -85,16 +85,16 @@ export function RecoveryProgress({ snapshot }: { snapshot: RecoverySnapshot }) {
 export function RecoveryHolders({ snapshot }: { snapshot: RecoverySnapshot }) {
   const data = holderDistribution(snapshot);
   const exited = exitedClaims(snapshot);
-  if (!data) return <p className="text-sm text-text-secondary">{copy.holdersUnavailable}</p>;
   return <section className="space-y-6">
     <div><h2 className="text-xl font-bold">{copy.holdersTitle}</h2></div>
     <div className="grid grid-cols-2 gap-5 md:grid-cols-3">
-      {[{ label: copy.holderAccounts, value: String(data.accounts) }, { label: copy.holderClaim, value: amount(data.representedClaim, 0) + " ETH" }, { label: snapshot.live ? production.programmeSettled : live.exited, value: exited ? pct(exited.fraction) : "—", note: exited ? (snapshot.live ? production.programmeSettledAmount : live.exitedAmount)(amount(exited.exited, 0), amount(exited.total, 0)) : undefined }].map(item => <div key={item.label}><p className="text-xs text-text-secondary">{item.label}</p><p className="mt-2 font-number text-2xl font-bold">{item.value}</p>{"note" in item && item.note && <p className="mt-2 text-xs text-text-secondary">{item.note}</p>}</div>)}
+      {[{ label: copy.holderAccounts, value: data ? String(data.accounts) : "—" }, { label: copy.holderClaim, value: data?.representedClaim != null ? amount(data.representedClaim, 0) + " ETH" : "—" }, { label: snapshot.live ? production.programmeSettled : live.exited, value: exited ? pct(exited.fraction) : "—", note: exited ? (snapshot.live ? production.programmeSettledAmount : live.exitedAmount)(amount(exited.exited, 0), amount(exited.total, 0)) : undefined }].map(item => <div key={item.label}><p className="text-xs text-text-secondary">{item.label}</p><p className="mt-2 font-number text-2xl font-bold">{item.value}</p>{"note" in item && item.note && <p className="mt-2 text-xs text-text-secondary">{item.note}</p>}</div>)}
     </div>
-    <div className="grid gap-8 md:grid-cols-2">
+    {!data ? <p className="text-sm text-text-secondary">{copy.holdersUnavailable}</p> : <div className="grid gap-8 md:grid-cols-2">
       <div className="rounded-box border border-border p-5">
         <h3 className="mb-5 text-sm font-bold">{copy.distributionTitle}</h3>
-        {data.buckets.map((count, i) => <div key={i} className="mb-4">
+        {!data.buckets && <p className="text-sm text-text-secondary">{production.holderPrincipalUnavailable}</p>}
+        {data.buckets?.map((count, i) => <div key={i} className="mb-4">
           <div className="mb-2 flex justify-between gap-3 text-xs"><span>{copy.holderBuckets[i]}</span><span className="font-number">{copy.accounts(count)}</span></div>
           <ProgressBar value={count / data.accounts * 100} variant="yeth" className="bg-surface-tertiary" aria-hidden="true" />
         </div>)}
@@ -102,13 +102,13 @@ export function RecoveryHolders({ snapshot }: { snapshot: RecoverySnapshot }) {
       <div className="max-h-96 overflow-y-auto rounded-box border border-border">
         <table className="w-full table-fixed text-left text-xs">
           <caption className="p-4 text-left font-bold">{text.positionsTitle}</caption>
-          <thead className="border-y border-border bg-surface-secondary"><tr><th className="w-3/5 p-3 font-medium">{copy.holderAccount}</th><th className="p-3 text-right font-medium">{copy.holderBalance}</th></tr></thead>
+          <thead className="border-y border-border bg-surface-secondary"><tr><th className="w-3/5 p-3 font-medium">{copy.holderAccount}</th><th className="p-3 text-right font-medium">{data.representedClaim === null ? production.holderShares : copy.holderBalance}</th></tr></thead>
           <tbody>{data.positions.map(p => <tr key={p.id} className="border-b border-border last:border-0">
             <td className="p-3"><AddressLink address={p.address} variant="compact" className="max-w-full" />{p.id === "example-account" && snapshot.connected && <span className="block text-[0.65rem] text-text-secondary">{text.yourAccount}</span>}</td>
-            <td className="p-3 text-right font-number">{amount(p.claim)} ETH</td>
+            <td className="p-3 text-right font-number">{p.claim === null ? amount(p.shares) : amount(p.claim) + " ETH"}</td>
           </tr>)}</tbody>
         </table>
       </div>
-    </div>
+    </div>}
   </section>;
 }
