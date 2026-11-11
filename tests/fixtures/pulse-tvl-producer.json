@@ -1,0 +1,708 @@
+{
+  "schema": "pulse-tvl/v1",
+  "enabled": true,
+  "status": "available",
+  "checkedAt": 1794316800,
+  "error": null,
+  "unit": "USD",
+  "source": {
+    "id": "defillama-yearn-finance",
+    "url": "https://api.llama.fi/protocol/yearn-finance",
+    "label": "DefiLlama · Yearn Finance",
+    "scope": "Yearn vaults across seven chains; excludes separate Yearn Curating and yETH pool series",
+    "reviewedAdapterRevision": "bcafec31291fc1033282b575ce85f7dd8a7b4959",
+    "chains": [
+      {
+        "chainId": 1,
+        "name": "Ethereum"
+      },
+      {
+        "chainId": 10,
+        "name": "Optimism"
+      },
+      {
+        "chainId": 137,
+        "name": "Polygon"
+      },
+      {
+        "chainId": 250,
+        "name": "Fantom"
+      },
+      {
+        "chainId": 8453,
+        "name": "Base"
+      },
+      {
+        "chainId": 42161,
+        "name": "Arbitrum"
+      },
+      {
+        "chainId": 747474,
+        "name": "Katana"
+      }
+    ]
+  },
+  "history": [
+    {
+      "observedAt": 1786492800,
+      "value": "176913935.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1786579200,
+      "value": "171229801.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1786665600,
+      "value": "170401859.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1786752000,
+      "value": "169954268.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1786838400,
+      "value": "170656631.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1786924800,
+      "value": "171026653.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787011200,
+      "value": "171424040.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787097600,
+      "value": "170133314.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787184000,
+      "value": "178938083.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787270400,
+      "value": "181370917.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787356800,
+      "value": "187605663.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787443200,
+      "value": "186365986.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787529600,
+      "value": "194163546.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787616000,
+      "value": "194226042.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787702400,
+      "value": "183845776.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787788800,
+      "value": "185376471.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787875200,
+      "value": "185465412.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1787961600,
+      "value": "183728020.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788048000,
+      "value": "184078630.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788134400,
+      "value": "182955466.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788220800,
+      "value": "184949654.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788307200,
+      "value": "183222774.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788393600,
+      "value": "183410223.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788480000,
+      "value": "187188431.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788566400,
+      "value": "185618063.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788652800,
+      "value": "188091416.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788739200,
+      "value": "188958397.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788825600,
+      "value": "188204584.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788912000,
+      "value": "188590695.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1788998400,
+      "value": "187172536.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789084800,
+      "value": "185252827.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789171200,
+      "value": "186609368.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789257600,
+      "value": "187357849.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789344000,
+      "value": "186497594.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789430400,
+      "value": "187416846.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789516800,
+      "value": "186776205.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789603200,
+      "value": "187702324.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789689600,
+      "value": "190783740.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789776000,
+      "value": "197398262.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789862400,
+      "value": "199854144.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1789948800,
+      "value": "201662234.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790035200,
+      "value": "205021469.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790121600,
+      "value": "205435082.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790208000,
+      "value": "203669170.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790294400,
+      "value": "203195009.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790380800,
+      "value": "203584778.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790467200,
+      "value": "204194089.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790553600,
+      "value": "204442315.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790640000,
+      "value": "205439755.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790726400,
+      "value": "205178028.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790812800,
+      "value": "204960553.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790899200,
+      "value": "204846527.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1790985600,
+      "value": "204519252.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791072000,
+      "value": "204340156.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791158400,
+      "value": "205634787.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791244800,
+      "value": "204895701.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791331200,
+      "value": "204111058.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791417600,
+      "value": "200279873.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791504000,
+      "value": "196994092.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791590400,
+      "value": "198747392.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791676800,
+      "value": "199537249.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791763200,
+      "value": "199592345.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791849600,
+      "value": "198383961.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1791936000,
+      "value": "198831010.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792022400,
+      "value": "197845736.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792108800,
+      "value": "154803418.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792195200,
+      "value": "153210762.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792281600,
+      "value": "153271125.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792368000,
+      "value": "153981811.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792454400,
+      "value": "153840014.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792540800,
+      "value": "155339055.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792627200,
+      "value": "156392670.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792713600,
+      "value": "153469540.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792800000,
+      "value": "154837468.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792886400,
+      "value": "154321407.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1792972800,
+      "value": "153231757.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793059200,
+      "value": "153544339.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793145600,
+      "value": "154717805.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793232000,
+      "value": "155543650.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793318400,
+      "value": "152891971.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793404800,
+      "value": "151465021.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793491200,
+      "value": "152874243.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793577600,
+      "value": "153402181.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793664000,
+      "value": "150461600.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793750400,
+      "value": "151750163.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793836800,
+      "value": "157096138.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1793923200,
+      "value": "149431984.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1794009600,
+      "value": "148711624.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1794096000,
+      "value": "148963223.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1794182400,
+      "value": "145570170.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": false
+    },
+    {
+      "observedAt": 1794309587,
+      "value": "144619681.00",
+      "quality": "estimated",
+      "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+      "provisional": true
+    }
+  ],
+  "latest": {
+    "observedAt": 1794309587,
+    "value": "144619681.00",
+    "quality": "estimated",
+    "sourceSha256": "e4af4b7aaf85846812dcddeecb2349427b51b032ffdd315626d481e3a2b3b270",
+    "provisional": true
+  },
+  "coverage": {
+    "requestedClosedDays": 90,
+    "observedClosedDays": 90,
+    "missingDays": [],
+    "forwardFilled": false,
+    "isDailyClose": false,
+    "historyStart": 1786492800,
+    "historyEnd": 1794309587
+  },
+  "annotations": [
+    {
+      "at": 1792108800,
+      "kind": "methodology",
+      "label": "Overlap accounting changed",
+      "detail": "Adapter overlap deductions changed on 15–16 October 2026. The TVL movement can include an accounting change; it is not a withdrawal measure."
+    }
+  ]
+}

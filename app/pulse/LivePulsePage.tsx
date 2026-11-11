@@ -1,10 +1,14 @@
 "use client";
-import { useState } from "react";
+import { createContext, useContext, useId, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import {Modal} from "@/components/ui/Modal";
+import {SourceDetails} from "./SourceDetails";
 import { useLivePulse } from "@/lib/hooks/useLivePulse";
-import { CHAIN_NAMES, type PulseFeed } from "@/lib/clients/pulse/feed";
-import { accountTrend, capitalAssets, capitalTrend, coveredDays, dayAt, metricTrend, windowDays, xTrend } from "@/lib/clients/pulse/live";
+import {MARKET_METRIC_IDS,marketMetrics} from "@/lib/clients/pulse/market-history";
+import {flexMetrics} from "@/lib/clients/pulse/flex";
+import { CHAIN_NAMES, type LiveMetric,type PulseFeed } from "@/lib/clients/pulse/feed";
+import { accountTrend, lockerPegValue, capitalChains, globalCapitalTrend, coveredDays, dayAt, metricStatus, metricTrend, productActivity, windowDays, xTrend, tvlTrend } from "@/lib/clients/pulse/live";
 import type { XTab } from "@/lib/clients/pulse/x";
 import type { Period } from "@/lib/clients/pulse/types";
 import { TrendChart, type TrendSeries } from "./TrendChart";
@@ -13,46 +17,90 @@ import { liveCopy as c } from "./messages";
 import styles from "./pulse.module.css";
 
 const BLUE = "#3478f6", PURPLE = "#9a78e8", ORANGE = "#cc7451";
+const COLORS = [BLUE, PURPLE, "#42a68c", ORANGE, "#c8a444", "#7489a3", "#cb79a8"];
 const numeric = (v: number) => new Intl.NumberFormat("en", { maximumFractionDigits: 2, notation: Math.abs(v) >= 10000 ? "compact" : "standard" }).format(v);
-const precise = (v: number) => new Intl.NumberFormat("en", { maximumFractionDigits: 8 }).format(v);
 const percent = (v: number) => numeric(v) + "%";
 const usd = (v: number) => "$" + numeric(v);
-type Chart = { dates: string[]; series: TrendSeries[]; format?: (value: number) => string; zero?: boolean; reference?: { value: number; label: string } };
-function Plot({ title, dates, series, format = numeric, zero, reference }: Chart & { title: string }) {
+const PlotHeight = createContext(140);
+type Chart = { integerAxis?:boolean; domain?:[number,number]; dates: string[]; series: TrendSeries[]; format?: (value: number) => string; zero?: boolean; reference?: { value: number; label: string }; markers?: {date: string; label: string}[]; provisional?: boolean[] };
+export function Plot({ title, dates, series, format = numeric, zero, reference, markers, domain, integerAxis }: Chart & { title: string }) {
+  const height = useContext(PlotHeight);
   const any = series.some(s => s.values.some(v => v !== null));
-  return <>
-    {any ? <TrendChart label={title} dates={dates} series={series} format={format} zero={zero} reference={reference} height={168} groupBars detailsHint={c.chartHint} /> : <div className="flex h-[168px] items-center justify-center text-center text-sm text-text-secondary">{c.noData}</div>}
-    <div className={styles.legend}>{series.map(s => <span key={s.label} className="inline-flex items-center gap-1.5 text-text-secondary"><span className="h-0.5 w-3" style={{ background: s.color }} />{s.label}</span>)}</div>
-    {any && <details className="mt-2 text-xs"><summary className="cursor-pointer text-text-secondary">{c.values}</summary><div className="mt-2 max-h-48 overflow-auto"><table className="w-full text-left"><caption className="sr-only">{title}</caption><thead><tr><th>{c.date}</th>{series.map(s => <th key={s.label} className="px-2">{s.label}</th>)}</tr></thead><tbody>{dates.map((date, i) => <tr key={date}><td className="whitespace-nowrap py-1">{date}</td>{series.map(s => <td key={s.label} className="px-2 font-number">{s.values[i] === null ? "—" : precise(s.values[i]!)}</td>)}</tr>)}</tbody></table></div></details>}
-  </>;
+  return <div className={styles.plot}>
+    {any ? <TrendChart label={title} dates={dates} series={series} format={format} zero={zero} reference={reference} markers={markers} height={height} domain={domain} integerAxis={integerAxis} groupBars detailsHint={c.chartHint} /> : <div style={{height}} className="flex items-center justify-center text-center text-sm text-text-secondary">{c.noData}</div>}
+    <div className={styles.legend}>{series.filter(s=>!s.tooltipOnly).map(s => <span key={s.label} className="inline-flex items-center gap-1.5 text-text-secondary"><span className="h-0.5 w-3" style={{ background: s.color }} />{s.label}</span>)}</div>
+
+  </div>;
 }
-function Tile({ title, status = c.partial, children, note, href, hrefLabel = c.methodLink }: { title: string; status?: string; children: React.ReactNode; note: string; href?: string; hrefLabel?: string }) {
+export function Tile({ title, status = c.partial, children, note, href, hrefLabel = c.methodLink, details, detailsId,notice,embedded=false }: { title: string; status?: string; children: React.ReactNode; note: string; href?: string; hrefLabel?: string; details?:React.ReactNode; detailsId?:string;notice?:string;embedded?:boolean }) {
+  const explanation=<><p>{note}</p>{details}{href&&<p><a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">{hrefLabel} ↗</a></p>}</>;
+  if(embedded)return <div><p className="mb-2 text-xs text-text-secondary" data-testid="pulse-embedded-status">{status}</p>{children}<div className="mt-4 space-y-3 text-sm text-text-secondary">{explanation}</div></div>;
   return <Card className={styles.tile} data-testid="pulse-live-card">
     <div className={styles.tileTop}><h2 className="text-sm font-bold">{title}</h2><span className="text-[10px] text-text-secondary">{status}</span></div>
     {children}
-    <p className={styles.foot + " text-text-secondary"}>{note}{href && <> <a href={href} target="_blank" rel="noreferrer" className="underline underline-offset-2">{hrefLabel} ↗</a></>}</p>
+    <SourceDetails title={title} testId={detailsId} notice={notice}>{explanation}</SourceDetails>
   </Card>;
 }
-function Pending({ title, note, href }: { title: string; note: string; href?: string }) {
-  return <Tile title={title} status={c.pending} note={note} href={href}><div className="flex h-[245px] items-center justify-center text-3xl text-text-tertiary">—</div></Tile>;
+function stackSeries(series:TrendSeries[]):TrendSeries[] {
+  return series.map((s,i)=>({...s,kind:"area",values:s.values.map((v,d)=>v===null||series.some(p=>p.values[d]===null)?null:series.slice(0,i+1).reduce((n,p)=>n+p.values[d]!,0)),floor:s.values.map((v,d)=>v===null||series.some(p=>p.values[d]===null)?null:series.slice(0,i).reduce((n,p)=>n+p.values[d]!,0))}));
 }
-function MetricCard({ feed, period, title, options, note, href }: { feed: PulseFeed; period: Period; title: string; options: { value: string; label: string; ids: string[]; format?: (v: number) => string; divisor?: number }[]; note: string; href: string }) {
+
+function statusLabel(status: string) {
+  return status === "available" ? c.fresh : status === "estimated" ? c.estimated : status === "stale" ? c.staleMetric : status === "unavailable" ? c.pending : c.partial;
+}
+function MiniTrend({ values, label }: { values: (number | null)[]; label: string }) {
+  const finite = values.filter((v): v is number => v !== null);
+  const low = Math.min(0, ...finite), high = Math.max(0, ...finite), span = high - low || 1;
+  const x = (i: number) => 2 + i / Math.max(1, values.length - 1) * 94;
+  const y = (v: number) => 25 - (v - low) / span * 22;
+  const path = values.map((v, i) => v === null ? "" : (i > 0 && values[i - 1] !== null ? "L" : "M") + x(i) + "," + y(v)).join(" ");
+  return <svg role="img" aria-label={label} viewBox="0 0 98 28" className="h-7 w-20">
+    <line x1="2" x2="96" y1={y(0)} y2={y(0)} stroke="currentColor" className="text-border" />
+    <path d={path} fill="none" stroke={BLUE} strokeWidth="1.5" />
+    {values.map((v, i) => v !== null && (values[i - 1] == null && values[i + 1] == null) ? <circle key={i} cx={x(i)} cy={y(v)} r="2" fill={BLUE} /> : null)}
+  </svg>;
+}
+
+export function MetricCard({ feed, period, title, options, note, href, scopeLabel,embedded=false,metricSource,methodDetails }: { feed: PulseFeed; period: Period; title: string; options: { value: string; label: string; ids: string[]; format?: (v: number) => string; divisor?: number; headlineId?: string; stacked?:boolean; labels?:string[]; connectGaps?:boolean;href?:string;closed?:boolean }[]; note: string; href: string; scopeLabel?:string;embedded?:boolean;metricSource?:LiveMetric[];methodDetails?:React.ReactNode }) {
+  const instance=useId();
+  const tabsId="live-"+title.replaceAll(" ","-")+instance;
   const [tab, setTab] = useState(options[0].value);
-  const option = options.find(o => o.value === tab)!;
-  const trends = option.ids.map(id => metricTrend(feed, period, id));
+  const option = options.find(o => o.value === tab) ?? options[0];
+  const source={generatedAt:feed.generatedAt,metrics:metricSource??feed.metrics};
+  const trends = option.ids.map(id => metricTrend(source, period, id,option.closed));
   const format = option.format ?? numeric;
-  const series = trends.map((t, i) => ({ label: t.metric?.label ?? option.label, color: i === 0 ? BLUE : PURPLE, values: t.values.map(v => v === null ? null : v / (option.divisor ?? 1)) }));
-  const latest = trends[0]?.metric?.latest;
-  const selectedValues = series[0]?.values.filter((v): v is number => v !== null) ?? [];
-  const status = trends.every(t => !t.metric || t.metric.status === "unavailable") ? c.pending : trends.some(t => t.metric?.status === "stale") ? "Stale" : c.partial;
-  return <Tile title={title} status={status} note={note} href={href}>
-    <div className="mt-2"><MetricTabs id={"live-" + title.replaceAll(" ", "-")} label={title} value={tab} options={options} onChange={setTab} /></div>
-    <div id={"live-" + title.replaceAll(" ", "-") + "-panel"} role="tabpanel" aria-labelledby={"live-" + title.replaceAll(" ", "-") + "-" + tab}>
-      <div className={styles.metric}><strong className="font-number text-2xl">{selectedValues.length ? format(selectedValues.at(-1)!) : "—"}</strong><span className="text-[10px] text-text-secondary">{latest ? dayAt(latest.observedAt) + " · " + (option.divisor ? "%" : trends[0]?.metric?.unit ?? "") : c.pending}</span></div>
-      <Plot title={title + ": " + option.label} dates={trends[0]?.dates ?? []} series={series} format={format} />
+  const series = trends.map((t, i) => ({ label: option.labels?.[i] ?? t.metric?.label ?? option.label, color: COLORS[i % COLORS.length], connectGaps:option.connectGaps,values: t.values.map(v => v === null ? null : v / (option.divisor ?? 1)) }));
+  const headline = option.headlineId ? metricTrend(source, period, option.headlineId,option.closed) : trends[0];
+  const latest = headline?.metric?.latest;
+  const selectedValues = (headline?.values ?? []).map(v => v === null ? null : v / (option.divisor ?? 1)).filter((v): v is number => v !== null) ?? [];
+  const sourceStatus = metricStatus([...trends.map(t => t.metric), headline?.metric]);
+  const status = scopeLabel && sourceStatus !== "stale" && sourceStatus !== "unavailable" ? scopeLabel : statusLabel(sourceStatus);
+  const observed = trends[0]?.values.filter((v,i) => v !== null && (!option.stacked || trends.every(t=>t.values[i]!==null))).length ?? 0;
+  return <Tile title={title} status={status} note={note} href={option.href??href} embedded={embedded} details={<>{methodDetails}{trends.map(t => t.metric && <p key={t.metric.id}>{t.metric.label}: {t.metric.basis}{t.metric.reason ? " · " + t.metric.reason : ""}</p>)}</>}>
+    <div className="mt-2"><MetricTabs id={tabsId} label={title} value={option.value} options={options} onChange={setTab} /></div>
+    <div id={tabsId+"-panel"} role="tabpanel" aria-labelledby={tabsId+"-"+option.value}>
+      <div className={styles.metric}><strong className="font-number text-2xl">{selectedValues.length ? format(selectedValues.at(-1)!) : "—"}</strong><span className="text-[10px] text-text-secondary">{latest ? dayAt(latest.observedAt) + " · " + (option.divisor ? "%" : trends[0]?.metric?.unit ?? "") : c.pending} · {observed}/{period} {c.observedDays}</span></div>
+      <Plot title={title + ": " + option.label} dates={trends[0]?.dates ?? []} series={option.stacked ? stackSeries(series) : series} format={format} integerAxis={trends[0]?.metric?.unit==="accounts"} zero />
     </div>
   </Tile>;
 }
+export function TvlCard({ feed, period }: { feed: PulseFeed; period: Period }) {
+  const data = feed.tvlHistory;
+  const trend = tvlTrend(feed, period);
+  const latest = data?.latest;
+  const observed = trend.values.filter(v => v !== null).length;
+  const status = !data || data.status === "unavailable" ? c.pending : data.status === "stale" ? c.staleMetric : c.tvlEstimated;
+  const breakdown = trend.chains.some(chain => chain.values.some(v=>v!==null));
+  const chainSeries = stackSeries(trend.chains.map((chain,i)=>({label:chain.name,color:COLORS[i % COLORS.length],values:chain.values})));
+  const series:TrendSeries[] = [...(breakdown ? chainSeries : []),{label:c.total,color:"#6b7280",values:trend.values,dash:breakdown}];
+  return <Tile title={c.tvl} status={status} note={c.tvlDataNote} href="https://defillama.com/protocol/yearn-finance" hrefLabel={c.tvlSource} notice={trend.annotations.length?c.tvlMethod+" · "+c.tvlMethodNote:undefined}
+    details={<>{data && <><p>{data.source.label}. {data.source.scope}.</p>{trend.annotations.length>0&&<><p>{c.tvlAccountingExplanation}</p><p><a href="https://github.com/DefiLlama/DefiLlama-Adapters/commit/23854d551c781d936c4f3afcb730949a3e22ba72" target="_blank" rel="noreferrer" className="underline">15 Oct: overlap deductions</a> · <a href="https://github.com/DefiLlama/DefiLlama-Adapters/commit/7720cad1d37278a7acae2212bc977414b29a1df0" target="_blank" rel="noreferrer" className="underline">16 Oct: strategy coverage</a></p></>}<p>{data.source.chains.map(chain => chain.name).join(" · ")}</p>{data.annotations.map(a => <p key={a.at}>{dayAt(a.at)}: {a.detail}</p>)}<p>{data.coverage.observedClosedDays}/{data.coverage.requestedClosedDays} {c.observedDays}.</p></>}<p>{breakdown ? c.chainBreakdownNote : c.chainBreakdownMissing}</p></>}>
+    <div className={styles.metric}><strong className="font-number text-2xl">{latest ? usd(Number(latest.value)) : "—"}</strong><span className="text-[10px] text-text-secondary">{latest ? dayAt(latest.observedAt) + " · " + (latest.provisional ? c.tvlProvisional : c.tvlDaily) : c.pending} · {observed}/{period} {c.observedDays}</span></div>
+    <Plot title={c.tvl} dates={trend.dates} series={series} format={usd} zero markers={trend.annotations.map(a => ({date:dayAt(a.at),label:a.label}))} />
+    {!latest && <p className="mt-2 text-xs text-text-secondary">{c.tvlUnavailable}</p>}
+  </Tile>;
+}
+
 function Lockers({ feed, period }: { feed: PulseFeed; period: Period }) {
   const [tab, setTab] = useState("rewards");
   const data = feed.yLockers;
@@ -63,25 +111,23 @@ function Lockers({ feed, period }: { feed: PulseFeed; period: Period }) {
     label: id === "ycrv" ? "yCRV" : "yYB", color: i ? PURPLE : BLUE, kind: tab === "rewards" ? "bar" : "line",
     values: dates.map(date => {
       if (tab === "rewards") { const r = rewards.find(r => r.product === id && dayAt(r.end) === date); return r ? Number(r.assetsRaw) / 1e18 : null; }
-      const p = data?.peg.history.find(p => dayAt(p.observedAt) === date);
-      return p ? Number(p.quoteOutRaw[id]) / Number(data!.peg.quoteInRaw) * 100 : null;
+      return lockerPegValue(feed, id, date);
     }),
   }));
   const current = (data?.rewards.history ?? []).filter(r => r.provisional && r.start <= feed.generatedAt && r.end > feed.generatedAt);
-  return <Tile title={c.ylockers} status={!data || data.status === "unavailable" ? c.pending : data.status === "stale" ? "Stale" : c.partial} note={tab === "rewards" ? c.rewardsNote : tab === "peg" ? c.pegNote : c.lockerFlowsNote} href="https://ybs.wavey.info/">
-    <div className="mt-2"><MetricTabs id="live-lockers" label={c.ylockers} value={tab} options={[{ value: "rewards", label: c.rewards }, { value: "peg", label: c.peg }, { value: "flows", label: c.lockerFlows }]} onChange={setTab} /></div>
+  return <Tile title={c.ylockers} status={!data || !series.some(s=>s.values.some(v=>v!==null)) ? c.pending : data.status === "stale" ? c.staleMetric : c.observed} note={tab === "rewards" ? c.rewardsNote : c.pegNote} href="https://ybs.wavey.info/" details={<><p>{c.lockerHistoryNote}</p><p>{c.lockerFlowsNote}</p></>}>
+    <div className="mt-2"><MetricTabs id="live-lockers" label={c.ylockers} value={tab} options={[{ value: "rewards", label: c.rewards }, { value: "peg", label: c.peg }]} onChange={setTab} /></div>
     <div id="live-lockers-panel" role="tabpanel" aria-labelledby={"live-lockers-" + tab}>
       <div className={styles.metric}><span className="text-xs text-text-secondary">{tab === "rewards" ? c.currentWeek + ": " + (current.length ? current.map(r => (r.product === "ycrv" ? "yCRV " : "yYB ") + numeric(Number(r.assetsRaw) / 1e18) + " crvUSD").join(" · ") : "—") : tab === "peg" ? "yCRV / CRV · yYB / YB" : c.pending}</span></div>
-      {tab === "flows" ? <div className="flex h-[196px] items-center text-center text-sm text-text-secondary">{c.lockerFlowsNote}</div> : <Plot title={c.ylockers + ": " + tab} dates={dates} series={series} format={tab === "peg" ? percent : numeric} reference={tab === "peg" ? { value: 100, label: "Parity" } : undefined} zero={tab === "rewards"} />}
-      <p className="mt-1 text-[10px] text-text-secondary">{c.lockerHistoryNote}</p>
+      {<Plot title={c.ylockers + ": " + tab} dates={dates} series={series} format={tab === "peg" ? percent : numeric} reference={tab === "peg" ? { value: 100, label: c.parity } : undefined} zero={tab === "rewards"} />}
     </div>
   </Tile>;
 }
 export function XAudience({ feed, period }: { feed: PulseFeed; period: Period }) {
-  const [tab, setTab] = useState<XTab>("impressions");
   const data = feed.x;
   const trend = xTrend(feed, period);
   const last = trend.latest;
+  const [tab, setTab] = useState<XTab>(() => last?.intervalStart === null && last.followers !== null ? "followers" : "impressions");
   const options = [{ value: "impressions", label: c.xImpressions }, { value: "linkClicks", label: c.xClicks }, { value: "followers", label: c.xFollowers }];
   const label = options.find(o => o.value === tab)!.label;
   const status = !data ? c.pending : data.status === "disabled" ? c.xDisabled : data.status === "stale" ? c.xStale : data.status === "unavailable" ? c.pending : c.partial;
@@ -89,17 +135,7 @@ export function XAudience({ feed, period }: { feed: PulseFeed; period: Period })
   const series: TrendSeries[] = [{ label, color: BLUE, values: trend[tab], kind: tab === "followers" ? "line" : "bar" }];
   if (tab !== "followers") series.push({ label: tab === "linkClicks" ? c.xClickAverage : c.xAverage, color: PURPLE, values: tab === "impressions" ? trend.impressionAverage : trend.clickAverage, dash: true });
   const headline = last?.[tab] ?? null;
-  return <Tile title={c.x} status={status} note={tab === "followers" ? c.xFollowNote : c.xNote} href="https://x.com/yearnfi" hrefLabel={c.xProfile}>
-    <div className="mt-2"><MetricTabs id="live-x" label={c.x} value={tab} options={options} onChange={value => setTab(value as XTab)} /></div>
-    <div id="live-x-panel" role="tabpanel" aria-labelledby={"live-x-" + tab}>
-      <div className={styles.metric}><strong className="font-number text-2xl" data-testid="pulse-x-headline">{headline === null ? "—" : numeric(headline)}</strong><span className="text-[10px] text-text-secondary">{last ? dayAt(last.observedAt) + " · " + (tab === "followers" ? c.xFollowerCount : c.xInterval) : c.pending}</span></div>
-      {tab === "linkClicks" && last && <div className="mb-2 space-y-1 text-xs text-text-secondary" data-testid="pulse-x-click-coverage">
-        <p>{last.intervalStart === null ? c.xClickBaseline : <><span className="font-number">{last.measuredLinkPosts}</span> {c.xClickContributors}</>}</p>
-        <p>{c.xClickSubset}</p>
-      </div>}
-      <Plot title={c.x + ": " + label} dates={trend.dates} series={series} zero={tab !== "followers"} />
-      {reason && <p className="mt-2 text-xs text-text-secondary" role="status">{reason}</p>}
-      <details className="mt-2 text-xs" data-testid="pulse-x-details"><summary className="cursor-pointer text-text-secondary">{c.xDetails}</summary><div className="mt-3 space-y-3">
+  return <Tile title={c.x} status={status} note={tab === "followers" ? c.xFollowNote : c.xNote} href="https://x.com/yearnfi" hrefLabel={c.xProfile} detailsId="pulse-x-details" details={<>
         <p className="font-semibold">{c.xTypical}</p>
         {last?.medianSevenDayImpressions !== null && last?.medianSevenDayImpressions !== undefined ? <dl className="space-y-1">
           <div className="flex flex-wrap justify-between gap-2"><dt>{c.xMedian}</dt><dd className="font-number">{numeric(last.medianSevenDayImpressions)}</dd></div>
@@ -113,72 +149,125 @@ export function XAudience({ feed, period }: { feed: PulseFeed; period: Period })
           <p>{last.baselinedPosts} {c.xBaselineCount} · {last.missingPosts} {c.xMissingPosts} · {last.counterCorrections} {c.xCorrections}.</p>
           {last.truncated && <p>{c.xTruncated}</p>}
         </>}
-        <p className="text-text-secondary">{c.xClickAvailability}</p>
+        <p className="text-text-secondary">{c.xClickSubset}</p><p className="text-text-secondary">{c.xClickAvailability}</p>
         <p className="text-text-secondary">{c.xSnapshotNote}</p>
-      </div></details>
+      </>}>
+    <div className="mt-2"><MetricTabs id="live-x" label={c.x} value={tab} options={options} onChange={value => setTab(value as XTab)} /></div>
+    <div id="live-x-panel" role="tabpanel" aria-labelledby={"live-x-" + tab}>
+      <div className={styles.metric}><strong className="font-number text-2xl" data-testid="pulse-x-headline">{headline === null ? "—" : numeric(headline)}</strong><span className="text-[10px] text-text-secondary">{last ? dayAt(last.observedAt) + " · " + (tab === "followers" ? c.xFollowerCount : c.xInterval) : c.pending}</span></div>
+      {tab === "linkClicks" && last && <div className="mb-2 space-y-1 text-xs text-text-secondary" data-testid="pulse-x-click-coverage">
+        <p>{last.intervalStart === null ? c.xClickBaseline : <><span className="font-number">{last.measuredLinkPosts}</span> {c.xClickContributors}</>}</p>
+      </div>}
+      <Plot title={c.x + ": " + label} dates={trend.dates} series={series} zero={tab !== "followers"} integerAxis />
+      {reason && <p className="mt-2 text-xs text-text-secondary" role="status">{reason}</p>}
+
+    </div>
+  </Tile>;
+}
+
+function GlobalFlows({feed,period}:{feed:PulseFeed;period:Period}) {
+  const [tab,setTab]=useState("usd");
+  const data=feed.globalCapital;
+  const trend=globalCapitalTrend(feed,period);
+  const usdValues=trend.net.filter((v):v is number=>v!==null);
+  const headline=tab==="usd" ? usdValues.length ? usd(usdValues.reduce((n,v)=>n+v,0)) : "—" : trend.periodBalance === null ? "—" : percent(trend.periodBalance);
+  const status=!data||!trend.observed?c.pending:data.status==="stale"?c.staleMetric:trend.partial?c.pricedSubtotal:c.estimated;
+  const unpriced=[...new Map(trend.rows.flatMap(p=>p?.priceCoverage.unpricedAssets??[]).map(a=>[a.chainId+":"+a.address,a])).values()];
+  return <Tile title={c.flows} status={status} note={c.flowsNote} details={<>
+    <p>{c.deposits}: {usdValues.length?usd(trend.depositsUsd):"—"} · {c.withdrawals}: {usdValues.length?usd(trend.withdrawalsUsd):"—"}.</p><p>{c.flowBalanceNote}</p><p>{c.runningNote}</p><p>{data?.source.valuation??c.valuationPending}</p>
+    <p>{trend.pricedActions}/{trend.actions} {c.pricedActions}. {c.priceCoverageNote}</p>
+    <p>{trend.unresolved} {c.unresolvedEvents}. {c.coverageNote}</p>
+    {unpriced.length>0&&<div><p>{unpriced.length} {c.unpricedAssets}</p><ul className="mt-1 max-h-40 overflow-auto">{unpriced.map(a=><li key={a.chainId+":"+a.address}>{CHAIN_NAMES[a.chainId]} · {a.symbol}: {a.reason}</li>)}</ul></div>}
+  </>}>
+    <MetricTabs id="live-flows" label={c.flows} value={tab} options={[{value:"usd",label:"USD"},{value:"balance",label:c.flowBalance}]} onChange={setTab}/>
+    <div id="live-flows-panel" role="tabpanel" aria-labelledby={"live-flows-"+tab}>
+      <div className={styles.metric}><strong className="font-number text-2xl">{headline}</strong><span className="text-[10px] text-text-secondary">{tab==="usd"?c.periodNet:c.periodBalance} · {trend.observed}/{period} {c.observedDays}</span></div>
+      <Plot title={c.flows+": "+(tab==="usd"?"USD":c.flowBalance)} dates={trend.dates} series={[{label:tab==="usd"?c.daily:c.dailyBalance,color:BLUE,values:tab==="usd"?trend.net:trend.balance,kind:"bar"},{label:tab==="usd"?c.runningNet:c.runningBalance,color:PURPLE,values:tab==="usd"?trend.cumulativeNet:trend.runningBalance},{label:c.deposits,color:BLUE,values:trend.deposits,format:usd,tooltipOnly:true},{label:c.withdrawals,color:ORANGE,values:trend.withdrawals,format:usd,tooltipOnly:true}]} format={tab==="usd"?usd:percent} domain={tab==="balance"?[-100,100]:undefined} zero/>
+      {trend.partial&&<p className="text-[10px] text-text-secondary">{c.pricedSubtotal} · {trend.pricedActions}/{trend.actions} {c.pricedActions}</p>}
+    </div>
+  </Tile>;
+}
+function Movers({feed,period}:{feed:PulseFeed;period:Period}) {
+  const [tab,setTab]=useState("activity");
+  const activity=productActivity(feed,period);
+  const priced=globalCapitalTrend(feed,period);
+  const hasUsd=priced.products.length>0;
+  const view=tab==="flows"&&hasUsd?"flows":"activity";
+  const rows=view==="activity"?activity.products:priced.products;
+  const observed=view==="activity"?activity.observedChainDays:priced.observed*6;
+  const stale=view==="activity"?feed.reviewedCapital?.sources.chains.some(s=>s.status==="stale"):feed.globalCapital?.status==="stale";
+  return <Tile title={c.movers} status={!observed?c.pending:stale?c.staleMetric:view==="flows"?(priced.partial?c.pricedSubtotal:c.estimated):c.reviewed} note={view==="activity"?c.activityNote:c.productsNote}
+    details={<><p>{activity.observedChainDays}/{activity.expectedChainDays} {c.chainDays}.</p><p>{c.scope}</p>{view==="flows"&&<p>{c.priceCoverageNote}</p>}</>}>
+    <MetricTabs id="live-movers" label={c.movers} value={view} options={[{value:"activity",label:c.activity},...(hasUsd?[{value:"flows",label:c.moverFlows}]:[])]} onChange={setTab}/>
+    <div id="live-movers-panel" role="tabpanel" aria-labelledby={"live-movers-"+view}>
+      <div className={styles.metric}><span className="text-[10px] text-text-secondary">{c.allCapitalChains} · {period}D</span></div>
+      <div className={styles.movers}><table className="w-full text-left text-xs"><caption className="sr-only">{c.movers}</caption><thead><tr><th className="pb-2">{c.product}</th><th className="pb-2 text-right">{view==="flows"?c.netAmount:c.actions}</th><th className="pb-2 pl-2 text-right">{c.movement}</th></tr></thead><tbody>
+        {rows.map(p=><tr key={p.id}><td className="max-w-40 truncate py-1" title={p.name}><span className={styles.productIdentity}><span className="truncate">{p.name}</span><span className="text-[10px] text-text-secondary">{CHAIN_NAMES[p.chainId]??p.chainId}</span></span></td><td className="pl-2 text-right font-number">{"net" in p?usd(p.net)+(p.partial?" *":""):numeric(p.actions)}</td><td className="pl-2"><div className="flex justify-end"><MiniTrend values={p.values} label={p.name+": "+(view==="flows"?c.net:c.actions)}/></div></td></tr>)}
+      </tbody></table>{!rows.length&&<p className="py-8 text-center text-sm text-text-secondary">{observed?c.noActivity:c.noData}</p>}</div>
     </div>
   </Tile>;
 }
 export function LivePulsePage() {
   const query = useLivePulse();
   const [period, setPeriod] = useState<Period>(30);
-  const [asset, setAsset] = useState("");
-  const [flowTab, setFlowTab] = useState("flows");
   const [wall, setWall] = useState(false);
+  const [recoveryOpen,setRecoveryOpen]=useState(false);
   const feed = query.data;
-  const assets = feed ? capitalAssets(coveredDays(feed, period)) : [];
-  const selected = assets.some(a => a.id === asset) ? asset : (assets.find(a => a.chainId === 1 && a.asset.symbol === "USDC") ?? assets[0])?.id ?? "";
-  const definition = assets.find(a => a.id === selected);
-  const capital = feed ? capitalTrend(feed, period, selected) : null;
-  const accounts = feed ? accountTrend(feed, period) : null;
-  const net = capital?.net.reduce<number>((n, v) => n + (v ?? 0), 0);
-  const hasCapital = Boolean(capital?.net.some(v => v !== null));
-  return <section aria-label="Pulse dashboard" className={styles.page + (wall ? " " + styles.wall : "")}>
-    <div className="mb-5 flex flex-wrap items-center justify-between gap-4">
+  const hasMarketHistory=(feed?.marketHistory?.history.length??0)>0;
+  const publishedDays=feed?.reviewedCapital?.coverage.publishedHistory?.days;
+  const publicationNote=publishedDays?c.capitalWindow.replace("{days}",String(publishedDays)):null;
+  const windowExceedsPublication=publishedDays!==undefined&&period>publishedDays;
+  const accounts=feed?accountTrend(feed,period):null;
+  const chains=feed?capitalChains(feed):[];
+  return <PlotHeight.Provider value={wall?108:140}><section aria-label="Pulse dashboard" className={styles.page+(wall?" "+styles.wall:"")}>
+    <div className={styles.liveHeader+" flex flex-wrap items-center justify-between gap-3"}>
       <div><h1 className="text-2xl font-bold">{c.title}</h1><p className="mt-1 text-sm text-text-secondary">{c.subtitle}</p></div>
-      <div className="flex flex-wrap items-center gap-2"><div role="group" aria-label={c.ranges} className="flex rounded-box bg-surface-secondary p-1">{([7, 30, 90, 365] as const).map(p => <button type="button" key={p} aria-pressed={period === p} onClick={() => setPeriod(p)} className={"min-h-8 rounded px-3 text-xs " + (period === p ? "bg-surface font-bold" : "text-text-secondary")}>{p}D</button>)}</div><Button variant="secondary" onClick={() => setWall(!wall)}>{wall ? c.exitWall : c.wall}</Button><Button variant="secondary" onClick={() => void query.refetch()}>{c.retry}</Button></div>
+      <div className="flex flex-wrap items-center gap-2"><div role="group" aria-label={c.ranges} className="flex rounded-box bg-surface-secondary p-1">{([7,30,90,365] as const).map(p=><button type="button" key={p} aria-pressed={period===p} onClick={()=>setPeriod(p)} className={"min-h-8 rounded px-3 text-xs "+(period===p?"bg-surface font-bold":"text-text-secondary")}>{p}D</button>)}</div><Button variant="secondary" onClick={()=>setWall(!wall)}>{wall?c.exitWall:c.wall}</Button><Button variant="secondary" onClick={()=>setRecoveryOpen(true)}>{c.recovery}</Button><Button variant="secondary" onClick={()=>void query.refetch()}>{c.retry}</Button></div>
     </div>
-    <div className="mb-4 flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary"><span>{c.live}</span><span>{feed ? c.updated + " " + new Date(feed.generatedAt * 1000).toISOString().replace("T", " ").slice(0, 19) + " UTC" : c.loading}</span></div>
-    {(query.stale || query.isError) && <p role="status" className="mb-4 rounded-box border border-orange-300 bg-orange-50 p-3 text-sm text-orange-900 dark:bg-orange-950 dark:text-orange-200">{query.stale ? c.stale : c.failed}</p>}
-    {!feed ? <Card><p role="status">{query.isPending ? c.loading : c.unavailable}</p></Card> : <>
-      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
-        <label className="flex max-w-full flex-wrap items-center gap-2 text-xs text-text-secondary">{c.assets}<select className="h-9 max-w-full rounded-box border border-border bg-surface px-2 text-text-primary" value={selected} onChange={e => setAsset(e.target.value)} disabled={!assets.length}>{!assets.length && <option value="">{c.noAssets}</option>}{assets.map(a => <option key={a.id} value={a.id}>{a.asset.symbol} · {CHAIN_NAMES[a.chainId] ?? a.chainId} · {a.asset.address.slice(0, 8)}</option>)}</select></label>
-        <details className="max-w-2xl text-xs text-text-secondary"><summary className="cursor-pointer">{c.coverage}</summary><div className="mt-2 space-y-2"><p>{c.coverageNote}</p><p>{c.native}</p><p>{c.scope}</p><p>{c.liveHistory}</p>{feed.reviewedCapital?.sources.chains.map(s => <p key={s.chainId}>{CHAIN_NAMES[s.chainId]}: {s.status} · {s.coveredThrough ? "through " + dayAt(s.coveredThrough - 1) : "no closed days"}</p>)}</div></details>
-      </div>
-      <div className={styles.grid}>
-        <Pending title={c.tvl} note={c.tvlNote} href="https://yearn.fi/v3" />
-        <Tile title={c.flows} status={hasCapital ? feed.reviewedCapital?.sources.chains.find(s => s.chainId === definition?.chainId)?.status === "stale" ? "Stale" : c.partial : c.pending} note={c.flowsNote}>
-          <div className="mt-2"><MetricTabs id="live-flows" label={c.flows} value={flowTab} options={[{value:"flows",label:c.flowTab},{value:"products",label:c.productsTab}]} onChange={setFlowTab} /></div>
-          <div id="live-flows-panel" role="tabpanel" aria-labelledby={"live-flows-" + flowTab}>
-            <div className={styles.metric}><strong className="font-number text-2xl">{hasCapital ? numeric(net!) : "—"}</strong><span className="text-xs text-text-secondary">{definition?.asset.symbol} · {capital?.observed ?? 0}/{period} days</span></div>
-            {flowTab === "flows" && capital ? <Plot title={c.net} dates={capital.dates} series={[{label:c.net,color:BLUE,values:capital.net,kind:"bar"}]} zero /> : <div className="min-h-[196px]"><table className="w-full text-left text-xs"><caption className="sr-only">{c.productsTab}</caption><thead><tr><th className="pb-2">{c.product}</th><th className="pb-2 text-right">{c.netAmount}</th><th className="pb-2 pl-2 text-right">{c.actions}</th></tr></thead><tbody>{capital?.products.map(p => <tr key={p.id}><td className="max-w-48 truncate py-2" title={p.name}>{p.name}</td><td className="text-right font-number">{numeric(p.net)}</td><td className="pl-2 text-right font-number">{p.actions}</td></tr>)}</tbody></table><p className="mt-3 text-[10px] text-text-secondary">{c.productsNote}</p></div>}
-          </div>
-          <p className="mt-2 text-[10px] text-text-secondary">Excluded unresolved capital: +{numeric(capital?.gapIn ?? 0)} / −{numeric(capital?.gapOut ?? 0)} {definition?.asset.symbol}. {capital?.unresolved ?? 0} unresolved events on this chain.</p>
+    <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary"><span data-testid={windowExceedsPublication?"pulse-capital-horizon":undefined}>{windowExceedsPublication?publicationNote:c.live}</span><span>{feed?c.updated+" "+new Date(feed.generatedAt*1000).toISOString().replace("T"," ").slice(0,19)+" UTC":c.loading}</span></div>
+    {(query.stale||query.isError)&&<p role="status" className="mb-3 rounded-box border border-border p-2 text-sm text-text-secondary">{query.stale?c.stale:c.failed}</p>}
+    {!feed?<Card><p role="status">{query.isPending?c.loading:c.unavailable}</p></Card>:<>
+      <div className="mb-3"><SourceDetails title={c.coverage} label={c.coverage}><p>{c.coverageNote}</p>{publicationNote&&<p>{publicationNote} {c.capitalWindowNote}</p>}<p>{c.rangeCoverage}: {coveredDays(feed,period).length}/{period*chains.length}.</p><p>{c.scope}</p><p>{c.liveHistory}</p>{feed.reviewedCapital?.coverage.gaps.map((gap,i)=><p key={i}>{gap}</p>)}{feed.reviewedCapital?.sources.chains.map(s=><p key={s.chainId}>{CHAIN_NAMES[s.chainId]}: {s.status} · {s.coveredThrough?c.closedDaysThrough+" "+dayAt(s.coveredThrough-1):c.chainPending}</p>)}</SourceDetails></div>
+      <div className={styles.grid} data-testid="pulse-main-grid">
+        <TvlCard feed={feed} period={period}/>
+        <GlobalFlows feed={feed} period={period}/>
+        <Tile title={c.accounts} status={!accounts?.completeDays?c.pending:feed.reviewedCapital?.sources.chains.some(s=>s.status==="stale")?c.staleMetric:c.reviewed} note={c.accountsNote}
+          details={<><p>{accounts?.chainDays}/{accounts?.expected} {c.chainDays}.</p><p>{c.scope}</p></>}>
+          <div className={styles.metric}><span className="text-xs text-text-secondary">{c.chainQualified} · {accounts?.completeDays}/{period} {c.observedDays}</span></div>
+          {accounts&&<Plot title={c.accounts} dates={accounts.dates} series={[{label:c.depositing,color:BLUE,values:accounts.deposits},{label:c.withdrawing,color:ORANGE,values:accounts.withdrawals}]} format={v=>numeric(Math.round(v))} integerAxis zero/>}
         </Tile>
-        <Tile title={c.accounts} note={c.accountsNote}>
-          <div className={styles.metric}><span className="text-xs text-text-secondary">{accounts?.chainDays}/{accounts?.expected} chain-days observed</span></div>
-          {accounts && <Plot title={c.accounts} dates={accounts.dates} series={[{label:c.depositing,color:BLUE,values:accounts.deposits},{label:c.withdrawing,color:ORANGE,values:accounts.withdrawals}]} zero />}
-        </Tile>
-        <Lockers feed={feed} period={period} />
-        <Pending title={c.harvests} note={c.harvestNote} />
-        <XAudience feed={feed} period={period} />
-        <MetricCard feed={feed} period={period} title={c.governance} note={c.governanceNote} href="https://styfi.yearn.fi" options={[
-          {value:"stake",label:c.stake,ids:["yfi.styfi_direct","yfi.styfix"]},
-          {value:"rate",label:c.rate,ids:["yfi.staking_rate_bps"],divisor:100,format:percent},
+        <Lockers feed={feed} period={period}/>
+        <MetricCard feed={feed} period={period} title="Flex" metricSource={flexMetrics(feed.flex)} note={c.flexSeparate} href="https://flexmeow.com/info"
+          methodDetails={<><p>{feed.flex?.scope}</p>{feed.flex?.limitations.map((limit,i)=><p key={i}>{limit}</p>)}{feed.flex?.participation.activeTroves!==null&&feed.flex?.participation.activeTroves!==undefined&&<p>{feed.flex.participation.activeTroves} {c.flexTroves} · {feed.flex.participation.marketCount??"—"} {c.flexMarkets}</p>}</>}
+          options={[{value:"capital",label:c.flexCapital,ids:["flex.value_usd","flex.debt_usd","flex.deposits_usd"],labels:[c.flexValue,c.flexDebt,c.flexDeposits],format:usd},
+          {value:"accounts",label:c.flexAccounts,ids:["flex.borrower_accounts"]},
+          {value:"fees",label:c.flexFees,ids:["flex.claimable_fees_usd"],format:usd}]}/>
+
+        <XAudience feed={feed} period={period}/>
+        <MetricCard feed={feed} period={period} title={c.governance} metricSource={[...feed.metrics.filter(m=>!MARKET_METRIC_IDS.some(id=>id===m.id)),...marketMetrics(feed.marketHistory)]} methodDetails={hasMarketHistory&&feed.marketHistory&&<><p>{c.marketNote}</p>{feed.marketHistory.history.at(-1)&&<p>{c.marketSamples(new Date(feed.marketHistory.history.at(-1)!.yfiQuoteAt*1000).toISOString(),new Date(feed.marketHistory.history.at(-1)!.wethQuoteAt*1000).toISOString())}</p>}</>} note={c.governanceNote} href="https://styfi.yearn.fi" options={[
+          {value:"stake",label:c.stake,ids:["yfi.veyfi_migrated","yfi.liquid_lockers_backing","yfi.styfix","yfi.styfi_direct"],labels:["Migrated veYFI","Liquid lockers","stYFIx","Direct stYFI"],headlineId:"yfi.participating",stacked:true},
+          {value:"rate",label:c.rate,ids:["yfi.participation_rate_bps"],divisor:100,format:percent},
           {value:"apr",label:c.apr,ids:["yfi.styfix_apr_bps"],divisor:100,format:percent},
-          {value:"price",label:c.price,ids:["yfi.price_usd"],format:usd},
-          {value:"votes",label:c.turnout,ids:["yfi.turnout_bps"],divisor:100,format:percent},
-        ]} />
-        <MetricCard feed={feed} period={period} title={c.treasury} note={c.treasuryNote} href="https://treasury.yearn.fi" options={[
-          {value:"operating",label:c.operating,ids:["treasury.available_operating_ex_yfi_usd"],format:usd},
-          {value:"holdings",label:c.holdings,ids:["treasury.priced_ex_yfi_usd"],format:usd},
-        ]} />
-        <MetricCard feed={feed} period={period} title={c.recovery} note={c.recoveryNote} href="https://yeth.yearn.fi" options={[
-          {value:"gap",label:c.gap,ids:["recovery.target_gap_weth"]},{value:"paid",label:c.paid,ids:["recovery.cash_paid_weth"]},
-          {value:"principal",label:c.principal,ids:["recovery.principal_settled_weth"]},{value:"loans",label:c.loans,ids:["loans.resupply_crvusd"]},
-        ]} />
+          {value:"price",label:c.priceUsd,ids:[hasMarketHistory?"yfi.market_price_usd":"yfi.price_usd"],labels:[hasMarketHistory?c.marketUsdLabel:c.chainlinkUsdLabel],format:usd,closed:hasMarketHistory,href:hasMarketHistory?feed.marketHistory?.sourceUrl:undefined},
+          ...(hasMarketHistory?[{value:"price-eth",label:c.priceEth,ids:["yfi.market_price_eth"],closed:true,href:feed.marketHistory?.sourceUrl}]:[]),
+          ...(feed.metrics.some(m=>m.id==="yfi.turnout_bps"&&m.history.length)?[{value:"votes",label:c.turnout,ids:["yfi.turnout_bps"],divisor:100,format:percent}]:[]),
+        ]}/>
+        <MetricCard feed={feed} period={period} title={c.treasury} scopeLabel={c.pricedHoldings} note={c.treasuryNote} href="https://treasury.yearn.fi" options={[
+          {value:"operating",label:c.operating,ids:["treasury.available_operating_ex_yfi_usd"],format:usd,connectGaps:true},
+          {value:"holdings",label:c.holdings,ids:["treasury.priced_ex_yfi_usd"],format:usd,connectGaps:true},
+        ]}/>
+        <Movers feed={feed} period={period}/>
+
       </div>
-      <footer className="mt-5 text-xs text-text-secondary">{c.liveHistory} {c.native}</footer>
+      {!wall&&<div className="mt-4" data-testid="pulse-recovery-section"><RecoveryCard feed={feed} period={period}/></div>}
+      <Modal isOpen={recoveryOpen} onClose={()=>setRecoveryOpen(false)} title={c.recovery} className="max-w-3xl" fitVisualViewport><div className="max-h-[75dvh] overflow-auto"><RecoveryCard feed={feed} period={period} embedded/></div></Modal>
     </>}
-  </section>;
+  </section></PlotHeight.Provider>;
+}
+
+function RecoveryCard({feed,period,embedded=false}:{feed:PulseFeed;period:Period;embedded?:boolean}) {
+ return <MetricCard feed={feed} period={period} title={c.recovery} note={c.recoveryNote} href="https://yeth.yearn.fi" embedded={embedded} options={[
+  {value:"gap",label:c.gap,ids:["recovery.target_gap_weth"],connectGaps:true},{value:"paid",label:c.paid,ids:["recovery.cash_paid_weth"],connectGaps:true},
+  {value:"principal",label:c.principal,ids:["recovery.principal_settled_weth"],connectGaps:true},{value:"loans",label:c.loans,ids:["loans.resupply_crvusd"],connectGaps:true,href:"https://treasury.yearn.fi"},
+ ]}/>;
 }

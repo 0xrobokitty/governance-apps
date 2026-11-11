@@ -1,5 +1,5 @@
 import { readBoundedJson, withFeedRequest } from "@/lib/feed-transport";
-import { parsePulseFeed, PULSE_FEED_POLICY } from "@/lib/clients/pulse/feed";
+import { parsePulseWireFeed, PULSE_FEED_POLICY } from "@/lib/clients/pulse/feed";
 import { isPulseLiveEnabled } from "@/lib/clients/pulse/config";
 import { isProductionMode } from "@/lib/runtime/runtime-mode";
 export const dynamic = "force-dynamic";
@@ -15,8 +15,10 @@ export async function GET() {
     if ((!local && !remote) || url.username || url.password || url.search || url.hash) throw new Error("Invalid feed origin.");
     return await withFeedRequest(source, PULSE_FEED_POLICY, async (r, context) => {
       if (!r.ok) { await r.body?.cancel(); throw new Error("Upstream unavailable."); }
-      const feed = parsePulseFeed(await readBoundedJson(r, context, PULSE_FEED_POLICY));
-      return Response.json(feed, { headers });
+      const feed = parsePulseWireFeed(await readBoundedJson(r, context, PULSE_FEED_POLICY));
+      const body=JSON.stringify(feed);
+      if(new TextEncoder().encode(body).byteLength>PULSE_FEED_POLICY.maximumPayloadBytes)throw new Error("Pulse response exceeds its limit.");
+      return new Response(body,{headers:{...headers,"Content-Type":"application/json"}});
     });
   } catch {
     return Response.json({ error: "Pulse feed is unavailable or invalid." }, { status: 502, headers });

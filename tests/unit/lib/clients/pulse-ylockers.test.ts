@@ -1,4 +1,7 @@
 import { describe, expect, it } from "vitest";
+import { parsePulseFeed } from "@/lib/clients/pulse/feed";
+import { dayAt, lockerPegValue } from "@/lib/clients/pulse/live";
+import fixture from "../../../fixtures/pulse-live.json";
 import { getPulse } from "@/lib/clients/pulse/client";
 import { getYLockers } from "@/lib/clients/pulse/ylockers";
 
@@ -42,5 +45,24 @@ describe("yLockers metric boundaries", () => {
     expect(yyb.days[firstCovered + 6].averageRate).not.toBeNull();
     expect(yyb.days.at(-1)!.peg).toBeGreaterThan(0);
     expect(getPulse(30, "all", "unavailable")).toBeNull();
+  });
+});
+
+describe("Historical live peg availability", () => {
+  it("keeps a pre-deployment product missing without converting it to zero or NaN", () => {
+    const f = structuredClone(fixture);
+    const peg = f.yLockers.peg.history[0];
+    (peg.quoteOutRaw as Record<string, string>) = {ycrv: peg.quoteOutRaw.ycrv};
+    const parsed = parsePulseFeed(f, f.generatedAt + 60);
+    expect(lockerPegValue(parsed, "ycrv", dayAt(peg.observedAt))).toBeGreaterThan(0);
+    expect(lockerPegValue(parsed, "yyb", dayAt(peg.observedAt))).toBeNull();
+    expect(lockerPegValue(parsed, "ycrv", "2020-01-01")).toBeNull();
+  });
+  it("rejects empty quotes and unknown product keys", () => {
+    for (const quotes of [{}, {ycrv: "1", other: "2"}] as Record<string,string>[]) {
+      const f = structuredClone(fixture);
+      (f.yLockers.peg.history[0].quoteOutRaw as Record<string,string>) = quotes;
+      expect(() => parsePulseFeed(f, f.generatedAt + 60)).toThrow();
+    }
   });
 });

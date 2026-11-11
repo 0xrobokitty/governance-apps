@@ -1,4 +1,9 @@
 import { z } from "zod";
+import {readPackedCapital,decodePackedCapital} from "./packed-capital";
+import {marketHistorySchema,validateMarketHistory} from "./market-history";
+import {flexSchema,validateFlex} from "./flex";
+import { globalCapitalSchema, validateGlobalCapital } from "./global-capital";
+import { tvlHistorySchema, validateTvlHistory } from "./tvl";
 import { xSchema, validateX, validateXTransition } from "./x";
 import { readBoundedJson, withFeedRequest, type FeedTransportPolicy } from "@/lib/feed-transport";
 
@@ -30,12 +35,12 @@ const day = z.object({
 });
 const capital = z.object({
   schema: z.literal("pulse-kong-envio/v3"), rules: z.literal("receipt-boundary-rules/3"), enabled: z.boolean(),
-  coverage: z.object({ allYearn: z.literal(false), forwardFilled: z.literal(false), openUtcDayIncluded: z.literal(false), supportedChains: z.array(timestamp).max(12), quarantined: z.array(z.string()).max(4440), gaps: z.array(z.string()).max(20) }),
+  coverage: z.object({ allYearn: z.literal(false), forwardFilled: z.literal(false), openUtcDayIncluded: z.literal(false), supportedChains: z.array(timestamp).max(12), quarantined: z.array(z.string()).max(4440), gaps: z.array(z.string()).max(20), publishedHistory: z.object({ days: timestamp.positive().max(740), from: timestamp, until: timestamp, durableRetentionDays: timestamp.positive().max(740), basis: z.string().min(1).max(1024) }).optional() }),
   sources: z.object({ chains: z.array(z.object({ chainId: timestamp, status: z.string(), coveredThrough: timestamp.nullable() })).max(12) }),
   history: z.array(day).max(4440),
   ranges: z.array(z.object({ days: timestamp, totals: totals.nullable(), observedChainDays: timestamp })).length(4),
 });
-const peg = z.object({ observedAt: timestamp, block, quoteOutRaw: z.object({ ycrv: raw, yyb: raw }), sourceSha256: digest });
+const peg = z.object({ observedAt: timestamp, block, quoteOutRaw: z.object({ ycrv: raw.optional(), yyb: raw.optional() }).strict().refine(v => v.ycrv !== undefined || v.yyb !== undefined), sourceSha256: digest });
 const reward = z.object({ product: z.enum(["ycrv", "yyb"]), week: timestamp, start: timestamp, end: timestamp, observedAt: timestamp, sharesRaw: raw, assetsRaw: raw, valuation: block, following: block.nullable(), provisional: z.boolean(), sourceSha256: digest });
 const lockers = z.object({
   schema: z.literal("pulse-ylockers/v1"), status: z.enum(["partial", "stale", "unavailable"]), checkedAt: timestamp, error: z.string().nullable(),
@@ -45,7 +50,7 @@ const lockers = z.object({
 });
 const schema = z.object({
   schema: z.literal("pulse/v1"), mode: z.literal("live"), generatedAt: timestamp,
-  metrics: z.array(metric).max(100), x: xSchema.optional(), reviewedCapital: capital.optional(), yLockers: lockers.optional(),
+  metrics: z.array(metric).max(100), flex:flexSchema.optional(), marketHistory:marketHistorySchema.optional(), tvlHistory: tvlHistorySchema.optional(), globalCapital: globalCapitalSchema.optional(), x: xSchema.optional(), reviewedCapital: capital.optional(), yLockers: lockers.optional(),
 });
 export type PulseFeed = z.infer<typeof schema>;
 export type CapitalDay = z.infer<typeof day>;
@@ -54,10 +59,16 @@ export type LiveMetric = z.infer<typeof metric>;
 export const CHAIN_NAMES: Record<number, string> = { 1: "Ethereum", 10: "Optimism", 137: "Polygon", 8453: "Base", 42161: "Arbitrum", 747474: "Katana" };
 export const assetId = (row: {chainId: number; asset: {address: string}}) => row.chainId + ":" + row.asset.address;
 
-export function parsePulseFeed(value: unknown, now = Math.floor(Date.now() / 1000)): PulseFeed {
-  const feed = schema.parse(value);
+function parsePulseInput(value: unknown, now: number) {
+  const input=value&&typeof value==="object"&&!Array.isArray(value)?value as Record<string,unknown>:null;
+  const packed=readPackedCapital(input?.reviewedCapital);
+  const normalized=packed?{...input,reviewedCapital:{...(input!.reviewedCapital as Record<string,unknown>),schema:"pulse-kong-envio/v3",history:decodePackedCapital(packed)}}:value;
+  const feed = schema.parse(normalized);
   if (feed.generatedAt > now + 60) throw new Error("Pulse publication is in the future.");
   if (feed.x) validateX(feed.x, feed.generatedAt);
+  if(feed.flex)validateFlex(feed.flex,feed.generatedAt);
+  if(feed.marketHistory)validateMarketHistory(feed.marketHistory,feed.generatedAt);
+  if (feed.tvlHistory) validateTvlHistory(feed.tvlHistory, feed.generatedAt);
   const ids = new Set<string>();
   for (const m of feed.metrics) {
     if (ids.has(m.id)) throw new Error("Duplicate Pulse metric.");
@@ -71,11 +82,15 @@ export function parsePulseFeed(value: unknown, now = Math.floor(Date.now() / 100
     if (JSON.stringify(m.latest) !== JSON.stringify(m.history.at(-1) ?? null)) throw new Error("Pulse latest value disagrees with history.");
     if ((m.status === "unavailable") !== (m.history.length === 0)) throw new Error("Pulse metric availability disagrees with history.");
   }
+  const published = feed.reviewedCapital?.coverage.publishedHistory;
+  if (published && (published.until !== Math.floor(feed.generatedAt / 86400) * 86400 || published.from !== published.until - published.days * 86400 || published.days > published.durableRetentionDays)) throw new Error("Invalid published capital window.");
   const keys = new Set<string>();
   for (const d of feed.reviewedCapital?.history ?? []) {
+    if (published && (d.day < published.from || d.day >= published.until)) throw new Error("Capital observation is outside the published window.");
     const key = d.chainId + ":" + d.day;
     if (keys.has(key) || d.day % 86400 !== 0 || d.day + 86400 > feed.generatedAt || !feed.reviewedCapital?.coverage.supportedChains.includes(d.chainId)) throw new Error("Invalid capital day.");
     keys.add(key);
+    if (new Set(d.products.map(p => p.address)).size !== d.products.length) throw new Error("Duplicate capital product.");
     for (const t of [d.totals, ...d.products.map(p => p.totals)]) {
       const assets = new Set<string>();
       for (const a of [...t.assets, ...t.unresolvedAssets]) {
@@ -87,7 +102,16 @@ export function parsePulseFeed(value: unknown, now = Math.floor(Date.now() / 100
       }
     }
   }
-  return feed;
+  if (feed.globalCapital) validateGlobalCapital(feed.globalCapital, feed);
+  return {feed,packed};
+}
+export function parsePulseFeed(value:unknown,now=Math.floor(Date.now()/1000)):PulseFeed {
+ return parsePulseInput(value,now).feed;
+}
+/** Keep the validated compact representation on HTTP, while charts receive the decoded typed view. */
+export function parsePulseWireFeed(value:unknown,now=Math.floor(Date.now()/1000)){
+ const {feed,packed}=parsePulseInput(value,now);
+ return packed?{...feed,reviewedCapital:{...feed.reviewedCapital!,...packed}}:feed;
 }
 export const PULSE_FEED_POLICY: FeedTransportPolicy = {
   maximumPayloadBytes: 8 * 1024 * 1024, fatalUtf8: true, requestTimeoutMs: 15000,

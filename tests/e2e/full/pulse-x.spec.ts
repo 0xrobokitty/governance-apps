@@ -8,23 +8,24 @@ test("X stays in one card with accessible tabs and expandable post performance",
   await page.route("**/api/pulse-data",route=>route.fulfill({json:xFixture()}));
   await page.setViewportSize({width:1500,height:1100});
   await page.goto("/pulse");
-  await expect(page.getByTestId("pulse-live-card")).toHaveCount(9);
+  await expect(page.getByTestId("pulse-live-card")).toHaveCount(10);
   const card=page.getByTestId("pulse-live-card").filter({has:page.getByRole("heading",{name:"X audience",exact:true})});
   await expect(card.getByTestId("pulse-x-headline")).toHaveText("1,900");
-  await expect(card.getByTestId("pulse-x-details")).not.toHaveAttribute("open","");
+  await expect(page.getByRole("dialog")).toHaveCount(0);
   await card.getByRole("tab",{name:"Observed link clicks",exact:true}).click();
   await expect(card.getByTestId("pulse-x-headline")).toHaveText("19");
   await expect(card.getByTestId("pulse-x-click-coverage")).toHaveText(/8 posts contributed comparable click counts/);
-  await expect(card.getByTestId("pulse-x-click-coverage")).toHaveText(/Missing click values are unknown, not zero/);
   await card.getByRole("tab",{name:"Followers",exact:true}).click();
   await expect(card.getByTestId("pulse-x-headline")).toHaveText("90.02K");
-  await card.getByText("Post performance & coverage").click();
-  await expect(card.getByText("Median impressions per post")).toBeVisible();
-  await expect(card.getByText(/collection limit was reached/)).toBeVisible();
+  await card.getByText("Details",{exact:true}).click();
+  await expect(page.getByText("Median impressions per post")).toBeVisible();
+  await expect(page.getByText(/collection limit was reached/)).toBeVisible();
   await page.screenshot({path:testInfo.outputPath("x-desktop.png"),fullPage:true});
   await page.setViewportSize({width:390,height:844});
   expect(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth)).toBe(true);
   await page.screenshot({path:testInfo.outputPath("x-mobile.png"),fullPage:true});
+  await page.keyboard.press("Escape");
+  await expect(card.getByRole("button",{name:"Details: X audience",exact:true})).toBeFocused();
   await card.getByRole("tab",{name:"Impressions",exact:true}).focus();
   await page.keyboard.press("ArrowRight");
   await expect(card.getByRole("tab",{name:"Observed link clicks",exact:true})).toBeFocused();
@@ -39,10 +40,13 @@ test("X baseline is not interpreted as daily views",async({page})=>{
   f.x.status="stale";
   await page.route("**/api/pulse-data",route=>route.fulfill({json:f}));
   await page.goto("/pulse");
-  await expect(page.getByTestId("pulse-x-headline")).toHaveText("—");
-  await expect(page.getByText(/first observation establishes/)).toBeVisible();
-  await page.getByRole("tab",{name:"Followers",exact:true}).click();
+  await expect(page.getByRole("tab",{name:"Followers",exact:true})).toHaveAttribute("aria-selected","true");
   await expect(page.getByTestId("pulse-x-headline")).toHaveText("90K");
+  await page.getByRole("tab",{name:"Impressions",exact:true}).click();
+  await expect(page.getByTestId("pulse-x-headline")).toHaveText("—");
+  await expect(page.getByText(/Baseline saved/)).toBeVisible();
+  await page.getByRole("button",{name:"90D",exact:true}).click();
+  await expect(page.getByRole("tab",{name:"Impressions",exact:true})).toHaveAttribute("aria-selected","true");
 });
 
 test("Pulse renders the actual producer X contract in light and dark themes",async({page},testInfo)=>{
@@ -54,8 +58,9 @@ test("Pulse renders the actual producer X contract in light and dark themes",asy
   await page.screenshot({path:testInfo.outputPath("producer-x-desktop.png"),fullPage:true});
   await page.getByRole("tab",{name:"Observed link clicks",exact:true}).click();
   await expect(page.getByTestId("pulse-x-headline")).toHaveText("41");
-  await page.getByText("Post performance & coverage").click();
+  await page.getByTestId("pulse-x-details").click();
   await expect(page.getByText("60.53",{exact:true})).toBeVisible();
+  await page.keyboard.press("Escape");
   await page.getByRole("button",{name:"Switch to Dark Mode",exact:true}).click();
   await expect(page.locator("html")).toHaveAttribute("data-theme","soft-dark");
   const card=page.getByTestId("pulse-live-card").filter({has:page.getByRole("heading",{name:"X audience",exact:true})});

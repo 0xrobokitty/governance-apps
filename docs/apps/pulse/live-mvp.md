@@ -65,47 +65,52 @@ DNS and public host routing remain separate deployment work.
 
 | Row | Left | Center | Right |
 | --- | --- | --- | --- |
-| 1 | TVL | Net external flows and top products | Depositing and withdrawing accounts |
-| 2 | yLockers | Harvests and fees | X audience |
-| 3 | YFI governance | Treasury reserves | Recovery and loans |
+| 1 | Vault TVL | Net vault flows | Depositing and withdrawing accounts |
+| 2 | yLockers | Flex | X audience |
+| 3 | YFI governance | Treasury reserves | Product movers |
 
-Capital uses reviewedCapital, schema pulse-kong-envio/v3.
-The consumer never adds registryCapital or scopedCapital totals.
-The asset selector identifies a token and chain together.
-Native quantities avoid changes caused only by market prices.
-USD totals and percentages of TVL remain unavailable.
+Recovery and loans appear below the main grid.
+The toolbar also opens these charts in a dialog, including in wall view.
+Sources and methods open accessible dialogs. They do not expand the cards.
+The shared dialog traps focus, closes with Escape, and restores its trigger.
+Recovery methods remain inside its chart dialog; dialogs do not nest.
 
-Each chart shows missing observations as gaps.
-Capital uses completed UTC days.
-Snapshot metrics retain the last valid observation in each UTC day.
-A single observation appears as a point, not an invented trend.
-All four ranges remain available: 7D, 30D, 90D, and 365D.
+Capital uses only reviewed vault-boundary routes. It never adds registryCapital or scopedCapital totals.
+USD estimates use reference prices near each day's UTC opening.
+The flow chart shares one USD axis between daily bars and running net.
+The balance chart uses daily balance and running gross-weighted balance.
+Running balance divides total deposits minus withdrawals by their sum. It never adds daily percentages.
+Running totals include observed, priced data only. Missing dates remain gaps.
+Integration reallocations can increase both sides. These are not proven new customer flows.
 
-Top products rank absolute net movements within the selected token and chain.
-The table also shows counted deposit and withdrawal actions.
-Daily account counts use distinct chain-qualified beneficiaries.
-They do not measure people, new users, or verified EOAs.
+Product movers ranks reviewed actions or absolute net USD flows across all supported chains and assets.
+Its five rows have right-aligned daily mini charts.
+Daily accounts are distinct chain-qualified beneficiaries. They are not people or verified EOAs.
 
-The yLockers card compares yCRV and yYB.
-It shows completed weekly crvUSD allocations and fixed-size peg quotes.
-Current-week allocations appear separately.
-The staking-flow tab remains unavailable.
+TVL uses the separate DeFiLlama Yearn Finance vault series and shows its seven chains.
+The October 2026 source-accounting break has a linked explanation.
+The chart cannot attribute the entire movement to withdrawals or accounting.
+It does not splice this history with the quarantined Kong valuation.
 
-Treasury values exclude YFI and include only priced holdings.
-Operating holdings do not subtract commitments.
-The yETH target gap excludes unclaimed eligibility.
-Cash paid and principal settled remain separate.
-Resupply is a receivable owed to Yearn.
+The yLockers card compares yCRV and yYB weekly rewards and fixed-size peg quotes.
+Peg charts include a 100% parity reference and readable percentage ticks.
+Current-week rewards remain provisional. The unfinished staking-flow tab is hidden.
 
-## Remaining unavailable series
+Governance stacks migrated veYFI, liquid-locker backing, stYFIx, and direct stYFI in that order.
+It matches the staking-app total without double-counting stYFIx.
+Supply share, reported APR, YFI price, treasury, and recovery use zero-based scales.
+Treasury values exclude YFI. Operating holdings do not subtract commitments.
+Dots mark observed treasury and recovery balances. Dashed segments connect sparse observations only.
+Hover values remain unavailable on missing dates.
 
-- TVL and normalized USD or TVL-based capital measures.
-- Complete harvest fees.
-- Governance turnout.
-- Combined direct-staking and compounding flows for yLockers.
+The yETH shortfall excludes unclaimed eligibility.
+Cash paid and original principal settled are different measurements.
+A 1 WETH claim settled for 0.3 WETH records 1 WETH principal settled and 0.3 WETH cash paid.
+Resupply is a receivable owed to Yearn, including interest.
 
-Plausible is excluded.
-The live feature does not require wallet access.
+All ranges remain available: 7D, 30D, 90D, and 365D.
+Each source shows only its available history.
+Harvest fees, governance turnout, combined yLocker staking flows, and Plausible remain outside this view.
 
 ## Validation
 
@@ -124,7 +129,7 @@ It requires PULSE_DATA_URL and NEXT_PUBLIC_ENABLE_PULSE=true.
 GovApps Stats 0.12 adds the optional pulse-x/v1 section.
 Older feeds without this section remain usable.
 One card contains Impressions, Observed link clicks, and Followers tabs.
-Post performance and coverage stay in collapsed details.
+Post performance and coverage appear in the source dialog.
 There is no advertising split or product attribution.
 
 Activity charts show observed counter changes on tracked posts under 30 days old.
@@ -200,3 +205,51 @@ Pulse also has no dedicated public host mapping.
 The rollout must configure the build flag, the runtime feed URL, and the intended route.
 A preprod browser review must use the deployed Worker and its actual feed.
 Production readiness also requires an explicit decision about incomplete capital history and unavailable series.
+
+## Sparse observation display
+
+Charts keep missing dates empty. Isolated observations remain visible as points, including observations after a connected segment.
+Signed flow charts label zero on the vertical axis.
+A first X baseline opens on Followers when its follower count is known.
+Users can select the activity tabs. Range changes and feed refreshes preserve that selection.
+
+## Separate Flex contract
+
+The optional flex section uses pulse-flex/v1 on Ethereum.
+It supplies five metrics: debt, deposits, value, active borrower accounts, and claimable fees.
+Value is collateral plus deposits minus debt. These stocks are not additive.
+Claimable fees are a current stock, not fees earned during the selected period.
+Active borrower accounts are distinct owners of active, positive-debt positions. They are not people.
+
+Each metric preserves its source timestamps, evidence hashes, daily observations, and observed coverage.
+The consumer requires unique IDs, matching units, ordered dates, exact latest values, and consistent coverage.
+It rejects fractional account counts, future observations, and unavailable metrics that contain history.
+Missing history stays empty. Flex does not contribute to Yearn capital, accounts, TVL, or product rankings.
+Older feeds without this section remain valid.
+
+## Compact yearly capital
+
+The consumer accepts legacy reviewedCapital v3 and compact v4 dictionary tuples.
+It validates bounded dictionaries, exact tuple lengths, canonical order, references, chains, and metadata aliases before expanding the chart view.
+Unused dictionary entries and more than 100,000 references are rejected.
+The API validates the complete decoded view but returns sanitized compact tuples.
+This keeps the HTTP response within the existing 8 MiB limit.
+The browser then decodes the same typed accounting view locally.
+
+Global capital and TVL coverage can request 90 or 365 closed days.
+Missing dates stay explicit; accepting a yearly format does not establish a complete yearly backfill.
+The v4 producer and this consumer require a coordinated rollout. An older deployed consumer cannot read v4.
+Deploy the compatible consumer before activating the paired producer feed.
+
+## Daily YFI reference prices
+
+The optional marketHistory section uses pulse-market-history/v1.
+It holds up to 365 closed dates of YFI/USD and same-source YFI/WETH reference prices.
+Quotes must be within four hours of UTC opening, with confidence at least 0.9.
+The consumer verifies the fixed-point YFI/WETH ratio and every missing date.
+This history uses separate metric IDs from the current Chainlink quote. The sources are not spliced.
+The governance price tabs show USD and ETH references. Methods expose their meaning and latest quote times.
+
+Historical peg samples can contain only the products deployed at that block. Missing product quotes stay unavailable; they are never zero or forward-filled. Unknown product keys and empty quote maps are rejected.
+
+If daily reference history is empty, the USD tab retains the separate Chainlink observations. The ETH tab appears only when reference history exists. A removed tab falls back to the first available view during refresh.
