@@ -16,11 +16,11 @@ const msPerDay = 24 * 60 * 60 * 1000;
 
 const allowedInstallScriptPackages = new Map([
   [
-    "node_modules/@opennextjs/aws/node_modules/esbuild@0.28.2",
-    "OpenNext AWS adapter uses esbuild's platform binary validation.",
+    "node_modules/@opennextjs/cloudflare/node_modules/esbuild@0.28.2",
+    "OpenNext Cloudflare adapter uses esbuild's platform binary validation.",
   ],
   [
-    "node_modules/esbuild@0.28.1",
+    "node_modules/esbuild@0.28.2",
     "Wrangler uses esbuild's platform binary validation.",
   ],
   [
@@ -36,7 +36,7 @@ const allowedInstallScriptPackages = new Map([
     "Resolver package validates its native binding selection after install.",
   ],
   [
-    "node_modules/workerd@1.20261006.1",
+    "node_modules/workerd@1.20261104.1",
     "Cloudflare worker tooling validates the workerd runtime binary.",
   ],
 ]);
