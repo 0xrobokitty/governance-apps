@@ -50,6 +50,8 @@ X credentials belong to GovApps Stats and are not required in this repository.
 
 The producer must publish the feed first.
 The feature remains disabled unless `NEXT_PUBLIC_ENABLE_PULSE` equals `true`.
+For a Cloudflare rollout, set this variable to `true` in the corresponding GitHub Actions environment.
+Both Worker configurations read the public production feed. The runtime check verifies the page and feed before deployment.
 Changes to `NEXT_PUBLIC_*` values require a new build.
 
 The proxy accepts the production or staging Pulse object on data.dao-ops.com.
@@ -231,11 +233,11 @@ Each metric preserves its source timestamps, evidence hashes, daily observations
 The consumer requires unique IDs, matching units, ordered dates, exact latest values, and consistent coverage.
 It rejects fractional account counts, future observations, and unavailable metrics that contain history.
 Missing history stays empty. Flex does not contribute to Yearn capital, accounts, TVL, or product rankings.
-Older feeds without this section remain valid.
+The Flex section is optional.
 
 ## Compact yearly capital
 
-The consumer accepts legacy reviewedCapital v3 and compact v4 dictionary tuples.
+The consumer requires compact reviewedCapital v4 dictionary tuples.
 It validates bounded dictionaries, exact tuple lengths, canonical order, references, chains, and metadata aliases before expanding the chart view.
 Unused dictionary entries and more than 100,000 references are rejected.
 The API validates the complete decoded view but returns sanitized compact tuples.
@@ -244,8 +246,9 @@ The browser then decodes the same typed accounting view locally.
 
 Global capital and TVL coverage can request 90 or 365 closed days.
 Missing dates stay explicit; accepting a yearly format does not establish a complete yearly backfill.
-The v4 producer and this consumer require a coordinated rollout. An older deployed consumer cannot read v4.
-Deploy the compatible consumer before activating the paired producer feed.
+Before deployment, verify that PULSE_DATA_URL serves compact v4.
+Keep a v4 feed available during producer maintenance. If the feed must return to v3,
+restore a dashboard revision that supports v3 before switching the feed.
 
 ## Daily YFI reference prices
 

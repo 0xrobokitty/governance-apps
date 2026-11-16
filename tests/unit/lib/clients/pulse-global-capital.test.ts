@@ -2,7 +2,8 @@ import {describe,it,expect} from "vitest";
 import {parsePulseFeed} from "@/lib/clients/pulse/feed";
 import {accountTrend,globalCapitalTrend} from "@/lib/clients/pulse/live";
 import {globalCapitalFixture} from "../../../fixtures/pulse-global-capital";
-const parse=(f:ReturnType<typeof globalCapitalFixture>)=>parsePulseFeed(f,f.generatedAt+60);
+import {packCapital} from "../../../fixtures/pulse-packed";
+const parse=(f:ReturnType<typeof globalCapitalFixture>)=>parsePulseFeed(packCapital(f),f.generatedAt+60);
 describe("Global capital consumer contract",()=>{
   it("accepts six-chain source-bound daily USD estimates without changing legacy native amounts",()=>{
     const feed=parse(globalCapitalFixture());

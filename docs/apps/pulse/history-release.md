@@ -9,7 +9,7 @@ and a Product movers card in place of Harvests. Deployment remains separate.
 
 ## Consumer contract
 
-Keep pulse/v1 and reviewedCapital v3 compatible. Historical acquisition dates are
+The current consumer uses pulse/v1 with compact reviewedCapital v4. Historical acquisition dates are
 not evidence of observed coverage. A day contributes only when it exists in the
 feed and is not quarantined. Empty days remain gaps. Do not fill old dates from a
 current snapshot. X keeps its daily, forward-collected history.

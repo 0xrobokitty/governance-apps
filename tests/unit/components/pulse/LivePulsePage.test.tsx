@@ -6,12 +6,13 @@ import { parsePulseFeed } from "@/lib/clients/pulse/feed";
 import { globalCapitalFixture } from "../../../fixtures/pulse-global-capital";
 import {marketFixture} from "../../../fixtures/pulse-market-history";
 import fixture from "../../../fixtures/pulse-live.json";
+import {packCapital} from "../../../fixtures/pulse-packed";
 const query=vi.hoisted(()=>({data:undefined as unknown,stale:false,isError:false,isPending:false,refetch:vi.fn()}));
 vi.mock("@/lib/hooks/useLivePulse",()=>({useLivePulse:()=>query}));
 vi.mock("@/app/pulse/TrendChart",()=>({TrendChart:({label,series,rightAxis}:{label:string;series:TrendSeries[];rightAxis?:{label:string}})=><div role="img" aria-label={label} data-series={JSON.stringify(series)} data-right-axis={rightAxis?.label}/>}));
 describe("Pulse overview and method dialogs",()=>{
  it("keeps the agreed nine-card hierarchy and recovery outside the grid",async()=>{
-  const f=globalCapitalFixture();query.data=parsePulseFeed(f,f.generatedAt+60);
+  const f=globalCapitalFixture();query.data=parsePulseFeed(packCapital(f),f.generatedAt+60);
   render(<LivePulsePage/>);
   const grid=screen.getByTestId("pulse-main-grid");
   expect(within(grid).getAllByTestId("pulse-live-card")).toHaveLength(9);

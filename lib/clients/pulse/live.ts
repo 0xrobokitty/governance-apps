@@ -13,11 +13,11 @@ export function lockerPegValue(feed: PulseFeed, product: "ycrv" | "yyb", date: s
 }
 export function coveredDays(feed: PulseFeed, period: Period) {
   const dates = windowDays(feed.generatedAt, period, true);
-  const bad = new Set(feed.reviewedCapital?.coverage.quarantined ?? []);
-  return (feed.reviewedCapital?.enabled ? feed.reviewedCapital.history : []).filter(d => d.day >= dates[0] && d.day <= dates.at(-1)! && !bad.has(d.chainId + ":" + d.day));
+  const bad = new Set(feed.reviewedCapital.coverage.quarantined);
+  return (feed.reviewedCapital.enabled ? feed.reviewedCapital.history : []).filter(d => d.day >= dates[0] && d.day <= dates.at(-1)! && !bad.has(d.chainId + ":" + d.day));
 }
 export function capitalChains(feed: PulseFeed) {
-  return [...new Set([...(feed.reviewedCapital?.coverage.supportedChains ?? []), ...(feed.reviewedCapital?.sources.chains.map(c => c.chainId) ?? [])])].sort((a, b) => a - b);
+  return [...new Set([...feed.reviewedCapital.coverage.supportedChains, ...feed.reviewedCapital.sources.chains.map(c => c.chainId)])].sort((a, b) => a - b);
 }
 export function metricStatus(metrics: (LiveMetric | undefined)[]) {
   if (metrics.every(m => !m || m.status === "unavailable")) return "unavailable";

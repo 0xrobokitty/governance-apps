@@ -196,7 +196,7 @@ function Movers({feed,period}:{feed:PulseFeed;period:Period}) {
   const view=tab==="flows"&&hasUsd?"flows":"activity";
   const rows=view==="activity"?activity.products:priced.products;
   const observed=view==="activity"?activity.observedChainDays:priced.observed*6;
-  const stale=view==="activity"?feed.reviewedCapital?.sources.chains.some(s=>s.status==="stale"):feed.globalCapital?.status==="stale";
+  const stale=view==="activity"?feed.reviewedCapital.sources.chains.some(s=>s.status==="stale"):feed.globalCapital?.status==="stale";
   return <Tile title={c.movers} status={!observed?c.pending:stale?c.staleMetric:view==="flows"?(priced.partial?c.pricedSubtotal:c.estimated):c.reviewed} note={view==="activity"?c.activityNote:c.productsNote}
     details={<><p>{activity.observedChainDays}/{activity.expectedChainDays} {c.chainDays}.</p><p>{c.scope}</p>{view==="flows"&&<p>{c.priceCoverageNote}</p>}</>}>
     <MetricTabs id="live-movers" label={c.movers} value={view} options={[{value:"activity",label:c.activity},...(hasUsd?[{value:"flows",label:c.moverFlows}]:[])]} onChange={setTab}/>
@@ -214,7 +214,7 @@ export function LivePulsePage() {
   const [wall, setWall] = useState(false);
   const feed = query.data;
   const hasMarketHistory=(feed?.marketHistory?.history.length??0)>0;
-  const publishedDays=feed?.reviewedCapital?.coverage.publishedHistory?.days;
+  const publishedDays=feed?.reviewedCapital.coverage.publishedHistory?.days;
   const publicationNote=publishedDays?c.capitalWindow.replace("{days}",String(publishedDays)):null;
   const windowExceedsPublication=publishedDays!==undefined&&period>publishedDays;
   const accounts=feed?accountTrend(feed,period):null;
@@ -227,11 +227,11 @@ export function LivePulsePage() {
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary"><span data-testid={windowExceedsPublication?"pulse-capital-horizon":undefined}>{windowExceedsPublication?publicationNote:c.live}</span><span>{feed?c.updated+" "+new Date(feed.generatedAt*1000).toISOString().replace("T"," ").slice(0,19)+" UTC":c.loading}</span></div>
     {(query.stale||query.isError)&&<p role="status" className="mb-3 rounded-box border border-border p-2 text-sm text-text-secondary">{query.stale?c.stale:c.failed}</p>}
     {!feed?<Card><p role="status">{query.isPending?c.loading:c.unavailable}</p></Card>:<>
-      <div className="mb-3"><SourceDetails title={c.coverage} label={c.coverage}><p>{c.coverageNote}</p>{publicationNote&&<p>{publicationNote} {c.capitalWindowNote}</p>}<p>{c.rangeCoverage}: {coveredDays(feed,period).length}/{period*chains.length}.</p><p>{c.scope}</p><p>{c.liveHistory}</p>{feed.reviewedCapital?.coverage.gaps.map((gap,i)=><p key={i}>{gap}</p>)}{feed.reviewedCapital?.sources.chains.map(s=><p key={s.chainId}>{CHAIN_NAMES[s.chainId]}: {s.status} · {s.coveredThrough?c.closedDaysThrough+" "+dayAt(s.coveredThrough-1):c.chainPending}</p>)}</SourceDetails></div>
+      <div className="mb-3"><SourceDetails title={c.coverage} label={c.coverage}><p>{c.coverageNote}</p>{publicationNote&&<p>{publicationNote} {c.capitalWindowNote}</p>}<p>{c.rangeCoverage}: {coveredDays(feed,period).length}/{period*chains.length}.</p><p>{c.scope}</p><p>{c.liveHistory}</p>{feed.reviewedCapital.coverage.gaps.map((gap,i)=><p key={i}>{gap}</p>)}{feed.reviewedCapital.sources.chains.map(s=><p key={s.chainId}>{CHAIN_NAMES[s.chainId]}: {s.status} · {s.coveredThrough?c.closedDaysThrough+" "+dayAt(s.coveredThrough-1):c.chainPending}</p>)}</SourceDetails></div>
       <div className={styles.grid} data-testid="pulse-main-grid">
         <TvlCard feed={feed} period={period}/>
         <GlobalFlows feed={feed} period={period}/>
-        <Tile title={c.accounts} status={!accounts?.completeDays?c.pending:feed.reviewedCapital?.sources.chains.some(s=>s.status==="stale")?c.staleMetric:c.reviewed} note={c.accountsNote}
+        <Tile title={c.accounts} status={!accounts?.completeDays?c.pending:feed.reviewedCapital.sources.chains.some(s=>s.status==="stale")?c.staleMetric:c.reviewed} note={c.accountsNote}
           details={<><p>{accounts?.chainDays}/{accounts?.expected} {c.chainDays}.</p><p>{c.scope}</p></>}>
           <div className={styles.metric}><span className="text-xs text-text-secondary">{c.chainQualified} · {accounts?.completeDays}/{period} {c.observedDays}</span></div>
           {accounts&&<Plot title={c.accounts} dates={accounts.dates} series={[{label:c.depositing,color:BLUE,values:accounts.deposits},{label:c.withdrawing,color:ORANGE,values:accounts.withdrawals}]} format={v=>numeric(Math.round(v))} integerAxis zero/>}

@@ -10,6 +10,7 @@ const expectedRuntimeEnv: Record<string, string> = {
   NEXT_PUBLIC_RUNTIME_MODE: "production",
   NEXT_PUBLIC_USE_MOCKS: '"false"',
   NEXT_PUBLIC_E2E: '"false"',
+  NEXT_PUBLIC_ENABLE_PULSE: "${{ vars.NEXT_PUBLIC_ENABLE_PULSE || 'false' }}",
   NEXT_PUBLIC_ENABLE_DEBUG_UI: '"false"',
   NEXT_PUBLIC_ENABLE_TREASURY: "${{ vars.NEXT_PUBLIC_ENABLE_TREASURY || 'false' }}",
   NEXT_PUBLIC_ENABLE_TEAMS:
@@ -106,12 +107,13 @@ describe("deploy workflow env wiring", () => {
       );
     });
 
-    it(`${relativePath} checks yETH hosts with the same exposure gate and approved live flag`, () => {
+    it(`${relativePath} checks Pulse and yETH with their configured exposure gates`, () => {
       const runtimeCommand = relativePath.includes("preprod")
         ? "npm run validate:worker-runtime -- wrangler.preprod.jsonc"
         : "npm run validate:worker-runtime -- wrangler.jsonc";
       expect(parseStepEnvByRun(workflowPath, runtimeCommand)).toEqual({
         NEXT_PUBLIC_ENABLE_DAO: "${{ vars.NEXT_PUBLIC_ENABLE_DAO || 'false' }}",
+        NEXT_PUBLIC_ENABLE_PULSE: expectedRuntimeEnv.NEXT_PUBLIC_ENABLE_PULSE,
         NEXT_PUBLIC_ENABLE_YETH: expectedRuntimeEnv.NEXT_PUBLIC_ENABLE_YETH,
         NEXT_PUBLIC_YETH_RECOVERY_LIVE: '"true"',
       });

@@ -36,6 +36,11 @@ if (process.env.NEXT_PUBLIC_ENABLE_YETH === "true") {
   );
 }
 
+const pulseEnabled = process.env.NEXT_PUBLIC_ENABLE_PULSE === "true";
+if (pulseEnabled) {
+  probes.push(["https://app.dao-ops.com/pulse", "Pulse | Yearn"]);
+}
+
 let worker;
 const envDirectory = await mkdtemp(path.join(tmpdir(), "worker-runtime-check-"));
 const envFile = path.join(envDirectory, "empty.env");
@@ -132,6 +137,21 @@ try {
     assert.ok(html.includes("</html>"), `${url} returned incomplete HTML`);
     assert.doesNotMatch(html, /id="__next_error__"|NEXT_HTTP_ERROR_FALLBACK;500|Unexpected loadManifest/);
     console.log(`PASS ${url}: HTTP 200 and complete server-rendered HTML`);
+  }
+  if (pulseEnabled) {
+    const response = await worker.fetch("https://app.dao-ops.com/api/pulse-data", {
+      headers: { "x-forwarded-host": "app.dao-ops.com" },
+      signal: AbortSignal.timeout(20_000),
+    });
+    assert.equal(response.status, 200, "Live Pulse feed proxy failed in workerd");
+    const body = await response.text();
+    assert.ok(Buffer.byteLength(body) <= 8 * 1024 * 1024, "Pulse response exceeds 8 MiB");
+    const feed = JSON.parse(body);
+    assert.equal(feed.schema, "pulse/v1");
+    assert.equal(feed.mode, "live");
+    assert.equal(feed.reviewedCapital?.schema, "pulse-kong-envio/v4");
+    assert.equal(feed.reviewedCapital?.encoding, "dictionary-tuples/v1");
+    console.log("PASS Pulse proxy: live compact v4 feed in workerd");
   }
   if (process.env.YETH_VERIFY_PUBLIC_FEED === "true") {
     const response = await worker.fetch("https://yeth.yearn.fi/api/yeth-recovery-data", {

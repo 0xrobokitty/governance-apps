@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../../../fixtures/pulse-live.json";
+import { packCapital } from "../../../fixtures/pulse-packed";
 import { parsePulseFeed, PulseFeedReader } from "@/lib/clients/pulse/feed";
 import { accountTrend, capitalAssets, capitalChains, capitalTrend, coveredDays, metricStatus, metricTrend, productActivity } from "@/lib/clients/pulse/live";
 const now = fixture.generatedAt + 60;
@@ -17,22 +18,22 @@ describe("Pulse live data boundary", () => {
     expect(feed.reviewedCapital!.coverage.publishedHistory).toBeUndefined();
     const until = Math.floor(feed.generatedAt / 86400) * 86400;
     feed.reviewedCapital!.coverage.publishedHistory = { days:90, from:until-90*86400, until, durableRetentionDays:740, basis:"Last 90 closed UTC days." };
-    expect(parse(feed).reviewedCapital!.coverage.publishedHistory?.days).toBe(90);
+    expect(parse(packCapital(feed)).reviewedCapital!.coverage.publishedHistory?.days).toBe(90);
     const bad = structuredClone(feed);
     bad.reviewedCapital!.coverage.publishedHistory!.from -= 86400;
-    expect(() => parse(bad)).toThrow(/published capital window/);
+    expect(() => parse(packCapital(bad))).toThrow(/published capital window/);
     const outside = structuredClone(feed);
     outside.reviewedCapital!.history[0].day = until - 91 * 86400;
-    expect(() => parse(outside)).toThrow(/outside the published window/);
+    expect(() => parse(packCapital(outside))).toThrow(/outside the published window/);
   });
   it("rejects duplicate and conflicting metric observations", () => {
     const bad = structuredClone(parse(fixture));
     const metric = bad.metrics.find(m => m.latest)!;
     metric.history.push(metric.history[0]);
-    expect(() => parse(bad)).toThrow();
+    expect(() => parse(packCapital(bad))).toThrow();
     const conflict = structuredClone(parse(fixture));
     conflict.metrics.find(m => m.latest)!.latest!.value = "999";
-    expect(() => parse(conflict)).toThrow();
+    expect(() => parse(packCapital(conflict))).toThrow();
   });
   it("leaves unknown dates empty in every range", () => {
     const feed = parse(fixture);
@@ -138,7 +139,7 @@ describe("Pulse live data boundary", () => {
     const feed = parse(fixture);
     const day = feed.reviewedCapital!.history.find(d => d.products.length)!;
     day.products.push(structuredClone(day.products[0]));
-    expect(() => parse(feed)).toThrow(/Duplicate capital product/);
+    expect(() => parse(packCapital(feed))).toThrow(/Duplicate or aliased capital product/);
   });
 
 });

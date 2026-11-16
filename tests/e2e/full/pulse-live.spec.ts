@@ -4,6 +4,7 @@ import {flexFixture} from "../../fixtures/pulse-flex";
 import {globalCapitalFixture} from "../../fixtures/pulse-global-capital";
 import {tvlFixture} from "../../fixtures/pulse-tvl";
 import fixture from "../../fixtures/pulse-live.json";
+import {packCapital} from "../../fixtures/pulse-packed";
 test.skip(process.env.NEXT_PUBLIC_ENABLE_PULSE !== "true", "Pulse live review is opt-in.");
 test("Pulse live feed uses nine cards, real observations and visible gaps", async ({ page }, testInfo) => {
   const errors: string[] = [];
@@ -63,9 +64,9 @@ test("Pulse global overview keeps chain and price detail inside compact cards",a
   const source=f.metrics.find(m=>m.latest)!;
   const governance=[["yfi.styfi_direct",100],["yfi.styfix",200],["yfi.veyfi_migrated",300],["yfi.liquid_lockers_backing",400],["yfi.participating",1000],["yfi.participation_rate_bps",250]].map(([id,value])=>{
     const point={...source.latest!,observedAt:f.generatedAt,value:String(value)};
-    return {...source,id:String(id),label:String(id),unit:"YFI",status:"available",history:[point],latest:point};
+    return {...source,id:String(id),label:String(id),unit:"YFI",status:"available" as const,history:[point],latest:point};
   });
-  await page.route("**/api/pulse-data",route=>route.fulfill({json:{...f,tvlHistory:{...tvl,history,latest:history.at(-1)},metrics:[...f.metrics.filter(m=>!governance.some(g=>g.id===m.id)),...governance]}}));
+  await page.route("**/api/pulse-data",route=>route.fulfill({json:packCapital({...f,tvlHistory:{...tvl,history,latest:history.at(-1) ?? null},metrics:[...f.metrics.filter(m=>!governance.some(g=>g.id===m.id)),...governance]})}));
   await page.setViewportSize({width:1920,height:1080});
   await page.goto("/pulse");
   await expect(page.getByTestId("pulse-live-card")).toHaveCount(10);

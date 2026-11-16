@@ -7,13 +7,15 @@ const unresolvedRow=z.tuple([count,raw,raw]);
 const totals=z.tuple([count,count,count,count,count,count,z.array(assetRow).max(10000),z.array(unresolvedRow).max(10000)]);
 const productRow=z.tuple([count,totals]);
 const day=z.tuple([count,count,digest,digest,count,count,count,count,count,count,count,count,z.string().regex(/^0x[0-9a-f]{64}$/),count,totals,z.array(productRow).max(10000)]);
-const packedSchema=z.object({
- schema:z.literal("pulse-kong-envio/v4"),encoding:z.literal("dictionary-tuples/v1"),
+const capitalSchema = "pulse-kong-envio/v4";
+const capitalEncoding = "dictionary-tuples/v1";
+export const packedCapitalSchema = z.object({
+ schema: z.literal(capitalSchema), encoding: z.literal(capitalEncoding),
  assetDictionary:z.array(z.object({chainId:count,address,symbol:z.string().min(1).max(128).refine(scalar),decimals:count.max(36)})).max(10000),
  productDictionary:z.array(z.object({chainId:count,address,name:z.string().max(512).refine(scalar)})).max(10000),
  history:z.array(day).max(2190),
 });
-export type PackedCapital=z.infer<typeof packedSchema>;
+export type PackedCapital=z.infer<typeof packedCapitalSchema>;
 export const MAX_CAPITAL_REFERENCES=100000;
 function compareScalar(a:string,b:string){
  const x=Array.from(a,c=>c.codePointAt(0)!),y=Array.from(b,c=>c.codePointAt(0)!);
@@ -23,28 +25,56 @@ function compareScalar(a:string,b:string){
 function ordered<T>(rows:T[],compare:(a:T,b:T)=>number){
  for(let i=1;i<rows.length;i++)if(compare(rows[i-1],rows[i])>=0)throw new Error("Capital dictionary is not strictly canonical.");
 }
-function checkRawBounds(value:object){
- const input=value as Record<string,unknown>;let references=0;
- const array=(v:unknown,max:number):unknown[]=>{if(!Array.isArray(v)||v.length>max)throw new Error("Invalid packed capital array bound.");return v;};
- array(input.assetDictionary,10000);array(input.productDictionary,10000);
- const add=(n:number)=>{references+=n;if(references>MAX_CAPITAL_REFERENCES)throw new Error("Packed capital expansion exceeds its reference limit.");};
- const total=(v:unknown)=>{const t=array(v,8);if(t.length!==8)throw new Error("Invalid capital totals tuple.");add(array(t[6],10000).length+array(t[7],10000).length);};
- for(const value of array(input.history,2190)){
-  const d=array(value,16);if(d.length!==16)throw new Error("Invalid capital day tuple.");
-  total(d[14]);const products=array(d[15],10000);add(products.length);
-  for(const value of products){const p=array(value,2);if(p.length!==2)throw new Error("Invalid capital product tuple.");total(p[1]);}
- }
+/** Reject large expansions before Zod walks the tuple elements. */
+export function checkPackedCapitalBounds(value: unknown): unknown {
+  if (!value || typeof value !== "object" || Array.isArray(value)) return value;
+  const input = value as Record<string, unknown>;
+  if (input.schema !== capitalSchema || input.encoding !== capitalEncoding) {
+    throw new Error("Unsupported Pulse capital format.");
+  }
+
+  function boundedArray(value: unknown, limit: number): unknown[] {
+    if (!Array.isArray(value) || value.length > limit) {
+      throw new Error("Invalid packed capital array bound.");
+    }
+    return value;
+  }
+
+  let references = 0;
+  function addReferences(count: number) {
+    references += count;
+    if (references > MAX_CAPITAL_REFERENCES) {
+      throw new Error("Packed capital expansion exceeds its reference limit.");
+    }
+  }
+  function countTotals(value: unknown) {
+    const row = boundedArray(value, 8);
+    if (row.length !== 8) throw new Error("Invalid capital totals tuple.");
+    addReferences(boundedArray(row[6], 10000).length + boundedArray(row[7], 10000).length);
+  }
+
+  boundedArray(input.assetDictionary, 10000);
+  boundedArray(input.productDictionary, 10000);
+  for (const value of boundedArray(input.history, 2190)) {
+    const row = boundedArray(value, 16);
+    if (row.length !== 16) throw new Error("Invalid capital day tuple.");
+    countTotals(row[14]);
+    const products = boundedArray(row[15], 10000);
+    addReferences(products.length);
+    for (const value of products) {
+      const product = boundedArray(value, 2);
+      if (product.length !== 2) throw new Error("Invalid capital product tuple.");
+      countTotals(product[1]);
+    }
+  }
+  return value;
 }
-export function readPackedCapital(value:unknown):PackedCapital|null{
- if(!value||typeof value!=="object"||!("schema" in value)||value.schema!=="pulse-kong-envio/v4")return null;
- checkRawBounds(value);
- const p=packedSchema.parse(value);
+
+export function validatePackedCapital(p: PackedCapital) {
  ordered(p.assetDictionary,(a,b)=>a.chainId-b.chainId||compareScalar(a.address,b.address)||compareScalar(a.symbol,b.symbol)||a.decimals-b.decimals);
  ordered(p.productDictionary,(a,b)=>a.chainId-b.chainId||compareScalar(a.address,b.address)||compareScalar(a.name,b.name));
- const usedAssets=new Set<number>(),usedProducts=new Set<number>();let references=0;
- const add=(n:number)=>{references+=n;if(references>MAX_CAPITAL_REFERENCES)throw new Error("Packed capital expansion exceeds its reference limit.");};
+ const usedAssets = new Set<number>(), usedProducts = new Set<number>();
  const checkTotals=(t:z.infer<typeof totals>,chain:number)=>{
-  add(t[6].length+t[7].length);
   for(const group of [t[6],t[7]]){
    const addresses=new Set<string>();
    for(const row of group){
@@ -56,7 +86,7 @@ export function readPackedCapital(value:unknown):PackedCapital|null{
   }
  };
  for(const d of p.history){
-  checkTotals(d[14],d[0]);add(d[15].length);const addresses=new Set<string>();
+  checkTotals(d[14],d[0]);const addresses=new Set<string>();
   for(const row of d[15]){
    const product=p.productDictionary[row[0]];
    if(!product||product.chainId!==d[0])throw new Error("Invalid capital product reference.");
@@ -65,7 +95,6 @@ export function readPackedCapital(value:unknown):PackedCapital|null{
   }
  }
  if(usedAssets.size!==p.assetDictionary.length||usedProducts.size!==p.productDictionary.length)throw new Error("Capital dictionary contains unused entries.");
- return p;
 }
 function display(value:bigint,decimals:number){
  const sign=value<0n?"-":"",digits=(value<0n?-value:value).toString().padStart(decimals+1,"0");
@@ -86,7 +115,7 @@ export function decodePackedCapital(p:PackedCapital){
  });
  return p.history.map(d=>({
   chainId:d[0],day:d[1],accountingSha256:d[2],sourceSha256:d[3],registryProducts:d[4],nativeEventIneligibleProducts:d[5],metadataGapProducts:d[6],registryObservedAt:d[7],scopedEvents:d[8],transactions:d[9],
-  anchor:{number:d[10],timestamp:d[11],hash:d[12]},...(d[13]?{receiptRecoveredEvents:d[13]}:{}),totals:expandTotals(d[14]),
+  anchor:{number:d[10],timestamp:d[11],hash:d[12]},totals:expandTotals(d[14]),
   products:d[15].map(row=>({address:p.productDictionary[row[0]].address,name:p.productDictionary[row[0]].name,totals:expandTotals(row[1])})),
  }));
 }

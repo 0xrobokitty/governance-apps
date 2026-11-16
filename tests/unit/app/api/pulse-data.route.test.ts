@@ -16,6 +16,13 @@ describe("Pulse compact HTTP proxy",()=>{
   expect(Array.isArray(wire.reviewedCapital.history[0])).toBe(true);
   expect(parsePulseFeed(wire).globalCapital?.history).toHaveLength(1);
  });
+ it("rejects a v3 upstream publication",async()=>{
+  vi.stubEnv("PULSE_DATA_URL","https://data.dao-ops.com/prod/pulse.json");
+  const f=globalCapitalFixture();
+  const legacy={...f,reviewedCapital:{...f.reviewedCapital,schema:"pulse-kong-envio/v3"}};
+  vi.stubGlobal("fetch",vi.fn().mockResolvedValue(new Response(JSON.stringify(legacy))));
+  expect((await GET()).status).toBe(502);
+ });
  it("rejects malformed compact references instead of passing them to the browser",async()=>{
   vi.stubEnv("PULSE_DATA_URL","http://127.0.0.1:3210/pulse.json");
   const f=packCapital(globalCapitalFixture());f.reviewedCapital.history[0][14][6][0][0]=99999;

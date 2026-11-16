@@ -11,6 +11,8 @@ test("Pulse renders the real local Stats response through its API proxy",async({
   expect(body.length).toBeLessThanOrEqual(8*1024*1024);
   const feed=JSON.parse(body.toString("utf8"));
   expect(feed.mode).toBe("live");
+  expect(feed.reviewedCapital.schema).toBe("pulse-kong-envio/v4");
+  expect(feed.reviewedCapital.encoding).toBe("dictionary-tuples/v1");
   expect(feed.metrics.filter((m:{latest:unknown})=>m.latest).length).toBeGreaterThanOrEqual(13);
   if(process.env.PULSE_HISTORY_INTEGRATION === "true"){
     const parsed = parsePulseFeed(feed);
@@ -21,7 +23,6 @@ test("Pulse renders the real local Stats response through its API proxy",async({
       const latest90=coveredDays(parsed,90);
       const recentDays=new Set(latest90.map(d=>d.day));
       expect(global.history.filter(d=>recentDays.has(d.day))).toHaveLength(90);
-      if(global.coverage.publishedDays===365)expect(feed.reviewedCapital.schema).toBe("pulse-kong-envio/v4");
       expect(parsed.tvlHistory?.history.every(p=>p.chains?.length===7)).toBe(true);
       for(const id of ["yfi.styfi_direct","yfi.styfix","yfi.veyfi_migrated","yfi.liquid_lockers_backing","yfi.participating","yfi.participation_rate_bps"]) {
         expect(parsed.metrics.find(m=>m.id===id)?.history.length).toBeGreaterThanOrEqual(90);

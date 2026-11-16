@@ -56,9 +56,9 @@ export function validateGlobalCapital(data: GlobalCapital, feed: PulseFeed) {
   if (data.checkedAt > feed.generatedAt + 60 || data.coverage.until !== end || data.coverage.from !== end - data.coverage.publishedDays * 86400) throw new Error("Invalid global capital window.");
   const chains = [...data.coverage.supportedChains].sort((a, b) => a - b);
   if (JSON.stringify(chains) !== JSON.stringify([1, 10, 137, 8453, 42161, 747474])) throw new Error("Invalid global capital chain scope.");
-  if (!feed.reviewedCapital?.enabled && data.history.length) throw new Error("Global capital has no reviewed source.");
-  const bad = new Set(feed.reviewedCapital?.coverage.quarantined ?? []);
-  const native = new Map(feed.reviewedCapital?.history.map(d => [d.chainId + ":" + d.day, d]));
+  if (!feed.reviewedCapital.enabled && data.history.length) throw new Error("Global capital has no reviewed source.");
+  const bad = new Set(feed.reviewedCapital.coverage.quarantined);
+  const native = new Map(feed.reviewedCapital.history.map(d => [d.chainId + ":" + d.day, d]));
   let previous = -1;
   for (const p of data.history) {
     if (p.day <= previous || p.day % 86400 || p.day < data.coverage.from || p.day >= end) throw new Error("Invalid global capital day.");
