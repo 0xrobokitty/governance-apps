@@ -37,6 +37,7 @@
     { "pattern": "ybc-beta.dao-ops.com", "custom_domain": true },
     { "pattern": "dao-beta.dao-ops.com", "custom_domain": true },
     { "pattern": "treasury-beta.dao-ops.com", "custom_domain": true },
+    { "pattern": "pulse-beta.dao-ops.com", "custom_domain": true },
   ],
 
   "assets": {
