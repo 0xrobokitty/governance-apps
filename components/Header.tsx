@@ -27,7 +27,7 @@ export function Header() {
   const pathname = usePathname();
   const segments = useSelectedLayoutSegments();
   const segment = segments?.[0] ?? null;
-  const isReadOnlyPulse = pathname === "/pulse";
+  const isReadOnlyPulse = segment === "pulse" || pathname === "/pulse";
   const hostname = useHostname();
   const clock = useEpochClock({ tickMs: 1000 });
   const preferMocks =

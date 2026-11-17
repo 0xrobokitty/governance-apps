@@ -23,3 +23,13 @@ test("Pulse replaces Metrics with nine historical cards including recovery and r
   await expect(page.getByRole("table", { name: /Product trends/ })).not.toContainText("USDC");
   await expect(page.getByTestId("pulse-fees")).toContainText("All products");
 });
+
+test("the Pulse hostname opens Pulse at the root", async ({ page }) => {
+  await page.setExtraHTTPHeaders({ "x-forwarded-host": "pulse.yearn.fi" });
+  await page.goto("/");
+  await expect(page).toHaveURL(/\/$/);
+  await expect(page.getByRole("heading", { name: "Pulse", exact: true })).toBeVisible();
+  await expect(page.locator("header")).not.toContainText("0xf39F");
+  await page.getByRole("group", { name: "History window" }).getByRole("button", { name: "90D" }).click();
+  await expect(page.getByTestId("pulse-range")).toContainText("5 Aug");
+});

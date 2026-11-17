@@ -61,7 +61,17 @@ No live failure substitutes illustrative values.
 
 The earlier design preview uses its existing separate flags.
 When live mode is enabled, the live route takes priority.
-DNS and public host routing remain separate deployment work.
+
+## Custom domains
+
+After deploying with Pulse enabled, add `pulse.yearn.fi` as a Custom Domain
+on the production `governance-apps` Worker in Cloudflare. Use the same dashboard
+procedure as [the other Yearn hosts](../dao/production-release.md#11-configure-daoyearnfi-through-the-dashboard).
+The Worker routes requests for `pulse.yearn.fi/` to Pulse. Verify the homepage
+and `/api/pulse-data` on the custom domain after attachment and after redeploys.
+
+The preprod Worker registers `pulse-beta.dao-ops.com` through its Wrangler configuration.
+The Worker serves Pulse at the root on both custom domains.
 
 ## Card order
 
