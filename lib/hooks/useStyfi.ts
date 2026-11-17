@@ -11,6 +11,7 @@ import { useAccount } from "wagmi";
 import { useProtocol } from "@/state/protocol";
 import { StyfiStakeMode, type StyfiClient } from "@/lib/clients/styfi";
 import { useTx } from "@/lib/tx/useTx";
+import type { PreparedTransaction } from "@/lib/tx/types";
 import { E2E_MOCK_ADDRESS } from "@/lib/constants";
 import { formatPercent } from "@/lib/format";
 import { getRefetchOnWindowFocus } from "@/lib/query/focus-refetch-policy";
@@ -80,7 +81,7 @@ function toMsTimestamp(value: number | null | undefined) {
 
 // --- Read Hooks ---
 
-export function useStyfiAccount() {
+export function useStyfiAccount(enabled = true) {
   const { styfi, publicClient, usesMockBackend } = useProtocol();
   const { address: wagmiAddress } = useAccount();
   const isVisible = useDocumentVisibility();
@@ -88,7 +89,7 @@ export function useStyfiAccount() {
   const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const address =
     wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-  const isEnabled = !!address && (usesMockBackend || !!publicClient);
+  const isEnabled = enabled && !!address && (usesMockBackend || !!publicClient);
   const shouldPoll = isVisible && isPollingRoute;
 
   return useQuery({
@@ -211,7 +212,10 @@ export function useRewardTokenInfo() {
 
 // --- Write Hooks ---
 
-export function useStyfiStake() {
+function useStyfiWrite<Args extends unknown[]>(
+  prepare: (client: StyfiClient, ...args: Args) => Promise<PreparedTransaction>,
+  refreshStats = true
+) {
   const { styfi, usesMockBackend } = useProtocol();
   const { execute, state } = useTx();
   const queryClient = useQueryClient();
@@ -220,112 +224,38 @@ export function useStyfiStake() {
   const address =
     wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
 
-  const write = async (mode: StyfiStakeMode, amount: bigint) => {
-    const prepare = await styfi.prepareStake(mode, amount);
-
-    await execute(prepare, {
+  const write = async (...args: Args) => {
+    await execute(async () => {
+      const transaction = await prepare(styfi, ...args);
+      return transaction();
+    }, {
       invalidate: async () => {
         await Promise.all([
           queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
           queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+          queryClient.invalidateQueries({ queryKey: styfiKeys.account(address) }),
+          refreshStats ? refreshStyfiStatsFromChain(styfi, queryClient) : undefined,
         ]);
-        await queryClient.invalidateQueries({
-          queryKey: styfiKeys.account(address),
-        });
-        await refreshStyfiStatsFromChain(styfi, queryClient);
       },
       skipWaitForReceipt: usesMockBackend,
     });
   };
 
   return { write, state };
+}
+
+export function useStyfiStake() {
+  return useStyfiWrite((client, mode: StyfiStakeMode, amount: bigint) => client.prepareStake(mode, amount));
 }
 
 export function useStyfiStartCooldown() {
-  const { styfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async (mode: StyfiStakeMode, amount: bigint) => {
-    const prepare = await styfi.prepareStartCooldown(mode, amount);
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
-          queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
-        ]);
-        await queryClient.invalidateQueries({
-          queryKey: styfiKeys.account(address),
-        });
-        await refreshStyfiStatsFromChain(styfi, queryClient);
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useStyfiWrite((client, mode: StyfiStakeMode, amount: bigint) => client.prepareStartCooldown(mode, amount));
 }
 
 export function useStyfiWithdraw() {
-  const { styfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async (mode: StyfiStakeMode) => {
-    const prepare = await styfi.prepareWithdraw(mode);
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
-          queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
-        ]);
-        await queryClient.invalidateQueries({
-          queryKey: styfiKeys.account(address),
-        });
-        await refreshStyfiStatsFromChain(styfi, queryClient);
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useStyfiWrite((client, mode: StyfiStakeMode) => client.prepareWithdraw(mode));
 }
 
 export function useStyfiClaimRewards() {
-  const { styfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async () => {
-    const prepare = await styfi.prepareClaimRewards();
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await Promise.all([
-          queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
-          queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
-        ]);
-        await queryClient.invalidateQueries({
-          queryKey: styfiKeys.account(address),
-        });
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useStyfiWrite(client => client.prepareClaimRewards(), false);
 }

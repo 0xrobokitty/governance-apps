@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { usePathname } from "next/navigation";
+import { useHostname } from "@/lib/hooks/useHostname";
+import { applyHostPrefix, resolveHostPrefix } from "@/lib/runtime/host-routing";
 
 export function useDocumentVisibility() {
   const [isVisible, setIsVisible] = useState(() => {
@@ -38,7 +40,9 @@ function useCurrentPathname() {
 }
 
 export function useIsRouteActive(prefixes: readonly string[]) {
-  const pathname = useCurrentPathname();
+  const currentPathname = useCurrentPathname();
+  const hostname = useHostname();
+  const pathname = applyHostPrefix(currentPathname, hostname ? resolveHostPrefix(hostname) : null);
   return prefixes.some((prefix) => {
     if (!prefix) return false;
     return pathname === prefix || pathname.startsWith(`${prefix}/`);

@@ -18,8 +18,8 @@ export function useStyfiApr() {
   const { address, isConnected, isWrongNetwork } = useIdentity();
   const { mainnetPublicClient, globalData, usesMockBackend } = useProtocol();
   const accountAddress = isConnected && !isWrongNetwork ? address : undefined;
-  const account = useStyfiAccount();
-  const veyfiAccount = useVeyfiAccount();
+  const account = useStyfiAccount(usesMockBackend);
+  const veyfiAccount = useVeyfiAccount(usesMockBackend);
   const isVisible = useDocumentVisibility();
   const query = useQuery({
     queryKey: [...styfiAprKeys.all, accountAddress ?? null, globalData?.meta.timestamp ?? null],

@@ -90,9 +90,11 @@ export async function fetchStyfiAprSnapshot(
     const block = await client.getBlock({ blockTag: "latest" });
     if (block.number === null || block.hash === null) return unavailableStyfiAprSnapshot(price);
     const timestamp = Number(block.timestamp);
-    price = await readStyfiAprValuation(client, block.number, timestamp, globalData);
     const currentEpoch = Number((block.timestamp - GENESIS) / BigInt(EPOCH_LENGTH));
-    if (currentEpoch <= 0) return unavailableStyfiAprSnapshot(price);
+    if (currentEpoch <= 0) {
+      price = await readStyfiAprValuation(client, block.number, timestamp, globalData);
+      return unavailableStyfiAprSnapshot(price);
+    }
     const rewardEpoch = currentEpoch - 1;
     const epoch = BigInt(rewardEpoch);
     const read = async (contracts: Read[]): Promise<readonly unknown[]> => client.multicall({
@@ -101,18 +103,24 @@ export async function fetchStyfiAprSnapshot(
       allowFailure: false,
     });
 
-    const [lastEpoch, cursorValue, rewardDecimalsValue, assetValue, delegatedSource, ybcKilled, ybcClaimFrom, ybcSupplyValue, stakingComponent, boostComponent] = await read([
-      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "last_epoch"),
-      call(STYFI_REWARD_DISTRIBUTOR_ADDRESS, stakingAbi, "total_weight_cursor"),
-      call(REWARD_TOKEN_CONFIG.address, erc20Abi, "decimals"),
-      call(REWARD_TOKEN_CONFIG.address, vaultAbi, "asset"),
-      call(STYFIX_REWARD_DISTRIBUTOR_ADDRESS, addressAbi, "distributor"),
-      call(YBC_REWARDS, ybcAbi, "killed"),
-      call(YBC_REWARDS, addressAbi, "claim_from"),
-      call(YBC_WEIGHTS, ybcAbi, "supply"),
-      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "components", [STYFI_REWARD_DISTRIBUTOR_ADDRESS]),
-      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "components", [STYFI_GOVERNANCE.voteBoost]),
+    const [valuation, metadata] = await Promise.all([
+      readStyfiAprValuation(client, block.number, timestamp, globalData),
+      read([
+        call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "last_epoch"),
+        call(STYFI_REWARD_DISTRIBUTOR_ADDRESS, stakingAbi, "total_weight_cursor"),
+        call(REWARD_TOKEN_CONFIG.address, erc20Abi, "decimals"),
+        call(REWARD_TOKEN_CONFIG.address, vaultAbi, "asset"),
+        call(STYFIX_REWARD_DISTRIBUTOR_ADDRESS, addressAbi, "distributor"),
+        call(YBC_REWARDS, ybcAbi, "killed"),
+        call(YBC_REWARDS, addressAbi, "claim_from"),
+        call(YBC_WEIGHTS, ybcAbi, "supply"),
+        call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "components", [STYFI_REWARD_DISTRIBUTOR_ADDRESS]),
+        call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "components", [STYFI_GOVERNANCE.voteBoost]),
+      ]),
     ]);
+    price = valuation;
+    const [lastEpoch, cursorValue, rewardDecimalsValue, assetValue, delegatedSource, ybcKilled, ybcClaimFrom, ybcSupplyValue, stakingComponent, boostComponent] = metadata;
+
     // rewards() reports zero before finalization. Do not misrepresent that as a zero APR.
     if ((lastEpoch as bigint) <= epoch || (assetValue as string).toLowerCase() !== USDC ||
       (delegatedSource as string).toLowerCase() !== STYFI_GOVERNANCE.delegatedRewardClaimer.toLowerCase() ||
@@ -126,28 +134,50 @@ export async function fetchStyfiAprSnapshot(
       return unavailableStyfiAprSnapshot(price);
     }
 
-    const common = await read([
-      call(STYFI_REWARD_DISTRIBUTOR_ADDRESS, stakingAbi, "total_weight_entries", [cursor.count - 1n]),
-      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [STYFI_REWARD_DISTRIBUTOR_ADDRESS, epoch]),
-      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [STYFI_GOVERNANCE.voteBoost, epoch]),
-      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [LL_REWARDS, epoch]),
-      call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [VEYFI_REWARD_DISTRIBUTOR_ADDRESS, epoch]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "packed_total_weights", [epoch / 5n]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_proposals", [epoch]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_proposals", [BigInt(currentEpoch)]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_votes", [BigInt(currentEpoch), STYFIX_ADDRESS]),
-      call(STYFIX_ADDRESS, erc20Abi, "totalSupply"),
-      call(REWARD_TOKEN_CONFIG.address, vaultAbi, "convertToAssets", [10n ** BigInt(rewardDecimals)]),
-      call(assetValue as Address, erc20Abi, "decimals"),
-      call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "total_weights", [epoch]),
-      ...LIQUID_LOCKERS.flatMap((locker) => [
-        call(LL_REWARDS, llAbi, "normalized_weights", [BigInt(locker.index)]),
-        call(locker.depositor, erc20Abi, "totalSupply"),
-        call(LL_REWARDS, llAbi, "current_rewards", [BigInt(locker.index)]),
-      ]),
+    const accounts = [STYFIX_ADDRESS, YBC, ...(address ? [address] : [])];
+    const [common, positionValues, accountValues] = await Promise.all([
+      read([
+        call(STYFI_REWARD_DISTRIBUTOR_ADDRESS, stakingAbi, "total_weight_entries", [cursor.count - 1n]),
+        call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [STYFI_REWARD_DISTRIBUTOR_ADDRESS, epoch]),
+        call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [STYFI_GOVERNANCE.voteBoost, epoch]),
+        call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [LL_REWARDS, epoch]),
+        call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "rewards", [VEYFI_REWARD_DISTRIBUTOR_ADDRESS, epoch]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "packed_total_weights", [epoch / 5n]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_proposals", [epoch]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_proposals", [BigInt(currentEpoch)]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_votes", [BigInt(currentEpoch), STYFIX_ADDRESS]),
+        call(STYFIX_ADDRESS, erc20Abi, "totalSupply"),
+        call(REWARD_TOKEN_CONFIG.address, vaultAbi, "convertToAssets", [10n ** BigInt(rewardDecimals)]),
+        call(assetValue as Address, erc20Abi, "decimals"),
+        call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "total_weights", [epoch]),
+        ...LIQUID_LOCKERS.flatMap((locker) => [
+          call(LL_REWARDS, llAbi, "normalized_weights", [BigInt(locker.index)]),
+          call(locker.depositor, erc20Abi, "totalSupply"),
+          call(LL_REWARDS, llAbi, "current_rewards", [BigInt(locker.index)]),
+          ]),
       call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "epoch_weights", [STYFI_REWARD_DISTRIBUTOR_ADDRESS, epoch]),
       call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "epoch_weights", [STYFI_GOVERNANCE.voteBoost, epoch]),
+    ]),
+      read(accounts.flatMap((account) => [
+        call(STYFI_ADDRESS, erc20Abi, "balanceOf", [account]),
+        call(STYFIX_ADDRESS, erc20Abi, "balanceOf", [account]),
+        ...LIQUID_LOCKERS.map((locker) => call(locker.depositor, erc20Abi, "balanceOf", [account])),
+        call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "locks", [account]),
+        call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "check_lock", [account]),
+        call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "last_claimed", [account]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "weight", [epoch, account]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "last_claimed", [account]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "ve_migrated", [account]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "ve_locks", [account]),
+      ])),
+      address ? read([
+        call(YBC, ybcAbi, "members", [address]),
+        call(YBC_WEIGHTS, ybcAbi, "staked", [address]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_votes", [BigInt(currentEpoch), address]),
+        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_votes", [epoch, address]),
+      ]) : Promise.resolve(null),
     ]);
+
     const [stakingEntry, stakingRewards, boostRewards, llRewards, veRewards, packedTotal, rewardProposals, currentProposals, delegatedVotes, styfixSupply, assetsPerShare, assetDecimalsValue, veTotal] = common;
     const rewardAssetDecimals = Number(assetDecimalsValue);
     if (!Number.isInteger(rewardAssetDecimals) || rewardAssetDecimals < 0 || rewardAssetDecimals > 36) {
@@ -176,19 +206,6 @@ export async function fetchStyfiAprSnapshot(
         staking: { numerator: historicalWeights[0], denominator: historicalStakingEntry.weight },
         voteBoost: { numerator: historicalWeights[1], denominator: normalizedBoostWeight },
       } : null;
-    const accounts = [STYFIX_ADDRESS, YBC, ...(address ? [address] : [])];
-    const positionValues = await read(accounts.flatMap((account) => [
-      call(STYFI_ADDRESS, erc20Abi, "balanceOf", [account]),
-      call(STYFIX_ADDRESS, erc20Abi, "balanceOf", [account]),
-      ...LIQUID_LOCKERS.map((locker) => call(locker.depositor, erc20Abi, "balanceOf", [account])),
-      call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "locks", [account]),
-      call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "check_lock", [account]),
-      call(VEYFI_REWARD_DISTRIBUTOR_ADDRESS, veAbi, "last_claimed", [account]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "weight", [epoch, account]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "last_claimed", [account]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "ve_migrated", [account]),
-      call(STYFI_GOVERNANCE.voteBoost, boostAbi, "ve_locks", [account]),
-    ]));
     let pendingEarlyExitReport = false;
     const positions = accounts.map((_, i): StyfiAprPosition => {
       const values = positionValues.slice(i * 12, (i + 1) * 12);
@@ -219,12 +236,7 @@ export async function fetchStyfiAprSnapshot(
     if (pendingEarlyExitReport) return unavailableStyfiAprSnapshot(price);
     let account;
     if (address) {
-      const [member, memberStake, votes, rewardEpochVotes] = await read([
-        call(YBC, ybcAbi, "members", [address]),
-        call(YBC_WEIGHTS, ybcAbi, "staked", [address]),
-        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_votes", [BigInt(currentEpoch), address]),
-        call(STYFI_GOVERNANCE.voteBoost, boostAbi, "num_votes", [epoch, address]),
-      ]);
+      const [member, memberStake, votes, rewardEpochVotes] = accountValues!;
       account = {
         address,
         position: positions[2],

@@ -29,8 +29,10 @@ export async function waitForDaoReceipt(hash: Hex, chainId: number, sender: Addr
     hash, confirmations: 1, timeout: 120_000, checkReplacement: true,
     onReplaced: replacement => { replacedTransaction = replacement.replacedTransaction; },
   });
-  const transaction = await client.getTransaction({ hash: receipt.transactionHash });
-  const block = await client.getBlock({ blockNumber: receipt.blockNumber });
+  const [transaction, block] = await Promise.all([
+    client.getTransaction({ hash: receipt.transactionHash }),
+    client.getBlock({ blockNumber: receipt.blockNumber }),
+  ]);
   if (receipt.from.toLowerCase() !== sender.toLowerCase() || receipt.blockHash !== block.hash ||
       transaction.hash !== receipt.transactionHash || transaction.blockHash !== receipt.blockHash ||
       transaction.blockNumber !== receipt.blockNumber) throw new Error("DAO mined transaction or canonical block differs from the receipt.");

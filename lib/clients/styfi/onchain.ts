@@ -128,6 +128,22 @@ export class OnchainStyfiClient implements StyfiClient {
     return localNow;
   }
 
+  private async getClaimableRewards(address: Address): Promise<bigint> {
+    if (!this.publicClient) return 0n;
+    try {
+      const { result } = await this.publicClient.simulateContract({
+        address: REWARD_CLAIMER_ADDRESS,
+        abi: RewardClaimerAbi,
+        functionName: "claim",
+        args: [address],
+        account: address,
+      });
+      return result;
+    } catch {
+      return 0n;
+    }
+  }
+
   private async getBlacklistStatus(address: Address): Promise<BlacklistStatus> {
     if (!this.publicClient) return "unknown";
 
@@ -208,9 +224,42 @@ export class OnchainStyfiClient implements StyfiClient {
     const commonYfi = { abi: erc20Abi, address: YFI_ADDRESS } as const;
 
     try {
-      const blacklistStatusPromise = this.getBlacklistStatus(address);
+      // These reads depend only on the account and deployment configuration.
+      const [account, claimableRewards, now, rewardTokenDecimals, blacklistStatus] = await Promise.all([
+        this.publicClient.multicall({
+          contracts: [
+            // Wallet
+            { ...commonYfi, functionName: "balanceOf", args: [address] },
 
-      // 1. Parallel Reads
+            // stYFI
+            { ...commonStyfi, functionName: "balanceOf", args: [address] },
+            { ...commonStyfi, functionName: "streams", args: [address] },
+            { ...commonStyfi, functionName: "maxWithdraw", args: [address] },
+
+            // stYFIx
+            { ...commonStyfix, functionName: "balanceOf", args: [address] },
+            { ...commonStyfix, functionName: "streams", args: [address] },
+            { ...commonStyfix, functionName: "maxWithdraw", args: [address] },
+
+            // Allowances
+            {
+              ...commonYfi,
+              functionName: "allowance",
+              args: [address, STYFI_ADDRESS],
+            },
+            {
+              ...commonYfi,
+              functionName: "allowance",
+              args: [address, STYFIX_ADDRESS],
+            },
+          ],
+          allowFailure: false,
+        }),
+        this.getClaimableRewards(address),
+        this.getCanonicalNowSeconds(),
+        this.getRewardTokenDecimals(),
+        this.getBlacklistStatus(address),
+      ]);
       const [
         yfiBalance,
         styfiActive,
@@ -221,54 +270,9 @@ export class OnchainStyfiClient implements StyfiClient {
         styfiXMaxWithdraw,
         allowanceStyfi,
         allowanceStyfix,
-      ] = await this.publicClient.multicall({
-        contracts: [
-          // Wallet
-          { ...commonYfi, functionName: "balanceOf", args: [address] },
-
-          // stYFI
-          { ...commonStyfi, functionName: "balanceOf", args: [address] },
-          { ...commonStyfi, functionName: "streams", args: [address] },
-          { ...commonStyfi, functionName: "maxWithdraw", args: [address] },
-
-          // stYFIx
-          { ...commonStyfix, functionName: "balanceOf", args: [address] },
-          { ...commonStyfix, functionName: "streams", args: [address] },
-          { ...commonStyfix, functionName: "maxWithdraw", args: [address] },
-
-          // Allowances
-          {
-            ...commonYfi,
-            functionName: "allowance",
-            args: [address, STYFI_ADDRESS],
-          },
-          {
-            ...commonYfi,
-            functionName: "allowance",
-            args: [address, STYFIX_ADDRESS],
-          },
-        ],
-        allowFailure: false,
-      });
-
-      // 2. Reward Simulation
-      let claimableRewards = 0n;
-      try {
-        const { result } = await this.publicClient.simulateContract({
-          address: REWARD_CLAIMER_ADDRESS,
-          abi: RewardClaimerAbi,
-          functionName: "claim",
-          args: [address],
-          account: address,
-        });
-        claimableRewards = result;
-      } catch {
-        // Fallback for simulation failure (e.g. 0 rewards)
-        claimableRewards = 0n;
-      }
+      ] = account;
 
       // 3. Map Data
-      const now = await this.getCanonicalNowSeconds();
       const formatCooldown = (
         stream: readonly [bigint, bigint, bigint],
         withdrawable: bigint
@@ -292,8 +296,6 @@ export class OnchainStyfiClient implements StyfiClient {
 
       const styfiCooldown = formatCooldown(styfiStream, styfiMaxWithdraw);
       const styfiXCooldown = formatCooldown(styfiXStream, styfiXMaxWithdraw);
-      const rewardTokenDecimals = await this.getRewardTokenDecimals();
-      const blacklistStatus = await blacklistStatusPromise;
       const isBlacklisted = blacklistStatus === "blocked";
 
       // In the contracts, "streams" returns [start, total, claimed].
@@ -381,6 +383,21 @@ export class OnchainStyfiClient implements StyfiClient {
       } as const;
       const commonYfi = { abi: erc20Abi, address: YFI_ADDRESS } as const;
 
+      const [account, claimableRewards] = await Promise.all([
+        this.publicClient.multicall({
+          contracts: [
+            { ...commonYfi, functionName: "balanceOf", args: [address] },
+            { ...commonStyfi, functionName: "balanceOf", args: [address] },
+            { ...commonStyfi, functionName: "streams", args: [address] },
+            { ...commonStyfi, functionName: "maxWithdraw", args: [address] },
+            { ...commonStyfix, functionName: "balanceOf", args: [address] },
+            { ...commonStyfix, functionName: "streams", args: [address] },
+            { ...commonStyfix, functionName: "maxWithdraw", args: [address] },
+          ],
+          allowFailure: false,
+        }),
+        this.getClaimableRewards(address),
+      ]);
       const [
         yfiBalance,
         styfiActive,
@@ -389,32 +406,7 @@ export class OnchainStyfiClient implements StyfiClient {
         styfiXActive,
         styfiXStream,
         styfiXMaxWithdraw,
-      ] = await this.publicClient.multicall({
-        contracts: [
-          { ...commonYfi, functionName: "balanceOf", args: [address] },
-          { ...commonStyfi, functionName: "balanceOf", args: [address] },
-          { ...commonStyfi, functionName: "streams", args: [address] },
-          { ...commonStyfi, functionName: "maxWithdraw", args: [address] },
-          { ...commonStyfix, functionName: "balanceOf", args: [address] },
-          { ...commonStyfix, functionName: "streams", args: [address] },
-          { ...commonStyfix, functionName: "maxWithdraw", args: [address] },
-        ],
-        allowFailure: false,
-      });
-
-      let claimableRewards = 0n;
-      try {
-        const { result } = await this.publicClient.simulateContract({
-          address: REWARD_CLAIMER_ADDRESS,
-          abi: RewardClaimerAbi,
-          functionName: "claim",
-          args: [address],
-          account: address,
-        });
-        claimableRewards = result;
-      } catch {
-        claimableRewards = 0n;
-      }
+      ] = account;
 
       return {
         yfiBalance,

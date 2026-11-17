@@ -32,6 +32,31 @@ function createPublicClient(options: {
 }
 
 describe("OnchainStyfiClient blacklist probing", () => {
+  it("starts independent account reads before the balance batch finishes", async () => {
+    const publicClient = createPublicClient({ readContract: async ({ functionName }) => functionName === "decimals" ? 18 : false });
+    let release!: (value: unknown) => void;
+    vi.mocked(publicClient.multicall).mockImplementationOnce(() => new Promise(resolve => { release = resolve; }) as never);
+    const pending = new OnchainStyfiClient(publicClient, null).getAccountState(USER);
+    expect(publicClient.simulateContract).toHaveBeenCalledOnce();
+    expect(publicClient.getBlock).toHaveBeenCalledOnce();
+    expect(publicClient.readContract).toHaveBeenCalledWith(expect.objectContaining({ functionName: "decimals" }));
+    expect(publicClient.readContract).toHaveBeenCalledWith(expect.objectContaining({ functionName: "blacklist" }));
+    release([100n, 50n, [0n, 20n, 5n], 2n, 25n, [0n, 10n, 3n], 1n, 0n, 0n]);
+    const state = await pending;
+    expect(state.yfiBalance).toBe(100n);
+    expect(state.claimableGenericRewards).toBe(7n);
+  });
+
+  it("starts nudge reward simulation before the balance batch finishes", async () => {
+    const publicClient = createPublicClient({ readContract: async () => false });
+    let release!: (value: unknown) => void;
+    vi.mocked(publicClient.multicall).mockImplementationOnce(() => new Promise(resolve => { release = resolve; }) as never);
+    const pending = new OnchainStyfiClient(publicClient, null).getNudgeState(USER);
+    expect(publicClient.simulateContract).toHaveBeenCalledOnce();
+    release([100n, 50n, [0n, 20n, 5n], 2n, 25n, [0n, 10n, 3n], 1n]);
+    expect((await pending).claimableRewards).toBe(7n);
+  });
+
   it("reads the deployed middleware's canonical blacklist getter", async () => {
     const publicClient = createPublicClient({
       readContract: async ({ address, functionName }) => {

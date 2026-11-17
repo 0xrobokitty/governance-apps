@@ -51,8 +51,9 @@ let ensInflightByClient = new WeakMap<
 
 /**
  * Resolves at most 64 mainnet identities with four workers by default.
- * Each identity has a three-second budget and the entire batch stops
- * scheduling work after ten seconds.
+ * Each identity has a three-second result-acceptance budget. The batch returns
+ * after ten seconds. Uncancellable RPC calls retain their slots until they
+ * settle, so overlapping batches cannot multiply requests for one identity.
  */
 export async function resolveVerifiedMainnetEnsIdentities(
   publicClient: PublicClient | null,

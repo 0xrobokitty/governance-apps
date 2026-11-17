@@ -60,8 +60,10 @@ export function useYethClaimAndExit() {
   const address = wagmiAddress ?? (isE2E ? E2E_MOCK_ADDRESS : undefined);
 
   const write = async () => {
-    const prepare = await yeth.prepareClaimAndExit();
-    await execute(prepare, {
+    await execute(async () => {
+      const prepare = await yeth.prepareClaimAndExit();
+      return prepare();
+    }, {
       skipWaitForReceipt: yethUsesMockBackend,
       invalidate: async () => {
         await Promise.all([
@@ -84,8 +86,10 @@ export function useYethClaimAndStay() {
   const address = wagmiAddress ?? (isE2E ? E2E_MOCK_ADDRESS : undefined);
 
   const write = async () => {
-    const prepare = await yeth.prepareClaimAndStay();
-    await execute(prepare, {
+    await execute(async () => {
+      const prepare = await yeth.prepareClaimAndStay();
+      return prepare();
+    }, {
       skipWaitForReceipt: yethUsesMockBackend,
       invalidate: async () => {
         await Promise.all([
@@ -108,8 +112,10 @@ export function useYethRedeemToEth() {
   const address = wagmiAddress ?? (isE2E ? E2E_MOCK_ADDRESS : undefined);
 
   const write = async () => {
-    const prepare = await yeth.prepareRedeemToEth();
-    await execute(prepare, {
+    await execute(async () => {
+      const prepare = await yeth.prepareRedeemToEth();
+      return prepare();
+    }, {
       skipWaitForReceipt: yethUsesMockBackend,
       invalidate: async () => {
         await Promise.all([

@@ -17,8 +17,8 @@ export function useStyfiVotingPower() {
   const scenario = useSyncExternalStore(subscribeStyfiMockScenario, getStyfiMockScenario, getStyfiMockScenario);
   const { address, isConnected, isWrongNetwork, chainId } = useIdentity();
   const { mainnetPublicClient, usesMockBackend } = useProtocol();
-  const { data: account } = useStyfiAccount();
-  const { data: veyfiAccount } = useVeyfiAccount();
+  const { data: account } = useStyfiAccount(usesMockBackend);
+  const { data: veyfiAccount } = useVeyfiAccount(usesMockBackend);
   const isVisible = useDocumentVisibility();
   const [clock, setClock] = useState(() => Math.floor(Date.now() / 1_000));
   useEffect(() => {

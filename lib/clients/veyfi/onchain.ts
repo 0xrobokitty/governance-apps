@@ -104,50 +104,44 @@ export class OnchainVeyfiClient implements VeyfiClient {
     return localNow;
   }
 
+  private readLegacyPosition(address: Address) {
+    if (!this.publicClient) throw new Error("Wallet public client not available");
+    return this.publicClient.multicall({
+      contracts: [
+        {
+          address: VEYFI_ADDRESS,
+          abi: LegacyVeYfiAbi,
+          functionName: "locked",
+          args: [address],
+        },
+        {
+          address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
+          abi: VotingEscrowRewardDistributorAbi,
+          functionName: "check_lock",
+          args: [address],
+        },
+        {
+          address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
+          abi: VotingEscrowRewardDistributorAbi,
+          functionName: "locks",
+          args: [address],
+        },
+        {
+          address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
+          abi: VotingEscrowRewardDistributorAbi,
+          functionName: "last_claimed",
+          args: [address],
+        },
+      ],
+      allowFailure: false,
+    });
+  }
+
   async getAccountState(address: Address): Promise<VeyfiAccountState> {
     if (!this.publicClient) {
       throw new Error("Wallet public client not available");
     }
     try {
-      const now = await this.getCanonicalNowSeconds();
-      const [
-        legacyLockResult,
-        snapshotCheckResult,
-        lockInfo,
-        lastClaimed,
-      ] = await this.publicClient.multicall({
-        contracts: [
-          {
-            address: VEYFI_ADDRESS,
-            abi: LegacyVeYfiAbi,
-            functionName: "locked",
-            args: [address],
-          },
-          {
-            address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
-            abi: VotingEscrowRewardDistributorAbi,
-            functionName: "check_lock",
-            args: [address],
-          },
-          {
-            address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
-            abi: VotingEscrowRewardDistributorAbi,
-            functionName: "locks",
-            args: [address],
-          },
-          {
-            address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
-            abi: VotingEscrowRewardDistributorAbi,
-            functionName: "last_claimed",
-            args: [address],
-          },
-        ],
-        allowFailure: false,
-      });
-
-      const currentEpoch = getCurrentEpoch(GENESIS, EPOCH_LENGTH, now);
-      const boostRaw = getVeyfiEpochBoostMultiplier(currentEpoch);
-
       const lockerCalls = LIQUID_LOCKERS.flatMap((locker) => [
         {
           address: locker.token,
@@ -242,14 +236,22 @@ export class OnchainVeyfiClient implements VeyfiClient {
         },
       ]);
 
-      const results = await this.publicClient.multicall({
-        contracts: [
-          ...lockerCalls,
-          ...redemptionCalls,
-          ...lockerRedemptionCalls,
-        ],
-        allowFailure: false,
-      });
+      const [results, legacy, now] = await Promise.all([
+        this.publicClient.multicall({
+          contracts: [
+            ...lockerCalls,
+            ...redemptionCalls,
+            ...lockerRedemptionCalls,
+          ],
+          allowFailure: false,
+        }),
+        this.readLegacyPosition(address),
+        this.getCanonicalNowSeconds(),
+      ]);
+      const [legacyLockResult, snapshotCheckResult, lockInfo, lastClaimed] = legacy;
+      const currentEpoch = getCurrentEpoch(GENESIS, EPOCH_LENGTH, now);
+      const boostRaw = getVeyfiEpochBoostMultiplier(currentEpoch);
+
 
       const legacyAmount = BigInt(legacyLockResult[0] as bigint);
       const snapshotAmount = (lockInfo as LockInfo).amount;
@@ -390,37 +392,6 @@ export class OnchainVeyfiClient implements VeyfiClient {
     }
 
     try {
-      const [legacyLockResult, snapshotCheckResult, lockInfo, lastClaimed] =
-        await this.publicClient.multicall({
-          contracts: [
-            {
-              address: VEYFI_ADDRESS,
-              abi: LegacyVeYfiAbi,
-              functionName: "locked",
-              args: [address],
-            },
-            {
-              address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
-              abi: VotingEscrowRewardDistributorAbi,
-              functionName: "check_lock",
-              args: [address],
-            },
-            {
-              address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
-              abi: VotingEscrowRewardDistributorAbi,
-              functionName: "locks",
-              args: [address],
-            },
-            {
-              address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
-              abi: VotingEscrowRewardDistributorAbi,
-              functionName: "last_claimed",
-              args: [address],
-            },
-          ],
-          allowFailure: false,
-        });
-
       const lockerCalls = LIQUID_LOCKERS.flatMap((locker) => [
         {
           address: locker.token,
@@ -436,10 +407,15 @@ export class OnchainVeyfiClient implements VeyfiClient {
         },
       ]);
 
-      const lockerResults = await this.publicClient.multicall({
-        contracts: lockerCalls,
-        allowFailure: false,
-      });
+      const [lockerResults, legacy] = await Promise.all([
+        this.publicClient.multicall({
+          contracts: lockerCalls,
+          allowFailure: false,
+        }),
+        this.readLegacyPosition(address),
+      ]);
+      const [legacyLockResult, snapshotCheckResult, lockInfo, lastClaimed] = legacy;
+
 
       const legacyBalance = BigInt(legacyLockResult[0] as bigint);
       const snapshotAmount = (lockInfo as LockInfo).amount;
@@ -650,26 +626,30 @@ export class OnchainVeyfiClient implements VeyfiClient {
       };
     }
 
+    const publicClient = this.publicClient;
     try {
-      const now = await this.getCanonicalNowSeconds();
-      const currentEpoch = getCurrentEpoch(GENESIS, EPOCH_LENGTH, now);
-      const currentEpochArg = BigInt(currentEpoch);
-      let migratedUnderlyingApprox = 0n;
-      if (currentEpoch > 0) {
-        try {
-          const totalWeightResult = await this.publicClient.readContract({
-            address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
-            abi: VotingEscrowRewardDistributorAbi,
-            functionName: "total_weights",
-            args: [currentEpochArg],
-          });
-          migratedUnderlyingApprox = totalWeightResult.slope * 104n;
-        } catch {
-          console.warn(
-            "Failed to read veYFI total weights for current epoch; continuing with fallback migrated amount."
-          );
+      const readMigration = async () => {
+        const now = await this.getCanonicalNowSeconds();
+        const currentEpoch = getCurrentEpoch(GENESIS, EPOCH_LENGTH, now);
+        const currentEpochArg = BigInt(currentEpoch);
+        let migratedUnderlyingApprox = 0n;
+        if (currentEpoch > 0) {
+          try {
+            const totalWeightResult = await publicClient.readContract({
+              address: VEYFI_REWARD_DISTRIBUTOR_ADDRESS,
+              abi: VotingEscrowRewardDistributorAbi,
+              functionName: "total_weights",
+              args: [currentEpochArg],
+            });
+            migratedUnderlyingApprox = totalWeightResult.slope * 104n;
+          } catch {
+            console.warn(
+              "Failed to read veYFI total weights for current epoch; continuing with fallback migrated amount."
+            );
+          }
         }
-      }
+        return { currentEpoch, migratedUnderlyingApprox };
+      };
 
       const calls = [
         {
@@ -722,10 +702,14 @@ export class OnchainVeyfiClient implements VeyfiClient {
         ]),
       ];
 
-      const results = await this.publicClient.multicall({
-        contracts: calls,
-        allowFailure: false,
-      });
+      const [results, { currentEpoch, migratedUnderlyingApprox }] = await Promise.all([
+        this.publicClient.multicall({
+          contracts: calls,
+          allowFailure: false,
+        }),
+        readMigration(),
+      ]);
+
 
       const lockedYfi = results[0] as bigint;
       const fee = results[1] as bigint;

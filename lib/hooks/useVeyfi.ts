@@ -17,6 +17,7 @@ import {
   type VeyfiClient,
 } from "@/lib/clients/veyfi";
 import { useTx } from "@/lib/tx/useTx";
+import type { PreparedTransaction } from "@/lib/tx/types";
 import { E2E_MOCK_ADDRESS, LIQUID_LOCKERS } from "@/lib/constants";
 import { normalizeLlyfiSymbol } from "@/lib/clients/veyfi/display";
 
@@ -54,22 +55,25 @@ async function refreshVeyfiStatsFromChain(
   veyfi: VeyfiClient,
   queryClient: QueryClient
 ) {
+  const refreshStats = async () => {
+    if (veyfi.getGlobalStatsFromChain) {
+      try {
+        const stats = await veyfi.getGlobalStatsFromChain();
+        queryClient.setQueriesData({ queryKey: veyfiKeys.stats() }, stats);
+        setVeyfiStatsOverride(queryClient);
+        return;
+      } catch (error) {
+        console.warn("Failed to refresh veYFI stats from chain", error);
+      }
+    }
+
+    await queryClient.invalidateQueries({ queryKey: veyfiKeys.stats() });
+  };
   await Promise.all([
     queryClient.invalidateQueries({ queryKey: ["styfi", "apr"] }),
     queryClient.invalidateQueries({ queryKey: ["styfi", "voting-power"] }),
+    refreshStats(),
   ]);
-  if (veyfi.getGlobalStatsFromChain) {
-    try {
-      const stats = await veyfi.getGlobalStatsFromChain();
-      queryClient.setQueriesData({ queryKey: veyfiKeys.stats() }, stats);
-      setVeyfiStatsOverride(queryClient);
-      return;
-    } catch (error) {
-      console.warn("Failed to refresh veYFI stats from chain", error);
-    }
-  }
-
-  await queryClient.invalidateQueries({ queryKey: veyfiKeys.stats() });
 }
 
 function toMsTimestamp(value: number | null | undefined) {
@@ -81,7 +85,7 @@ function toMsTimestamp(value: number | null | undefined) {
 
 // --- Read Hooks ---
 
-export function useVeyfiAccount() {
+export function useVeyfiAccount(enabled = true) {
   const { veyfi, publicClient, usesMockBackend } = useProtocol();
   const { address: wagmiAddress } = useAccount();
   const isVisible = useDocumentVisibility();
@@ -89,7 +93,7 @@ export function useVeyfiAccount() {
   const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
   const address =
     wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-  const isEnabled = !!address && (usesMockBackend || !!publicClient);
+  const isEnabled = enabled && !!address && (usesMockBackend || !!publicClient);
   const shouldPoll = isVisible && isPollingRoute;
 
   return useQuery({
@@ -256,7 +260,10 @@ export function useVeyfiInventory() {
 
 // --- Write Hooks ---
 
-export function useVeyfiMigration() {
+function useVeyfiWrite<Args extends unknown[]>(
+  prepare: (client: VeyfiClient, ...args: Args) => Promise<PreparedTransaction>,
+  refreshStyfiAccount = false
+) {
   const { veyfi, usesMockBackend } = useProtocol();
   const { execute, state } = useTx();
   const queryClient = useQueryClient();
@@ -265,157 +272,47 @@ export function useVeyfiMigration() {
   const address =
     wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
 
-  const write = async () => {
-    const prepare = await veyfi.prepareMigrateVeYfi();
-
-    await execute(prepare, {
+  const write = async (...args: Args) => {
+    await execute(async () => {
+      const transaction = await prepare(veyfi, ...args);
+      return transaction();
+    }, {
       invalidate: async () => {
-        // Invalidate Account State (to update card to "Migrated" state)
-        await queryClient.invalidateQueries({
-          queryKey: veyfiKeys.account(address),
-        });
-        // Refresh Global Stats (to update "Migrated veYFI" top bar)
-        await refreshVeyfiStatsFromChain(veyfi, queryClient);
+        await Promise.all([
+          queryClient.invalidateQueries({ queryKey: veyfiKeys.account(address) }),
+          refreshVeyfiStatsFromChain(veyfi, queryClient),
+          refreshStyfiAccount
+            ? queryClient.invalidateQueries({ queryKey: styfiKeys.account(address) })
+            : undefined,
+        ]);
       },
       skipWaitForReceipt: usesMockBackend,
     });
   };
 
   return { write, state };
+}
+
+export function useVeyfiMigration() {
+  return useVeyfiWrite(client => client.prepareMigrateVeYfi());
 }
 
 export function useLlyfiStake() {
-  const { veyfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async (symbol: LlyfiTokenId, amount: bigint) => {
-    const prepare = await veyfi.prepareStakeLlyfi(symbol, amount);
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: veyfiKeys.account(address),
-        });
-        await refreshVeyfiStatsFromChain(veyfi, queryClient);
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useVeyfiWrite((client, symbol: LlyfiTokenId, amount: bigint) => client.prepareStakeLlyfi(symbol, amount));
 }
 
 export function useLlyfiStartCooldown() {
-  const { veyfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async (symbol: LlyfiTokenId, amount: bigint) => {
-    const prepare = await veyfi.prepareStartCooldownLlyfi(symbol, amount);
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: veyfiKeys.account(address),
-        });
-        await refreshVeyfiStatsFromChain(veyfi, queryClient);
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useVeyfiWrite((client, symbol: LlyfiTokenId, amount: bigint) => client.prepareStartCooldownLlyfi(symbol, amount));
 }
 
 export function useLlyfiWithdraw() {
-  const { veyfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async (symbol: LlyfiTokenId) => {
-    const prepare = await veyfi.prepareWithdrawLlyfi(symbol);
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: veyfiKeys.account(address),
-        });
-        await refreshVeyfiStatsFromChain(veyfi, queryClient);
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useVeyfiWrite((client, symbol: LlyfiTokenId) => client.prepareWithdrawLlyfi(symbol));
 }
 
 export function useLlyfiRedeem() {
-  const { veyfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async (symbol: LlyfiTokenId, amount: bigint) => {
-    const prepare = await veyfi.prepareRedeemLlyfi(symbol, amount);
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: styfiKeys.account(address),
-        });
-        await queryClient.invalidateQueries({
-          queryKey: veyfiKeys.account(address),
-        });
-        await refreshVeyfiStatsFromChain(veyfi, queryClient);
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useVeyfiWrite((client, symbol: LlyfiTokenId, amount: bigint) => client.prepareRedeemLlyfi(symbol, amount), true);
 }
 
 export function useLlyfiMint() {
-  const { veyfi, usesMockBackend } = useProtocol();
-  const { execute, state } = useTx();
-  const queryClient = useQueryClient();
-  const { address: wagmiAddress } = useAccount();
-  const isE2E = process.env.NEXT_PUBLIC_E2E === "true";
-  const address =
-    wagmiAddress ?? (isE2E && usesMockBackend ? E2E_MOCK_ADDRESS : undefined);
-
-  const write = async (symbol: LlyfiTokenId, amount: bigint) => {
-    const prepare = await veyfi.prepareMintLlyfi(symbol, amount);
-
-    await execute(prepare, {
-      invalidate: async () => {
-        await queryClient.invalidateQueries({
-          queryKey: styfiKeys.account(address),
-        });
-        await queryClient.invalidateQueries({
-          queryKey: veyfiKeys.account(address),
-        });
-        await refreshVeyfiStatsFromChain(veyfi, queryClient);
-      },
-      skipWaitForReceipt: usesMockBackend,
-    });
-  };
-
-  return { write, state };
+  return useVeyfiWrite((client, symbol: LlyfiTokenId, amount: bigint) => client.prepareMintLlyfi(symbol, amount), true);
 }
