@@ -29,7 +29,7 @@ function isStrictCspPath(pathname: string, hostPrefix: string | null) {
 }
 
 function isGovernanceAppRequest(pathname: string, hostPrefix: string | null) {
-  if (hostPrefix) return true;
+  if (hostPrefix) return hostPrefix !== "/pulse";
   return STRICT_CSP_PATHS.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 

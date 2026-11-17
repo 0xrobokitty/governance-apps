@@ -6,6 +6,7 @@ export const GOVERNANCE_APP_PATHS = {
   teams: "/teams",
   yeth: "/yeth",
   ybc: "/ybc",
+  pulse: "/pulse",
 } as const;
 
 export type GovernanceApp = keyof typeof GOVERNANCE_APP_PATHS;
@@ -19,6 +20,7 @@ export const GOVERNANCE_APP_PROD_HOSTS: Record<GovernanceApp, string> = {
   teams: "teams.yearn.fi",
   yeth: "yeth.yearn.fi",
   ybc: "ybc.yearn.fi",
+  pulse: "pulse.yearn.fi",
 };
 
 export const GOVERNANCE_APP_PREPROD_HOSTS: Record<GovernanceApp, string> = {
@@ -29,6 +31,7 @@ export const GOVERNANCE_APP_PREPROD_HOSTS: Record<GovernanceApp, string> = {
   teams: "teams-beta.dao-ops.com",
   yeth: "yeth-beta.dao-ops.com",
   ybc: "ybc-beta.dao-ops.com",
+  pulse: "pulse-beta.dao-ops.com",
 };
 
 export const GOVERNANCE_SHARED_PATH_HOSTS = new Set(["app.dao-ops.com"]);
