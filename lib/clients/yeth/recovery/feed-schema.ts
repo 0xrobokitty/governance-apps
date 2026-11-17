@@ -36,12 +36,21 @@ export const recoveryHeadSchema = z.object({
     source: z.object({ observedAt: seconds, maxAgeSeconds: seconds.max(900) }).nullable().optional(),
     principal: programmePrincipal.optional(),
   }),
+  claimExitCohort: z.object({
+    basis: z.literal("original-claim-window/v1"),
+    principalMethod: z.literal("claim-event-proportional-transfers/v1"),
+    block: blockSchema, complete: z.boolean(), current: z.boolean(),
+    claimedPrincipalWei: uint, exitedPrincipalWei: uint, remainingHolderPrincipalWei: uint,
+    unsettledCustodyPrincipalWei: uint, unattributedRetiredPrincipalWei: uint, unresolvedPrincipalWei: signed,
+  }).nullable().optional(),
   quality: z.object({ snapshotMaxAgeSeconds: seconds.min(1).max(300), historyMaxAgeSeconds: seconds.min(1).max(1800), historyStatus: z.string().max(40), finalizedHead: blockSchema.nullable(), unindexedFinalizedBlocks: z.number().int().nonnegative().nullable() }),
   baseline: z.object({ block: blockSchema, normalizedRecoveryWad: uint }).nullable(),
   history: referenceSchema, holders: referenceSchema.nullable(), auctionHistory: referenceSchema.nullable(),
   funding: z.object({
     indexedThrough: blockSchema, basis: z.literal("all-time-first-allocation/v1"), current: z.boolean(), complete: z.boolean(),
-    vault: z.object({ yieldWei: uint, donationsWei: uint }), auctions: z.object({ yieldWei: uint, donationsWei: uint }),
+    vault: z.object({ yieldWei: uint, donationsWei: uint }),
+    auctions: z.object({ yieldWei: uint, donationsWei: uint, yearnRevenueShareWei: uint.optional() }),
+    evidence: collection.optional(),
     totalKickedRounds: z.number().int().nonnegative(), unknownWei: uint, pendingAllocationWei: uint,
   }).nullable(),
   kong: z.object({
@@ -52,6 +61,10 @@ export const recoveryHeadSchema = z.object({
   forecast: z.object({
     method: z.literal("current-capital-net-recovery-income/v2"), forecastFrom: seconds,
     basis: z.object({ windowDays: z.number().int().positive(), historySha256: digest }),
+    inputs: z.discriminatedUnion("status", [
+      z.object({ status: z.literal("estimated"), windowDays: seconds, currentEarningCapitalWei: uint, currentRecoverySharesWei: uint }),
+      z.object({ status: z.literal("unavailable"), windowDays: seconds }),
+    ]).optional(),
     dailyAssetsPerShareGrowthWad: signed.nullable(), fullRecoveryWad: uint,
     targets: z.array(z.object({ targetBps: z.number().int(), status: z.enum(["estimated","reached","unavailable","beyond_horizon"]), days: z.number().int().nonnegative().optional() })).max(10),
   }),
@@ -62,7 +75,7 @@ export const recoveryHeadSchema = z.object({
 });
 export const daySchema = z.object({
   dayIndex: z.number().int().nonnegative(), closingBlock: blockSchema,
-  closing: z.object({ assetsPerShareWad: uint }), recoveryRateWad: uint, complete: z.boolean(),
+  closing: z.object({ assetsPerShareWad: uint }), recoveryRateWad: uint, complete: z.boolean(), ppsObserved: z.boolean().optional(),
 });
 const historySchema = z.object({ schema: z.literal("yeth-recovery-history/v1"), chainId: z.literal(1), indexedThrough: blockSchema.nullable(), days: collection });
 const holderSchema = z.object({ address, sharesWei: uint, representedClaimWei: uint, classification: z.string().max(40) });
@@ -78,11 +91,21 @@ const fillSchema = z.object({
 });
 const roundSchema = z.object({ roundId: z.string().max(200), kickBlock: blockSchema, openingInventoryWei: uint });
 const auctionsSchema = z.object({ schema: z.literal("yeth-recovery-auctions/v1"), indexedThrough: blockSchema, complete: z.boolean(), fills: collection, rounds: collection });
+const pendingFundingSchema = z.object({
+  id: z.string().max(300),
+  block: blockSchema,
+  amountWei: uint,
+  destination: z.enum(["auction", "recovery_vault"]),
+  transactionHash: hash.optional(),
+  economicFlowId: z.string().max(200).optional(),
+});
 export type RecoveryHead = z.infer<typeof recoveryHeadSchema>;
 export type RecoveryFeedEnvelope = { head: unknown; documents: Record<string, unknown> };
 export type RecoveryFeedData = {
   head: RecoveryHead; history: z.infer<typeof historySchema>; days: z.infer<typeof daySchema>[];
   holders: z.infer<typeof holdersSchema> | null; positions: z.infer<typeof holderSchema>[];
+  issuedPrincipalVerified?: boolean;
+  pendingFunding?: z.infer<typeof pendingFundingSchema>[];
   auctions: z.infer<typeof auctionsSchema> | null; fills: z.infer<typeof fillSchema>[]; rounds: z.infer<typeof roundSchema>[];
 };
 export type RecoveryReference = z.infer<typeof referenceSchema>;
@@ -145,11 +168,36 @@ export function parseRecoveryFeed(input: unknown, now = Math.floor(Date.now() / 
       BigInt(holders.holderSharesWei) + BigInt(holders.protocolCustodySharesWei) !== BigInt(holders.totalSupplyWei)) throw new Error("Recovery holder reconciliation failed");
   }
   const principal = head.programme.principal;
-  if (head.programme.complete && principal) {
+  if (head.programme.complete) {
+    if (!principal) throw new Error("Missing complete programme principal");
     if (principal.claimBookResidualWei !== "0" || principal.unattributedAdministrativeDebitsWei !== "0" || BigInt(principal.totalSettledWei) + BigInt(principal.activeHolderWei) + BigInt(principal.unsettledCustodyWei) + BigInt(principal.unclaimedEligibilityWei) + BigInt(principal.unattributedAdministrativeDebitsWei) !== BigInt(principal.allocatedWei)) throw new Error("Programme principal reconciliation failed");
     if (holders?.complete && holders.representedClaimWei !== principal.activeHolderWei) throw new Error("Programme and holder principal differ");
   }
-  return { head, history, days, holders, positions, auctions, fills: auctions ? rows(auctions.fills, fillSchema) : [], rounds: auctions ? rows(auctions.rounds, roundSchema) : [] };
+  const cohort = head.claimExitCohort;
+  const issuedPrincipalVerified = cohort == null ? undefined :
+    cohort.complete && cohort.current && !!holders?.complete && sameBlock(cohort.block, holders.block) &&
+    cohort.remainingHolderPrincipalWei === holders.representedClaimWei &&
+    cohort.unresolvedPrincipalWei === "0" && cohort.unattributedRetiredPrincipalWei === "0" &&
+    BigInt(cohort.exitedPrincipalWei) + BigInt(cohort.remainingHolderPrincipalWei) +
+      BigInt(cohort.unsettledCustodyPrincipalWei) === BigInt(cohort.claimedPrincipalWei);
+  // Evidence is optional in older feeds. Use the head's pending total unless the
+  // allocation rows reconcile to it and belong to the same indexed history.
+  let pendingFunding: RecoveryFeedData["pendingFunding"];
+  const funding = head.funding;
+  if (funding?.evidence && funding.unknownWei !== "0") {
+    const evidence = rows(funding.evidence, z.unknown());
+    const unknown = evidence.filter(row => row !== null && typeof row === "object" && "source" in row && row.source === "unknown");
+    const parsed = z.array(pendingFundingSchema).safeParse(unknown);
+    if (parsed.success) {
+      const entries = parsed.data;
+      const valid = new Set(entries.map(entry => entry.id)).size === entries.length &&
+        entries.every(entry => BigInt(entry.block.number) <= BigInt(funding.indexedThrough.number) &&
+          entry.block.timestamp <= funding.indexedThrough.timestamp) &&
+        entries.reduce((sum, entry) => sum + BigInt(entry.amountWei), 0n) === BigInt(funding.unknownWei);
+      if (valid) pendingFunding = entries;
+    }
+  }
+  return { head, history, days, holders, positions, issuedPrincipalVerified, pendingFunding, auctions, fills: auctions ? rows(auctions.fills, fillSchema) : [], rounds: auctions ? rows(auctions.rounds, roundSchema) : [] };
 }
 
 function hContract(contracts: RecoveryHead["contracts"], name: string): string { return String(contracts[name as keyof typeof contracts]).toLowerCase(); }

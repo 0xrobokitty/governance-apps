@@ -10,13 +10,13 @@ function position(principalKnown: boolean): RecoverySnapshot {
   const s = new MockRecoveryPreviewClient().getSnapshot();
   return { ...s, walletWeth: parseEther("999"), originalClaimEth: principalKnown ? parseEther("10") : 0n,
     live: {
-      principalKnown, principalUnavailableReason: null, accountingComplete: true,
+      principalKnown, principalUnavailableReason: null,
       historyCurrent: true, feedFresh: true, chainFresh: true, baselineKnown: true,
       chainAsOf: s.now, feedAsOf: s.now, indexedAt: s.now,
       directAssets: parseEther("4.85"), maxRedeem: s.shares,
       targetAssetsPerShare: parseEther("2"), dailyAssetsPerShareGrowth: 100000000000n,
       publicReferenceRecovery: 0.485, measuredPerformance: [], ppsHistory: [],
-      fundingTotals: null, holderDataCurrent: true, programmeCurrent: true,
+      fundingTotals: null, holderDataCurrent: true, holderPrincipalCurrent: true, programmeCurrent: true,
       producerVersion: "0.10.0", auctionHistoryCurrent: true,
     },
   };

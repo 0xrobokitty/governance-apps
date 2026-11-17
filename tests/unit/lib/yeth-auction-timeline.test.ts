@@ -12,10 +12,10 @@ function snapshot(): RecoverySnapshot {
     auction: { kickedAt: start, initialWeth: WAD, remainingWeth: WAD, startingPrice: WAD, minimumPrice: parseEther(".2"), stepDuration: 100, stepDecayBps: 5000, length: 1000 } };
 }
 function live(): RecoveryLiveMetadata {
-  return { principalKnown: true, baselineKnown: true, principalUnavailableReason: null, accountingComplete: true, historyCurrent: true,
+  return { principalKnown: true, baselineKnown: true, principalUnavailableReason: null, historyCurrent: true,
     feedFresh: false, chainFresh: true, chainAsOf: start + 50, feedAsOf: start - 10000, indexedAt: start - 10000,
     directAssets: 0n, maxRedeem: 0n, targetAssetsPerShare: parseEther("4"), dailyAssetsPerShareGrowth: null,
-    publicReferenceRecovery: .25, measuredPerformance: [], ppsHistory: [], fundingTotals: null, holderDataCurrent: true,
+    publicReferenceRecovery: .25, measuredPerformance: [], ppsHistory: [], fundingTotals: null, holderDataCurrent: true, holderPrincipalCurrent: true,
     auctionHistoryCurrent: false, programmeCurrent: true, producerVersion: "test" };
 }
 

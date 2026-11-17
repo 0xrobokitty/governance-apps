@@ -20,11 +20,27 @@ export type RecoveryStrategy = {
   historicalApy: number | null;
   allocationBps: number;
 };
+export type RecoveryFundingTotals = {
+  complete: boolean;
+  vault: bigint;
+  auctions: bigint;
+  yieldReceived: bigint;
+  donations: bigint;
+  yearnRevenueShare: bigint;
+  unclassified: bigint;
+  pendingAllocation: bigint;
+  pendingSources: Array<{
+    id: string;
+    amount: bigint;
+    destination: "auction" | "recovery_vault";
+    transactionHash: string | null;
+  }>;
+  rounds: number;
+};
 export type RecoveryLiveMetadata = {
   principalKnown: boolean;
   baselineKnown: boolean;
   principalUnavailableReason: string | null;
-  accountingComplete: boolean;
   historyCurrent: boolean;
   feedFresh: boolean;
   chainFresh: boolean;
@@ -38,8 +54,9 @@ export type RecoveryLiveMetadata = {
   publicReferenceRecovery: number;
   measuredPerformance: Array<{ windowDays: number; periodReturn: number; annualizedReturn: number | null; asOf: number }>;
   ppsHistory: Array<{ at: number; pps: number }>;
-  fundingTotals: { vault: bigint; auctions: bigint; yieldReceived: bigint; donations: bigint; rounds: number } | null;
+  fundingTotals: RecoveryFundingTotals | null;
   holderDataCurrent: boolean;
+  holderPrincipalCurrent: boolean;
   auctionHistoryCurrent: boolean;
   programmeCurrent: boolean;
   producerVersion: string;

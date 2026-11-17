@@ -119,7 +119,7 @@ export function recoveryMetrics(snapshot: RecoverySnapshot) {
 export function recoveryProjectionYears(snapshot: RecoverySnapshot, multiplier = 1): number | null {
   if (!snapshot.live) return projectionYears(snapshot.history, normalizedRecovery(snapshot.vaultPps, snapshot.recoveryRate), multiplier);
   const pace = snapshot.live.dailyAssetsPerShareGrowth;
-  if (!snapshot.live.feedFresh || !snapshot.live.historyCurrent || !snapshot.live.accountingComplete || pace === null || pace <= 0n || multiplier <= 0) return null;
+  if (!snapshot.live.feedFresh || !snapshot.live.historyCurrent || pace === null || pace <= 0n || multiplier <= 0) return null;
   const remaining = snapshot.live.targetAssetsPerShare - snapshot.vaultPps;
   const years = remaining <= 0n ? 0 : Number(remaining) / Number(pace) / 365 / multiplier;
   return years <= 100 ? years : null;

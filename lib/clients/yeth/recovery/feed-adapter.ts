@@ -25,25 +25,39 @@ export function buildRecoverySnapshot(data: RecoveryFeedData, options: {
   const chainFresh = chainMatches && chain.blockTimestamp > 0 && fresh(chainNow, chain.blockTimestamp, 60);
   const historyCurrent = h.quality.historyStatus === "current" && h.quality.unindexedFinalizedBlocks === 0 && !!h.indexedThrough && fresh(now, h.indexedThrough.timestamp, h.quality.historyMaxAgeSeconds);
   const ledgerFresh = !!h.programme.source && fresh(now, h.programme.source.observedAt, h.programme.source.maxAgeSeconds);
-  const accountingComplete = h.accounting.complete && h.accounting.historyComplete;
-  const programmeCurrent = accountingComplete && feedFresh && historyCurrent && ledgerFresh && h.programme.complete && h.programme.current;
-  const holderDataCurrent = programmeCurrent && !!data.holders?.complete && !!data.holders?.current;
+  const indexCurrent = feedFresh && historyCurrent;
+  const programmeCurrent = indexCurrent && ledgerFresh && h.programme.complete && h.programme.current;
+  const holderDataCurrent = indexCurrent && !!data.holders?.complete && !!data.holders?.current;
+  const holderPrincipalCurrent = holderDataCurrent && (data.issuedPrincipalVerified ?? programmeCurrent);
   const holder = data.positions.find(p => p.address.toLowerCase() === address?.toLowerCase() && p.classification === "holder");
   const shares = chainMatches ? chain.shares : 0n;
-  const principalKnown = holderDataCurrent && chainFresh && !!holder && BigInt(holder.sharesWei) === shares && chain?.positionTransfersSinceIndexed === false;
-  const principalUnavailableReason = !connected ? null : !chainFresh ? "Waiting for a current wallet balance." : !holderDataCurrent ? "Recovery accounting is updating." : !holder || BigInt(holder.sharesWei) !== shares || chain?.positionTransfersSinceIndexed !== false ? "Your share transfers are awaiting finalized accounting." : null;
+  const principalKnown = holderPrincipalCurrent && chainFresh && !!holder && BigInt(holder.sharesWei) === shares && chain?.positionTransfersSinceIndexed === false;
+  const principalUnavailableReason = !connected ? null : !chainFresh ? "Waiting for a current wallet balance." : !holderPrincipalCurrent ? "Claim principal is updating." : !holder || BigInt(holder.sharesWei) !== shares || chain?.positionTransfersSinceIndexed !== false ? "Your share transfers are awaiting finalized accounting." : null;
   const principal = principalKnown && holder ? BigInt(holder.representedClaimWei) : 0n;
   const pps = chainFresh ? chain.vaultPps : BigInt(h.recoveryVault.assetsPerShareWad);
   const recoveryRate = chainFresh ? chain.recoveryRate : BigInt(h.claim.recoveryRateWad);
   const baseline = h.baseline;
-  const historyDays = data.days.filter(d => d.complete && (!baseline || d.closingBlock.timestamp >= baseline.block.timestamp));
+  const historyDays = data.days.filter(d => (d.ppsObserved ?? d.complete) && (!baseline || d.closingBlock.timestamp >= baseline.block.timestamp));
   const progressHistory = historyDays.map(d => ({ day: d.dayIndex, recovery: normalizedRecovery(BigInt(d.closing.assetsPerShareWad), BigInt(d.recoveryRateWad)) }));
   const kongFresh = h.kong.status === "available" && h.kong.observedAt != null && fresh(now, h.kong.observedAt, 86400);
   const rateIsFresh = (at: number | null) => at !== null && fresh(now, at, 86400);
   const rates = kongFresh ? (h.kong.rates ?? []).filter(r => rateIsFresh(r.observedAt)) : [];
   const historicalApy = rates.find(r => r.basis === "historical" && r.windowDays === 30)?.value ?? null;
   const estimatedApy = rates.find(r => r.basis === "estimated")?.value ?? null;
-  const funding = h.funding && accountingComplete && historyCurrent && h.funding.current && h.funding.complete ? h.funding : null;
+  const funding = indexCurrent && h.funding?.current ? h.funding : null;
+  const yearnRevenueShare = BigInt(funding?.auctions.yearnRevenueShareWei ?? "0");
+  const pendingSources = (data.pendingFunding ?? []).map(entry => ({
+    id: entry.id,
+    amount: BigInt(entry.amountWei),
+    destination: entry.destination,
+    // Older auction evidence carries the deposit transaction in the economic flow ID.
+    transactionHash: entry.transactionHash ?? /^1:(0x[a-fA-F0-9]{64}):[0-9]+:v1$/.exec(entry.economicFlowId ?? "")?.[1] ?? null,
+  }));
+  const inputs = h.forecast.inputs;
+  const forecastInputsMatch = h.recoveryVault.sharesWei !== "0" && h.yieldVault.assetsWei !== "0" &&
+    (!inputs || (inputs.status === "estimated" && inputs.windowDays === h.forecast.basis.windowDays &&
+      inputs.currentEarningCapitalWei === h.yieldVault.assetsWei &&
+      inputs.currentRecoverySharesWei === h.recoveryVault.sharesWei));
   const principalTotals = programmeCurrent ? h.programme.principal : undefined;
   const growth = h.forecast.dailyAssetsPerShareGrowthWad === null ? null : BigInt(h.forecast.dailyAssetsPerShareGrowthWad);
   return {
@@ -74,21 +88,26 @@ export function buildRecoverySnapshot(data: RecoveryFeedData, options: {
       stepDuration: h.auction.stepDurationSeconds, stepDecayBps: h.auction.stepDecayRateBps, length: h.auction.auctionLengthSeconds,
     },
     live: {
-      principalKnown, baselineKnown: baseline !== null, principalUnavailableReason, accountingComplete, historyCurrent, feedFresh, chainFresh,
+      principalKnown, baselineKnown: baseline !== null, principalUnavailableReason, historyCurrent, feedFresh, chainFresh,
       chainAsOf: chainMatches ? chain.blockTimestamp : null, feedAsOf: h.observedAt, indexedAt: h.indexedThrough?.timestamp ?? null,
       directAssets: chainFresh ? chain.directAssets : null, maxRedeem: chainFresh ? chain.maxRedeem : null,
       targetAssetsPerShare: BigInt(h.recoveryVault.targetAssetsPerShareWad),
-      dailyAssetsPerShareGrowth: programmeCurrent && growth !== null && growth > 0n ? growth : null,
+      dailyAssetsPerShareGrowth: indexCurrent && forecastInputsMatch && growth !== null && growth > 0n ? growth : null,
       publicReferenceRecovery: normalizedRecovery(pps, recoveryRate),
       measuredPerformance: h.performance.windows.filter(w => w.status === "measured" && w.periodReturnWad !== undefined && w.closingBlock).map(w => ({ windowDays: w.windowDays, periodReturn: ratio(w.periodReturnWad!), annualizedReturn: w.annualizedReturn ?? null, asOf: w.closingBlock!.timestamp })),
-      ppsHistory: data.days.filter(d => d.complete).map(d => ({ at: d.closingBlock.timestamp, pps: Number(BigInt(d.closing.assetsPerShareWad)) / Number(WAD) })),
+      ppsHistory: data.days.filter(d => d.ppsObserved ?? d.complete).map(d => ({ at: d.closingBlock.timestamp, pps: Number(BigInt(d.closing.assetsPerShareWad)) / Number(WAD) })),
       fundingTotals: funding ? {
         vault: BigInt(funding.vault.yieldWei) + BigInt(funding.vault.donationsWei),
-        auctions: BigInt(funding.auctions.yieldWei) + BigInt(funding.auctions.donationsWei),
+        auctions: BigInt(funding.auctions.yieldWei) + BigInt(funding.auctions.donationsWei) + yearnRevenueShare,
+        complete: funding.complete && funding.unknownWei === "0",
+        yearnRevenueShare,
+        unclassified: BigInt(funding.unknownWei),
+        pendingAllocation: BigInt(funding.pendingAllocationWei),
+        pendingSources,
         yieldReceived: BigInt(funding.vault.yieldWei) + BigInt(funding.auctions.yieldWei),
         donations: BigInt(funding.vault.donationsWei) + BigInt(funding.auctions.donationsWei), rounds: funding.totalKickedRounds,
       } : null,
-      holderDataCurrent, programmeCurrent, auctionHistoryCurrent: !!data.auctions?.complete && historyCurrent, producerVersion: h.producer.version,
+      holderDataCurrent, holderPrincipalCurrent, programmeCurrent, auctionHistoryCurrent: !!data.auctions?.complete && indexCurrent, producerVersion: h.producer.version,
     },
   };
 }

@@ -72,23 +72,31 @@ export function holderDistribution(s: RecoverySnapshot) {
   const accounts = s.holders.positions.filter(p => p.kind === "holder" && p.shares > 0n).sort((a, b) => a.shares > b.shares ? -1 : a.shares < b.shares ? 1 : 0);
   const total = accounts.reduce((sum, p) => sum + p.shares, 0n);
   if (total <= 0n || s.recoveryRate <= 0n) return null;
+  const principalKnown = !s.live || s.live.holderPrincipalCurrent;
   const bounds = [WAD, 10n * WAD, 100n * WAD];
-  const buckets = [0, 0, 0, 0];
+  const buckets = principalKnown ? [0, 0, 0, 0] : null;
   const positions = accounts.map(p => {
-    const claim = s.live ? p.representedClaimEth ?? 0n : p.shares * WAD / s.recoveryRate;
-    const index = bounds.findIndex(bound => claim < bound);
-    buckets[index === -1 ? 3 : index] += 1;
+    const claim = principalKnown ? s.live ? p.representedClaimEth ?? 0n : p.shares * WAD / s.recoveryRate : null;
+    if (buckets && claim !== null) {
+      const index = bounds.findIndex(bound => claim < bound);
+      buckets[index === -1 ? 3 : index] += 1;
+    }
     return { ...p, claim, fraction: Number(p.shares * WAD / total) / 1e18 };
   });
-  return { positions, buckets, accounts: accounts.length, representedClaim: s.live ? positions.reduce((sum,p) => sum + p.claim, 0n) : total * WAD / s.recoveryRate, largest: positions[0]?.fraction ?? 0, asOf: s.holders.asOf };
+  const representedClaim = !s.live ? total * WAD / s.recoveryRate
+    : principalKnown ? positions.reduce((sum, p) => sum + (p.claim ?? 0n), 0n) : null;
+  return { positions, buckets, accounts: accounts.length, representedClaim, largest: positions[0]?.fraction ?? 0, asOf: s.holders.asOf };
 }
 
 
 export function recoveryFunding(s: RecoverySnapshot) {
+  const extra = { yearnRevenueShare: 0n, unclassified: 0n, pendingAllocation: 0n, pendingSources: [] };
   if (s.live) {
-    const totals = s.live.fundingTotals ?? { vault: 0n, auctions: 0n, yieldReceived: 0n, donations: 0n, rounds: 0 };
+    const totals = s.live.fundingTotals ?? {
+      ...extra, complete: false, vault: 0n, auctions: 0n, yieldReceived: 0n, donations: 0n, rounds: 0,
+    };
     const total = totals.vault + totals.auctions;
-    return { ...totals, total, vaultPercent: total > 0n ? Number(totals.vault * 10000n / total) / 100 : null };
+    return { ...totals, total, vaultPercent: totals.complete && total > 0n ? Number(totals.vault * 10000n / total) / 100 : null };
   }
   const seen = new Set<string>();
   const rounds = new Set<number>();
@@ -101,7 +109,7 @@ export function recoveryFunding(s: RecoverySnapshot) {
     else { auctions += flow.weth; if (flow.round !== null) rounds.add(flow.round); }
   }
   const total = vault + auctions;
-  return { vault, auctions, yieldReceived, donations, total, rounds: rounds.size,
+  return { ...extra, complete: true, vault, auctions, yieldReceived, donations, total, rounds: rounds.size,
     vaultPercent: total > 0n ? Number(vault * 10000n / total) / 100 : null };
 }
 
