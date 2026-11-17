@@ -13,6 +13,7 @@ beforeEach(() => {
 
 afterEach(() => {
   vi.restoreAllMocks();
+  vi.unstubAllGlobals();
   localStorage.clear();
 });
 
@@ -32,6 +33,17 @@ describe("theme preference", () => {
     expect(document.documentElement).toHaveClass("dark");
     expect(persist).not.toHaveBeenCalledWith(STORAGE_KEY, "light");
     expect(localStorage.getItem(STORAGE_KEY)).toBe("soft-dark");
+  });
+
+  it("keeps theme controls usable when storage access is denied", () => {
+    vi.stubGlobal("matchMedia", () => ({ matches: false }));
+    vi.spyOn(Storage.prototype, "getItem").mockImplementation(() => { throw new DOMException("Denied", "SecurityError"); });
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Denied", "SecurityError"); });
+    const { result } = renderHook(() => useTheme());
+    const original = result.current.theme;
+    act(() => result.current.toggleTheme());
+    expect(result.current.theme).not.toBe(original);
+    expect(document.documentElement).toHaveAttribute("data-theme", result.current.theme);
   });
 
   it("persists a toggled preference and restores it after remounting", () => {

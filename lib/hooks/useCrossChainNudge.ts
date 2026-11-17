@@ -168,7 +168,6 @@ export function useCrossChainNudge({
     currentApp === "styfi" ? "/styfi" : "/veyfi",
   ]);
   const searchParams = useSearchParams();
-  const [, setDismissVersion] = useState(0);
 
   const baseEnabled =
     !!address &&
@@ -205,6 +204,7 @@ export function useCrossChainNudge({
     refetchOnWindowFocus: getRefetchOnWindowFocus("cross-app.nudge"),
   });
 
+  const [localDismissals, setLocalDismissals] = useState<Record<string, number>>({});
   const candidate = queryResult?.candidate ?? null;
   const checkedAt = queryResult?.checkedAt ?? 0;
   let nudge = candidate;
@@ -213,9 +213,11 @@ export function useCrossChainNudge({
   } else if (suppressedTarget === candidate.targetApp) {
     nudge = null;
   } else if (typeof window !== "undefined") {
-    const raw = window.localStorage.getItem(dismissKey(candidate.id, address));
-    if (raw) {
-      const dismissedAt = Number(raw);
+    let raw: string | null = null;
+    try { raw = window.localStorage.getItem(dismissKey(candidate.id, address)); } catch { /* Optional preference storage. */ }
+    const local = localDismissals[dismissKey(candidate.id, address)];
+    if (raw || local !== undefined) {
+      const dismissedAt = Math.max(Number(raw ?? 0), local ?? 0);
       if (Number.isFinite(dismissedAt) && checkedAt - dismissedAt < DISMISS_TTL_MS) {
         nudge = null;
       }
@@ -225,8 +227,10 @@ export function useCrossChainNudge({
   const dismiss = useCallback(
     (nudgeId: string) => {
       if (!address || typeof window === "undefined") return;
-      window.localStorage.setItem(dismissKey(nudgeId, address), String(Date.now()));
-      setDismissVersion((value) => value + 1);
+      const key = dismissKey(nudgeId, address);
+      const now = Date.now();
+      setLocalDismissals(previous => ({ ...previous, [key]: now }));
+      try { window.localStorage.setItem(key, String(now)); } catch { /* Local dismissal remains effective. */ }
     },
     [address]
   );

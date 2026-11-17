@@ -4,7 +4,6 @@ import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
 
 import {
-  useEffect,
   useId,
   useLayoutEffect,
   useRef,

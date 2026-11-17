@@ -137,6 +137,21 @@ domain eligibility -> useTx -> prepare/simulate -> receipt -> query invalidation
 - Wrong-network and simulation failures block normal submission.
 - UI code never fabricates canonical history while a producer feed catches up.
 
+### Query lifetime and independent reads
+
+stYFI and veYFI account hooks accept an optional `enabled` argument. Live APR and voting-power hooks disable their mock-only account subscriptions.
+Independent account, reward, metadata, and statistics reads run concurrently. Epoch-dependent reads still wait for their epoch.
+APR reads share one pinned block and retain the final canonical-block check. Chain validation precedes YBC snapshot reads.
+Post-confirmation refreshes run concurrently. stYFI, veYFI, and legacy yETH preparation runs inside the transaction lifecycle.
+Polling resolves custom app hostnames through the shared route map.
+
+Pulse and recovery readers retain accepted publications for the lifetime of their query cache. Teams retains its accepted canonical baseline for that lifetime.
+A route or wallet-session remount cannot reset those rollback guards. Separate query clients keep separate acceptance state.
+Pulse compares compact accepted publications, including tuple metadata, and reuses unchanged feed objects. The query does not repeat a deep structural comparison.
+
+Theme and nudge preferences tolerate unavailable browser storage. Nudge dismissal still applies to the current mounted view.
+Trade forms clear input when a new trade succeeds. A previous trade's success does not clear a later rejected attempt.
+
 ## 7. Server endpoints
 
 Use route handlers for server-owned credentials, same-origin remote fetches, and

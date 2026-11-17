@@ -20,7 +20,8 @@ export function useTheme() {
 
   useIsomorphicLayoutEffect(() => {
     if (typeof window === "undefined") return;
-    const stored = localStorage.getItem(STORAGE_KEY);
+    let stored: string | null = null;
+    try { stored = localStorage.getItem(STORAGE_KEY); } catch { /* Storage is optional in embedded contexts. */ }
     setTheme(
       stored === "light" || stored === "soft-dark" ? stored : getSystemTheme(),
     );
@@ -36,7 +37,7 @@ export function useTheme() {
     } else {
       root.classList.remove("dark");
     }
-    localStorage.setItem(STORAGE_KEY, theme);
+    try { localStorage.setItem(STORAGE_KEY, theme); } catch { /* The current preference still works without persistence. */ }
   }, [theme, hasRestoredPreference]);
 
   const toggleTheme = () => {

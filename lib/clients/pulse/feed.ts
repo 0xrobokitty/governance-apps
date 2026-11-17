@@ -117,20 +117,31 @@ export const PULSE_FEED_POLICY: FeedTransportPolicy = {
   createTimeoutError: () => new Error("Pulse request timed out."),
   payloadTooLargeCancelReason: "Pulse payload limit", timeoutCancelReason: "Pulse deadline",
 };
+// The compact accepted representation is smaller than the decoded chart model.
+const wireByFeed = new WeakMap<PulseFeed, string>();
 export async function fetchPulseFeed() {
   return withFeedRequest("/api/pulse-data", PULSE_FEED_POLICY, async (r, context) => {
     if (!r.ok) { await r.body?.cancel(); throw new Error("Pulse feed is unavailable."); }
-    return parsePulseFeed(await readBoundedJson(r, context, PULSE_FEED_POLICY));
+    const { feed, wire } = parsePulseInput(await readBoundedJson(r, context, PULSE_FEED_POLICY), Math.floor(Date.now() / 1000));
+    wireByFeed.set(feed, JSON.stringify(wire));
+    return feed;
   });
 }
 export class PulseFeedReader {
   private current: PulseFeed | null = null;
+  private currentJson: string | null = null;
   constructor(private readonly fetcher = fetchPulseFeed) {}
   async read() {
     const next = await this.fetcher();
-    if (this.current && (next.generatedAt < this.current.generatedAt || (next.generatedAt === this.current.generatedAt && JSON.stringify(next) !== JSON.stringify(this.current)))) throw new Error("Pulse publication regressed or conflicts.");
+    if (this.current && next.generatedAt < this.current.generatedAt) throw new Error("Pulse publication regressed or conflicts.");
+    const nextJson = wireByFeed.get(next) ?? JSON.stringify(next);
+    if (this.current && next.generatedAt === this.current.generatedAt) {
+      if (nextJson !== this.currentJson) throw new Error("Pulse publication regressed or conflicts.");
+      return this.current;
+    }
     validateXTransition(this.current?.x, next.x, next.generatedAt);
     this.current = next;
+    this.currentJson = nextJson;
     return next;
   }
 }

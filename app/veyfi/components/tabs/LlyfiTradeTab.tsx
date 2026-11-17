@@ -133,7 +133,11 @@ export function LlyfiTradeTab({ token }: { token: LlyfiTokenState }) {
   const [previousStatuses, setPreviousStatuses] = useState(transactionStatuses);
   if (previousStatuses !== transactionStatuses) {
     setPreviousStatuses(transactionStatuses);
-    if (redeemState.status === "success" || mintState.status === "success") {
+    const [previousRedeem, previousMint] = previousStatuses.split(":");
+    if (
+      (redeemState.status === "success" && previousRedeem !== "success") ||
+      (mintState.status === "success" && previousMint !== "success")
+    ) {
       setInput("");
     }
   }

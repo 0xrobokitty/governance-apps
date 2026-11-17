@@ -435,6 +435,26 @@ describe("useTeamsState canonical feed trust", () => {
     );
   });
 
+  it("retains the rollback baseline after the route remounts", async () => {
+    const advanced = { ...feedExample, blockNumber: feedExample.blockNumber + 10, blockHash: ADVANCED_BLOCK_HASH };
+    mainnetPublicClient.getBlock.mockImplementation(async ({ blockNumber }: { blockNumber: bigint }) => ({
+      hash: blockNumber === BigInt(feedExample.blockNumber) ? feedExample.blockHash : ADVANCED_BLOCK_HASH,
+      timestamp: BigInt(Math.floor(Date.now() / 1_000)),
+    }));
+    mainnetPublicClient.getBlockNumber.mockResolvedValue(BigInt(advanced.blockNumber));
+    vi.stubGlobal("fetch", vi.fn().mockResolvedValueOnce(okResponse(advanced)).mockResolvedValueOnce(okResponse(feedExample)));
+    const queryClient = createTestQueryClient();
+    const wrapper = createQueryWrapper(queryClient);
+    const first = renderHook(useTeamsState, { wrapper });
+    await waitFor(() => expect(first.result.current.writeFeed?.blockNumber).toBe(advanced.blockNumber));
+    first.unmount();
+    const second = renderHook(useTeamsState, { wrapper });
+    await act(async () => { await second.result.current.refetch(); });
+    await waitFor(() => expect(second.result.current.warning?.message).toMatch(/rolled back/i));
+    expect(second.result.current.data?.feed?.blockNumber).toBe(advanced.blockNumber);
+    expect(second.result.current.writeFeed).toBeNull();
+  });
+
   it("verifies disconnected viewers with the account-independent mainnet client", async () => {
     vi.stubGlobal(
       "fetch",

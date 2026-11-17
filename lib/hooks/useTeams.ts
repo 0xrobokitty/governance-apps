@@ -72,6 +72,9 @@ type TeamsAcceptanceState = {
   transitionError: Error | null;
 };
 
+// The rollback baseline must survive a route remount alongside the query cache.
+const acceptedTeamsByQueryClient = new WeakMap<ReturnType<typeof useQueryClient>, TeamsAcceptanceState>();
+
 async function invalidateTeamsQueries(
   queryClient: ReturnType<typeof useQueryClient>
 ) {
@@ -98,6 +101,7 @@ export function useTeamsScenario(id: TeamsMockScenarioId) {
 }
 
 export function useTeamsState() {
+  const queryClient = useQueryClient();
   const { address, chainId } = useAccount();
   const protocol = useOptionalProtocol();
   const usesMockBackend = protocol?.teamsUsesMockBackend ?? true;
@@ -113,7 +117,7 @@ export function useTeamsState() {
     [latestFeed]
   );
   const [acceptanceState, setAcceptanceState] =
-    useState<TeamsAcceptanceState>({
+    useState<TeamsAcceptanceState>(() => acceptedTeamsByQueryClient.get(queryClient) ?? {
       acceptedFeed: null,
       evaluatedFeed: null,
       evaluatedSnapshot: null,
@@ -153,18 +157,18 @@ export function useTeamsState() {
     (acceptanceState.evaluatedFeed !== nextFeed ||
       acceptanceState.evaluatedSnapshot !== nextVerification)
   ) {
-    setAcceptanceState(
-      transitionTeamsAcceptance(
-        acceptanceState,
-        {
-          activationId: latestActivationId,
-          authorityFingerprint: latestAuthorityFingerprint,
-          feed: nextFeed,
-          snapshot: nextVerification,
-        },
-        nextVerification
-      )
+    const nextAcceptance = transitionTeamsAcceptance(
+      acceptedTeamsByQueryClient.get(queryClient) ?? acceptanceState,
+      {
+        activationId: latestActivationId,
+        authorityFingerprint: latestAuthorityFingerprint,
+        feed: nextFeed,
+        snapshot: nextVerification,
+      },
+      nextVerification
     );
+    acceptedTeamsByQueryClient.set(queryClient, nextAcceptance);
+    setAcceptanceState(nextAcceptance);
   }
 
   const latestFeedVerified =
