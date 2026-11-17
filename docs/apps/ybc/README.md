@@ -3,8 +3,7 @@
 App name / slug: `ybc`
 Route key: `/ybc`
 Beta host: `ybc-beta.dao-ops.com`
-Production host: `ybc.yearn.fi` (gated until fork smoke, preprod smoke, and
-production approval)
+Production host: `ybc.yearn.fi` (controlled by `NEXT_PUBLIC_ENABLE_YBC`)
 Recommended display label: `Yearn Builder's Collective`
 
 ## Product summary
@@ -102,4 +101,4 @@ Without an explicit preset, the view follows the active wallet.
 The bootstrap indicator starts disabled for live data and for mock sessions with bootstrap disabled.
 Mock initialization retains cancellation checks before it updates the runtime store.
 
-See the [dependency migration notes](../../shared/testing.md#dependency-migration-2026-10-05) for compiler and linter requirements.
+See the [compiler and linter requirements](../../shared/testing.md#compiler-and-linter-compatibility) for toolchain compatibility.

@@ -1,7 +1,7 @@
 # Yearn Governance Apps
 
-Next.js applications for Yearn staking, governance, recovery, team finance, and
-collective operations.
+Next.js applications for Yearn staking, governance, recovery, team finance,
+collective operations, treasury reporting, and protocol analytics.
 
 ## Applications
 
@@ -12,10 +12,11 @@ collective operations.
 | `/yeth` | yETH recovery |
 | `/teams` | Team Finances |
 | `/ybc` | Yearn Builder's Collective |
-| `/dao` | DAO Governance, planned and mock-first |
+| `/dao` | DAO Governance |
+| `/treasury` | Treasury reporting |
+| `/pulse` | Protocol analytics |
 
-The DAO Governance requirements and delivery plan live in
-[`docs/apps/dao`](docs/apps/dao/README.md).
+The [app documentation index](docs/apps/README.md) links to each app’s behavior, data contracts, and release procedures.
 
 ## Local development
 
@@ -52,7 +53,7 @@ See [`docs/shared/testing.md`](docs/shared/testing.md) for the full test policy.
 ## Architecture
 
 - Next.js App Router, React, TypeScript, and Tailwind CSS
-- viem, wagmi, and RainbowKit
+- viem, wagmi, and shared wallet controls
 - Domain clients under `lib/clients/<domain>`
 - Prepared writes executed through the shared `useTx` pipeline
 - Deterministic mock clients before feed-backed and onchain integration

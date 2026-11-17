@@ -4,24 +4,23 @@ Scope: yETH recovery experience under `/yeth`.
 
 ## Documents
 
-- Mechanism spec: [`mechanism-spec.md`](mechanism-spec.md)
-- UI/UX spec: [`ui-ux-spec.md`](ui-ux-spec.md)
-- Implementation status: [`implementation-status.md`](implementation-status.md)
-- Production checklist: [`production-readiness-checklist.md`](production-readiness-checklist.md)
-- Telegram alerts and deployment: [`telegram-alerts.md`](telegram-alerts.md)
-- Recovery and auction message catalogue: [`alerts-message-catalogue-proposal.md`](alerts-message-catalogue-proposal.md)
+- [Live recovery dashboard and UAT](recovery-live.md)
+- [Recovery and auction behavior](recovery-auctions.md)
+- [Implementation map](implementation-status.md) and [release checklist](production-readiness-checklist.md)
+- [Telegram alerts and deployment](telegram-alerts.md)
+- [Recovery and auction message catalogue](alerts-message-catalogue-proposal.md)
+- Legacy claim design: [mechanism](mechanism-spec.md) and [UI specification](ui-ux-spec.md)
 
-## Current Delivery Status
+## Current implementation
 
-- A full mock-first yETH recovery app is implemented at `/yeth`.
-- Tokyo Refresh (v2.0) UI is implemented with de-boxed action-first hierarchy.
-- stYFI and veYFI remain independently operable.
-- The route has an onchain client, global feed path, and prepared claim/redeem
-  writes. Final addresses, production inputs, and rollout checks remain tracked
-  in the implementation status and production checklist.
+The production and preprod workflows select the live recovery dashboard.
+`NEXT_PUBLIC_ENABLE_YETH` controls production exposure.
+The dashboard combines Stats v3 accounting with live account and auction reads.
+Its exit flow supports injected wallets, Safe proposals, and delegated accounts.
 
-For exact completion details, use the status tracker:
-[`implementation-status.md`](implementation-status.md).
+The earlier claim page remains available when the live flag is disabled.
+A separate mock preview is available outside production.
+See the [implementation map](implementation-status.md) for route selection and the [live runbook](recovery-live.md) for acceptance requirements.
 
 ## React state compatibility
 
@@ -29,7 +28,7 @@ The page retains the last valid claim deadline across incomplete payloads and cl
 Claim history uses an external-store subscription and updates after storage events from other tabs.
 The current session retains successful claim details when browser storage is unavailable.
 
-See the [dependency migration notes](../../shared/testing.md#dependency-migration-2026-10-05) for compiler and linter requirements.
+See the [compiler and linter requirements](../../shared/testing.md#compiler-and-linter-compatibility) for toolchain compatibility.
 
 ## Shared app discovery
 
@@ -58,9 +57,10 @@ The root layout retains its existing rendering mode.
 
 The [recovery auction milestone](recovery-auctions.md) records the mock preview, verified contract behavior, data sources, and live integration gates.
 
-- [Recovery statistics producer request](recovery-data-request.md): proposed accounting, forecast, and account data contract for the mock recovery redesign.
+- [Recovery statistics producer request](recovery-data-request.md): original accounting, forecast, and account data request for the recovery redesign.
 
 ## Live recovery and auction UAT
 
 The [live dashboard runbook](recovery-live.md) defines the Stats v3 integration, transaction limits, and local fork review.
-The new page requires an explicit live rollout flag. Exits support connected wallets, Safe proposals, and delegated accounts. See the live UAT guide for receipt verification and fork acceptance cases.
+Production and preprod builds set the live-dashboard flag. The exposure flag controls public access.
+See the runbook for receipt verification, pending actions, and fork acceptance cases.

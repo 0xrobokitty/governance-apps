@@ -1,101 +1,35 @@
-# yETH Production Readiness Checklist
+# yETH Release Checklist
 
-Status: Working checklist  
-Owner: Frontend + Smart Contracts + Security + Ops
+Use this checklist for each release candidate.
+The [live recovery runbook](recovery-live.md) contains the commands, contract configuration, and acceptance cases.
+Record results against the candidate commit.
 
-Use this checklist to track all work required to move from current mock-first yETH to production contract-backed release.
+## Configuration and data
 
-## 1. Contract and Protocol Readiness
+- Confirm the reviewed contracts, tokens, chain, and configured Stats source.
+- Verify the production exposure flag and live-dashboard build configuration.
+- Verify feed digests, reconciliation, historical data, and unavailable-data behavior.
+- Confirm that production uses no mock client, local source override, or fork transport.
+- Review public copy, source links, contract links, and transaction limitations.
 
-- [ ] Finalize Recovery Vault and Yield Vault contract addresses.
-- [ ] Finalize Claim contract interface and eligibility/claim amount methods.
-- [ ] Confirm claim window constants and governance-approved timeline.
-- [x] Confirm manual yETH claim request endpoint.
-- [ ] Confirm canonical data source for:
-  - [ ] Recovery Vault PPS
-  - [ ] Recovery Vault total assets
-  - [ ] Yield Vault TVL
-  - [ ] performance fee and fee recipient
-- [ ] Verify invariant enforcement in contracts:
-  - [ ] Treasury receives 0% yield
-  - [ ] Treasury holds 0 Recovery Vault shares
-  - [ ] claim-and-exit and claim-and-stay are atomic
+## Validation
 
-## 2. Security and Risk Review
+- Pass the required [repository checks](../../shared/testing.md).
+- Run the applicable disposable-fork and browser acceptance cases from the live runbook.
+- Verify injected-account, Safe, and delegated-account behavior within the release scope.
+- Verify rejection, failed simulation, reverted execution, stale reads, and unresolved pending actions.
+- Verify that changing accounts or chains invalidates the earlier transaction review.
+- Verify restored pending actions and receipts without automatic resubmission.
+- Record limitations and review findings with the evidence.
 
-- [ ] Internal smart-contract audit complete.
-- [ ] External audit complete and findings resolved/accepted.
-- [ ] Threat model reviewed for:
-  - [ ] claim manipulation vectors
-  - [ ] vault accounting drift
-  - [ ] fee-routing correctness
-  - [ ] share dilution edge cases
-- [ ] Incident response runbook prepared.
-- [ ] User-facing risk language approved by governance/comms/legal.
+## Release and operations
 
-## 3. Frontend Integration Work
+- Obtain independent review and the required contract, security, governance, and operator approvals.
+- Deploy the reviewed source ref to preprod and complete its acceptance checks.
+- Promote the approved source through the production workflow.
+- Verify `/yeth`, the dedicated host, the Safe manifest, and wallet connection.
+- Confirm monitoring, rollback configuration, and incident ownership.
+- Record the deployed commit and the operator’s acceptance result.
 
-- [x] Implement `OnchainYethClient` in `lib/clients/yeth/onchain.ts`.
-- [x] Add production client selection path in `state/protocol.tsx`.
-- [x] Wire contract ABIs and typed read/write methods.
-- [ ] Replace mock placeholder URLs with final approved URLs.
-- [ ] Replace mock contract addresses in trust drawer with deployed addresses.
-- [x] Ensure error mapping for yETH-specific failure modes in `lib/tx/errors.ts`.
-- [ ] Add loading/error fallback UX for unavailable yETH chain data.
-
-## 4. Testing and Quality Gates
-
-- [x] Unit tests for yETH math and state transitions.
-- [x] Unit tests for on-chain data mapping and formatting.
-- [x] Integration tests for yETH hooks and query invalidation.
-- [x] E2E smoke tests:
-  - [x] eligible claim and exit
-  - [x] eligible claim and stay
-  - [x] staying user redeem
-  - [x] claim window ended flow
-  - [x] ineligible wallet flow
-- [ ] E2E failure-path tests:
-  - [ ] tx rejection
-  - [ ] revert handling
-  - [ ] insufficient liquidity handling
-- [ ] Lint, typecheck, unit, and e2e pipelines green on release commit.
-
-## 5. Data, Content, and Governance Artifacts
-
-- [ ] Confirm final approved YIP link.
-- [x] Publish manual claim request URL:
-  `https://github.com/yearn/yeth-manual-recovery-claims/issues/new?template=manual-yeth-claim.yml`.
-- [ ] Validate all copy against approved governance language.
-- [ ] Validate all displayed numbers are current-state only.
-- [ ] Confirm no prohibited language (yield promises, urgency pressure).
-
-## 6. Deployment and Operations
-
-- [ ] Merge release branch to `master`.
-- [ ] Deploy to production worker.
-- [ ] Verify path-based access:
-  - [ ] `app.dao-ops.com/yeth`
-- [ ] Confirm desired discoverability behavior:
-  - [ ] included or excluded in sitemap
-  - [ ] included or excluded in global header navigation (`Ecosystem` / `Resources`)
-- [ ] Confirm host-route behavior for `yeth.yearn.fi`:
-  - [ ] disabled until ready, or
-  - [ ] enabled with Cloudflare route when launch-approved
-- [ ] Post-deploy production sanity checklist:
-  - [ ] wallet connect
-  - [ ] claim actions
-  - [ ] trust drawer data
-  - [ ] explorer links
-
-## 7. Launch Criteria (Go/No-Go)
-
-Release to broad user traffic only when all are true:
-
-- [ ] Contracts deployed and audited
-- [ ] On-chain client integrated and validated
-- [ ] Security sign-off complete
-- [ ] Governance/comms sign-off complete
-- [ ] Full test suite pass in CI
-- [ ] Ops sign-off complete
-
-If any critical checkbox is incomplete, release remains controlled-access only.
+Do not infer approval or deployment from this checklist.
+Use the runbook’s transaction and data limitations when deciding release scope.

@@ -21,4 +21,4 @@ Shared architecture and standards are documented in [`../../shared/README.md`](.
 Trade inputs reset when the user changes trading mode or a transaction reaches success.
 These resets no longer require synchronous effects.
 
-See the [dependency migration notes](../../shared/testing.md#dependency-migration-2026-10-05) for compiler and linter requirements.
+See the [compiler and linter requirements](../../shared/testing.md#compiler-and-linter-compatibility) for toolchain compatibility.

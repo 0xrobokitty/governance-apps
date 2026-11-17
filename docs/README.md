@@ -1,42 +1,31 @@
 # Governance Apps Documentation
 
-This directory is organized by **shared system documentation** and **app-specific documentation**.
+Use the [app index](apps/README.md) for product behavior, data contracts, and release procedures.
+Use the [shared index](shared/README.md) for architecture, testing, security, and contribution rules.
 
-## Structure
+| Area | Entry point |
+| --- | --- |
+| Application behavior | [Eight app references](apps/README.md) |
+| Architecture and shared components | [Frontend architecture](shared/frontend-architecture.md) |
+| Implementation, review, and integration | [Delivery guide](shared/codex-usage-guide.md) |
+| Local checks and browser acceptance | [Testing](shared/testing.md) |
+| Environment selection and feature gates | [Runtime modes](shared/runtime-modes.md) |
+| Deployment | [Worker runtime](shared/cloudflare-worker-runtime.md) |
+| Alerts | [Alerts operations](alerts-bot.md) |
 
-```text
-docs/
-  shared/              # Cross-app architecture, standards, testing, schemas, roadmap
-  apps/
-    styfi/             # stYFI + stYFIx product docs
-    veyfi/             # veYFI + LLYFI product docs
-    yeth/              # yETH recovery docs
-    teams/             # Team finances docs
-    ybc/               # Yearn Builder's Collective docs
-    dao/               # DAO Governance requirements and delivery plan
-```
+## Documentation maintenance
 
-## Navigation
+Update behavior documentation in the same change as its implementation.
+Keep app behavior under `docs/apps/<domain>` and common requirements under `docs/shared`.
+Link to the owner’s document instead of copying its requirements.
 
-- Shared docs: [`docs/shared/README.md`](shared/README.md)
-- App docs index: [`docs/apps/README.md`](apps/README.md)
-- stYFI docs: [`docs/apps/styfi/README.md`](apps/styfi/README.md)
-- veYFI docs: [`docs/apps/veyfi/README.md`](apps/veyfi/README.md)
-- yETH docs: [`docs/apps/yeth/README.md`](apps/yeth/README.md)
-- Teams docs: [`docs/apps/teams/README.md`](apps/teams/README.md)
-- YBC docs: [`docs/apps/ybc/README.md`](apps/ybc/README.md)
-- DAO Governance docs: [`docs/apps/dao/README.md`](apps/dao/README.md)
+Production changes need current behavior, validation requirements, and a release procedure with rollback steps.
+Record release evidence against its exact source revision.
+A completed checklist does not establish that a later revision passed.
 
-## Documentation Rules
+## Historical records
 
-- Keep behavior changes and docs updates in the same PR.
-- Put app-specific behavior only in that app's folder.
-- Keep shared standards in `docs/shared` only.
-- Prefer references over duplication.
-- Keep current delivery status in each app README or delivery plan. Do not use a
-  repository-wide task list as a substitute for app-owned status.
-- Every production-impacting feature should have:
-  - app-level spec updates,
-  - implementation status notes,
-  - test coverage notes,
-  - production-readiness checklist updates.
+Completed task packages, prompts, screenshots, and logs remain available in Git history.
+The [DAO historical index](apps/dao/delivery/historical-index.md) links to its archived delivery records.
+The [shared index](shared/README.md#history) links to earlier cross-app and integration packages.
+Current schemas, executable examples, regression fixtures, and operational procedures remain in the working tree.

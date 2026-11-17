@@ -233,17 +233,9 @@ Playwright can also be run directly:
 - `npx playwright test --project=smoke`
 - `npx playwright test --project=full`
 
-## Dependency migration (2026-10-05)
+<a id="dependency-migration-2026-10-05"></a>
 
-The combined update replaces the dependency changes in upstream PRs #94–#98:
-
-| Dependency | Version | Original PR |
-| --- | --- | --- |
-| ESLint | 10.8.0 | [#94](https://github.com/yearn/governance-apps/pull/94) |
-| Testing Library user-event | 14.6.3 | [#95](https://github.com/yearn/governance-apps/pull/95) |
-| tailwind-merge | 3.6.0 | [#96](https://github.com/yearn/governance-apps/pull/96) |
-| Vitest | 4.1.11 | [#97](https://github.com/yearn/governance-apps/pull/97) |
-| TypeScript CLI | 7.0.2 | [#98](https://github.com/yearn/governance-apps/pull/98) |
+## Compiler and linter compatibility
 
 ### Compiler compatibility
 
@@ -260,21 +252,19 @@ The React, import, and accessibility plugins still declare peer ranges that excl
 Exact plugin-version overrides select the root ESLint version.
 The configuration uses [ESLint compatibility utilities](https://eslint.org/blog/2024/05/eslint-compatibility-utilities/) to restore the removed rule APIs.
 The regression test checks that React, hooks, accessibility, and TypeScript rules still report invalid code.
-No lint rules are disabled for this migration.
+The compatibility configuration keeps the existing lint rules enabled.
 The lockfile also updates typescript-eslint and React Hooks to versions that declare ESLint 10 support.
 
 The newer Hooks checks require derived state and form resets to run without synchronous effects.
 The app fixes retain default asset selection, Teams navigation, funding-form resets, trade-input resets, and yETH deadline gating.
 The shared clock supplies the veYFI lock status and epoch countdown.
 
-### Integrator notes
+### Dependency maintenance
 
-Merge the dependency changes and React compatibility fixes together.
-The lockfile comes from npm 11.14.0 with the seven-day release-age policy enabled.
-The native-install-script allowlist is unchanged.
-After the combined update merges into upstream master, PRs #94–#98 can close as superseded.
-The original PRs remain open during review.
-Remove the compatibility aliases and plugin overrides only after the upstream tools support their replacements.
+Use the pinned Node.js and npm versions with the repository’s release-age policy.
+Keep the native-install-script allowlist in place.
+Remove compatibility aliases and plugin overrides only after the dependent tools support their replacements.
+The [historical index](README.md#history) retains the original migration record.
 
 ## Environment Flags for Testing
 

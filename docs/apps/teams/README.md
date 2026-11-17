@@ -3,8 +3,7 @@
 App name / slug: `teams`
 Route key: `/teams`
 Beta host: `teams-beta.dao-ops.com`
-Production host: `teams.yearn.fi` (gated until feed-backed reads, launch writes, fork
-smoke, and production approval)
+Production host: `teams.yearn.fi` (controlled by `NEXT_PUBLIC_ENABLE_TEAMS`)
 Display label: `Team Finances`
 
 ## Product summary
@@ -96,4 +95,4 @@ Producer and cutover rules are in
 Unavailable team routes return to the directory after data resolves. URL updates remain browser effects.
 Funding forms reset their values and validation state before the changed approval or wallet renders.
 
-See the [dependency migration notes](../../shared/testing.md#dependency-migration-2026-10-05) for compiler and linter requirements.
+See the [compiler and linter requirements](../../shared/testing.md#compiler-and-linter-compatibility) for toolchain compatibility.
