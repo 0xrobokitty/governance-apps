@@ -1,3 +1,4 @@
+import { GOVERNANCE_APP_PATHS } from "@/lib/runtime/governance-hosts";
 import { NextResponse } from "next/server";
 import type { NextRequest } from "next/server";
 import {
@@ -20,7 +21,8 @@ const PUBLIC_FILE =
 
 const IS_PRODUCTION = process.env.NODE_ENV === "production";
 const IS_DEVELOPMENT = !IS_PRODUCTION;
-const STRICT_CSP_PATHS = ["/treasury", "/dao", "/styfi", "/veyfi", "/yeth", "/ybc"];
+const STRICT_CSP_PATHS = Object.values(GOVERNANCE_APP_PATHS);
+const SAFE_APP_PATHS = STRICT_CSP_PATHS.filter((path) => path !== "/pulse");
 const ADDITIONAL_CONNECT_SRC = resolveAdditionalConnectSrc();
 
 function isStrictCspPath(pathname: string, hostPrefix: string | null) {
@@ -30,7 +32,7 @@ function isStrictCspPath(pathname: string, hostPrefix: string | null) {
 
 function isGovernanceAppRequest(pathname: string, hostPrefix: string | null) {
   if (hostPrefix) return hostPrefix !== "/pulse";
-  return STRICT_CSP_PATHS.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
+  return SAFE_APP_PATHS.some((prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`));
 }
 
 function withSecurityHeaders(

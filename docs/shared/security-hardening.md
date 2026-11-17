@@ -1,7 +1,7 @@
 # Security Hardening: Production Baseline
 
-Status: Active baseline for production apps (`styfi`, `veyfi`)
-Date: 2026-02-12
+Status: Active baseline for all application routes
+Updated: 2026-11-17
 
 This document defines the enforced frontend security controls and release invariants.
 
@@ -12,7 +12,7 @@ Operational playbook:
 ## 1. Scope and Runtime Split
 
 - `styfi` and `veyfi` are production surfaces.
-- `yeth` is treated as non-production and is disabled by default in production runtime.
+- Additional applications use explicit production exposure flags. A disabled route must remain inaccessible on paths and dedicated hosts.
 - Debug routes are disabled by default in production runtime.
 
 ## 2. Supply Chain and Dependency Policy
@@ -304,3 +304,18 @@ Future hardening (recommended):
 - Publish signed payloads with key rotation policy.
 - Verify signatures in API routes before payload admission.
 - Add freshness/rollback guards (timestamp + monotonic version checks).
+
+
+## Bounded requests and route policies
+
+The global Stats and legacy yETH feeds share the bounded feed transport.
+One 10-second deadline covers each fetch and its response body.
+The global feed limit is 1 MiB. The legacy yETH feed limit is 64 KiB.
+The same limits apply to the API proxies and direct client reads.
+Timeout responses use HTTP 504 and no-store. Existing upstream status and cache headers retain their previous behavior.
+
+All registered application paths use nonce-based script policies, including Teams and Pulse.
+The same policy applies on shared hosts and dedicated app hosts.
+Teams supports Safe iframe embedding on both URL forms. Pulse denies embedding.
+
+The quality workflow grants only contents-read permission and does not persist checkout credentials.
