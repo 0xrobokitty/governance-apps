@@ -94,6 +94,32 @@ describe("stYFI APR onchain snapshot", () => {
     for (const [call] of multicall.mock.calls) expect(call).toMatchObject({ blockNumber: 100n, allowFailure: false });
   });
 
+  it("retains a delayed oracle quote when independent APR metadata fails", async () => {
+    const { client, multicall, globalData, getBlock } = fixture();
+    let resolveOracle!: (value: unknown[]) => void;
+    multicall.mockImplementation(({ contracts }) => {
+      if (contracts[0].functionName === "decimals") {
+        return new Promise<unknown[]>(resolve => { resolveOracle = resolve; });
+      }
+      return Promise.reject(new Error("APR metadata unavailable"));
+    });
+    let settled = false;
+    const pending = fetchStyfiAprSnapshot(client, globalData, USER).then(result => {
+      settled = true;
+      return result;
+    });
+    await vi.waitFor(() => expect(multicall).toHaveBeenCalledTimes(2));
+    expect(settled).toBe(false);
+    resolveOracle([8, "YFI / USD", [1n, 220000000000n, 0n, NOW, 1n]]);
+    const result = await pending;
+    expect(result.status).toBe("unavailable");
+    expect(result.baseAprBps).toBeNull();
+    expect(result.account).toBeNull();
+    expect(result.valuation).toEqual({ yfiPriceCts: 220000n, timestamp: Number(NOW), stale: false });
+    expect(multicall).toHaveBeenCalledTimes(2);
+    expect(getBlock).toHaveBeenCalledOnce();
+  });
+
   it("does not turn unfinalized reward allocations into a zero APR", async () => {
     const { client, globalData } = fixture({ unfinalized: true });
     expect((await fetchStyfiAprSnapshot(client, globalData)).status).toBe("unavailable");

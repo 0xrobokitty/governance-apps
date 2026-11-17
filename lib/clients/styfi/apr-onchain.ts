@@ -103,7 +103,7 @@ export async function fetchStyfiAprSnapshot(
       allowFailure: false,
     });
 
-    const [valuation, metadata] = await Promise.all([
+    const [valuation, metadata] = await Promise.allSettled([
       readStyfiAprValuation(client, block.number, timestamp, globalData),
       read([
         call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "last_epoch"),
@@ -118,8 +118,11 @@ export async function fetchStyfiAprSnapshot(
         call(REWARD_DISTRIBUTOR_ADDRESS, rewardAbi, "components", [STYFI_GOVERNANCE.voteBoost]),
       ]),
     ]);
-    price = valuation;
-    const [lastEpoch, cursorValue, rewardDecimalsValue, assetValue, delegatedSource, ybcKilled, ybcClaimFrom, ybcSupplyValue, stakingComponent, boostComponent] = metadata;
+    if (valuation.status === "rejected") throw valuation.reason;
+    // Preserve a successful quote even when the independent APR metadata fails.
+    price = valuation.value;
+    if (metadata.status === "rejected") throw metadata.reason;
+    const [lastEpoch, cursorValue, rewardDecimalsValue, assetValue, delegatedSource, ybcKilled, ybcClaimFrom, ybcSupplyValue, stakingComponent, boostComponent] = metadata.value;
 
     // rewards() reports zero before finalization. Do not misrepresent that as a zero APR.
     if ((lastEpoch as bigint) <= epoch || (assetValue as string).toLowerCase() !== USDC ||
