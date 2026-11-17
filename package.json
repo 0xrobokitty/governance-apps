@@ -90,6 +90,9 @@
     },
     "eslint-plugin-jsx-a11y@6.10.2": {
       "eslint": "$eslint"
+    },
+    "@node-minify/core@9.0.2": {
+      "glob": "10.5.0"
     }
   },
   "engines": {

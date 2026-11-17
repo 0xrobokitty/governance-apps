@@ -141,6 +141,26 @@ makes no asset request until the user opens one. A card is accepted only for a
 sole image token in a top-level body paragraph after the summary; nested or
 mixed image contexts fail. It never renders SVG inline.
 
+### 2.7 OpenNext minifier security override
+
+OpenNext's `@node-minify/core@9.0.2` pins `glob@10.3.3`.
+That version has the CLI command-injection issue
+[GHSA-5j98-mcp5-4vw2](https://github.com/advisories/GHSA-5j98-mcp5-4vw2).
+The package override selects the patched `glob@10.5.0` only for this minifier version.
+
+This update stays within glob's existing major version and meets the seven-day release-age rule.
+The minifier uses `globSync`, whose API remains compatible.
+The regression test exercises OpenNext's minifier, string and array wildcard inputs, and literal filename handling in the glob CLI.
+
+Remove this override when an accepted OpenNext update removes the vulnerable exact pin.
+Run `tests/unit/scripts/opennext-minifier-compatibility.test.ts` and the Worker build after that update.
+
+Moderate advisories remain:
+[glob cancellation](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) and
+[minimatch pattern amplification](https://github.com/advisories/GHSA-g3hv-75wg-m249).
+Their fixes require newer major versions in existing dependency chains.
+The minifier override does not claim to resolve those advisories.
+
 ## 3. Production Runtime Invariants
 
 Validation script: `/scripts/validate-prod-env.mjs`
