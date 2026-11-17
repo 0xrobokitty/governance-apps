@@ -97,13 +97,36 @@ export function ProtocolProvider({ children }: { children: ReactNode }) {
     return rpcPublicClient ?? null;
   }, [rpcPublicClient, walletChainId]);
 
+  // Keep each client's read caches until its own inputs change.
+  const styfi = useMemo<StyfiClient>(
+    () =>
+      preferMocks
+        ? mockClients.styfi
+        : new OnchainStyfiClient(publicClient, globalData ?? null),
+    [preferMocks, mockClients.styfi, publicClient, globalData]
+  );
+  const veyfi = useMemo<VeyfiClient>(
+    () =>
+      preferMocks
+        ? mockClients.veyfi
+        : new OnchainVeyfiClient(publicClient, globalData ?? null),
+    [preferMocks, mockClients.veyfi, publicClient, globalData]
+  );
+  const yeth = useMemo<YethClient>(
+    () =>
+      preferMocks
+        ? mockClients.yeth
+        : new OnchainYethClient(publicClient, yethGlobalData ?? null),
+    [preferMocks, mockClients.yeth, publicClient, yethGlobalData]
+  );
+
   const value = useMemo(() => {
     // If user wants mocks, ignore the public client
     if (preferMocks) {
       return {
-        styfi: mockClients.styfi,
-        veyfi: mockClients.veyfi,
-        yeth: mockClients.yeth,
+        styfi,
+        veyfi,
+        yeth,
         isMock: true,
         usesMockBackend: true,
         teamsUsesMockBackend: true,
@@ -117,9 +140,9 @@ export function ProtocolProvider({ children }: { children: ReactNode }) {
     }
 
     return {
-      styfi: new OnchainStyfiClient(publicClient, globalData ?? null),
-      veyfi: new OnchainVeyfiClient(publicClient, globalData ?? null),
-      yeth: new OnchainYethClient(publicClient, yethGlobalData ?? null),
+      styfi,
+      veyfi,
+      yeth,
       isMock: false,
       usesMockBackend: false,
       teamsUsesMockBackend: false,
@@ -136,7 +159,9 @@ export function ProtocolProvider({ children }: { children: ReactNode }) {
     rpcPublicClient,
     globalData,
     yethGlobalData,
-    mockClients,
+    styfi,
+    veyfi,
+    yeth,
   ]);
 
   const teams = useMemo<TeamsTestBridgeAdapter>(
