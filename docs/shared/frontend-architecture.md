@@ -137,6 +137,21 @@ domain eligibility -> useTx -> prepare/simulate -> receipt -> query invalidation
 - Wrong-network and simulation failures block normal submission.
 - UI code never fabricates canonical history while a producer feed catches up.
 
+### Safe transaction boundary
+
+The default receipt path expects an Ethereum transaction hash.
+The Safe Apps provider can return a Safe proposal hash instead.
+Generic stYFI, veYFI, Teams, YBC, and legacy yETH writes do not resolve that proposal to its execution receipt.
+A timeout does not prove failure. Check the Safe queue before another submission.
+
+The live yETH recovery flow has separate persisted intents and canonical Safe execution verification.
+Those guarantees do not apply to the generic transaction hook.
+DAO also requires direct sender and call checks that need separate Safe inner-call validation.
+
+Shared Safe support requires persisted submission ownership, duplicate prevention, resume controls, and execution-event verification.
+Acceptance must cover queued approval, reload, cancellation, account changes, and inner failure despite a successful outer receipt.
+Embedding policy and wallet connection alone do not establish transaction compatibility.
+
 ### Query lifetime and independent reads
 
 stYFI and veYFI account hooks accept an optional `enabled` argument. Live APR and voting-power hooks disable their mock-only account subscriptions.
