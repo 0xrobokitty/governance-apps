@@ -56,6 +56,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe("fetchGlobalData", () => {
   afterEach(() => {
+    vi.useRealTimers();
     restoreEnv();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -85,7 +86,28 @@ describe("fetchGlobalData", () => {
 
     expect(data?.meta.timestamp).toBe(1700000000);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("https://example.invalid/stats.json");
+    expect(fetchMock).toHaveBeenCalledWith("https://example.invalid/stats.json", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  });
+
+  it("rejects an oversized direct response", async () => {
+    process.env.NEXT_PUBLIC_GLOBAL_DATA_URL = "https://example.invalid/stats.json";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn(async () => new Response("{}", {
+      headers: { "content-length": String(1024 * 1024 + 1) },
+    })));
+    const { fetchGlobalData } = await loadFetcher();
+    await expect(fetchGlobalData()).rejects.toThrow("No valid global data payload");
+  });
+
+  it("fails a stalled direct read within the request budget", async () => {
+    vi.useFakeTimers();
+    process.env.NEXT_PUBLIC_GLOBAL_DATA_URL = "https://example.invalid/stats.json";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    const { fetchGlobalData } = await loadFetcher();
+    const assertion = expect(fetchGlobalData()).rejects.toThrow("No valid global data payload");
+    await vi.advanceTimersByTimeAsync(10_000);
+    await assertion;
   });
 
   it("uses the same-origin proxy URL in browser runtime", async () => {
@@ -107,6 +129,6 @@ describe("fetchGlobalData", () => {
 
     expect(data?.meta.timestamp).toBe(1700000001);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/global-data");
+    expect(fetchMock).toHaveBeenCalledWith("/api/global-data", expect.objectContaining({ signal: expect.any(AbortSignal) }));
   });
 });

@@ -1,3 +1,5 @@
+import { readBoundedJson, withFeedRequest, type FeedTransportPolicy } from "../../../lib/feed-transport";
+
 export type BlockTag = number | "latest";
 
 export interface RpcBlockHashReference {
@@ -475,86 +477,44 @@ class EthereumRpcClient implements RpcClient {
     signal?: AbortSignal,
     maxResponseBytes?: number,
   ): Promise<unknown> {
-    const response = await this.fetchImpl.call(globalThis, this.rpcUrl, {
-      method: "POST",
-      headers: {
-        "content-type": "application/json",
+    const policy: FeedTransportPolicy = {
+      maximumPayloadBytes: maxResponseBytes ?? ALERT_RPC_MAX_RESPONSE_BYTES,
+      requestTimeoutMs: ALERT_RPC_REQUEST_TIMEOUT_MS,
+      fetchOptions: {
+        method: "POST",
+        headers: { "content-type": "application/json" },
+        body: JSON.stringify(payload),
+        redirect: "manual",
+        credentials: "omit",
       },
-      body: JSON.stringify(payload),
-      ...(signal === undefined ? {} : { signal }),
-    });
-
-    if (!response.ok) {
-      await cancelResponseBody(response);
-      throw new RpcRequestError(
-        `RPC request failed with HTTP ${response.status}`,
-        method,
-        undefined,
-        undefined,
-        response.status,
-        false,
-        "http",
-      );
-    }
-
-    if (maxResponseBytes !== undefined) {
-      return readBoundedJson(response, method, maxResponseBytes);
-    }
-
+      createTimeoutError: () => new RpcRequestError("RPC request timed out", method),
+      createPayloadTooLargeError: () => malformedResponse(method, "response_size"),
+      payloadTooLargeCancelReason: "RPC response size limit",
+      timeoutCancelReason: "RPC request deadline",
+    };
     try {
-      return await response.json();
-    } catch {
-      throw malformedResponse(method, "json_decode");
+      return await withFeedRequest(this.rpcUrl, policy, async (response, context) => {
+        if (!response.ok) {
+          void response.body?.cancel().catch(() => undefined);
+          throw new RpcRequestError(
+            `RPC request failed with HTTP ${response.status}`,
+            method, undefined, undefined, response.status, false, "http",
+          );
+        }
+        try {
+          return await readBoundedJson(response, context, policy);
+        } catch (error) {
+          if (error instanceof RpcRequestError) throw error;
+          if (signal?.aborted) throw signal.reason;
+          throw malformedResponse(method, "json_decode");
+        }
+      }, (url, init) => this.fetchImpl.call(globalThis, url, init), signal);
+    } catch (error) {
+      if (signal?.aborted) throw signal.reason;
+      if (error instanceof RpcRequestError) throw error;
+      // Provider URLs can contain credentials. Never retain fetch error text.
+      throw new RpcRequestError("RPC request failed", method);
     }
-  }
-}
-
-async function readBoundedJson(
-  response: Response,
-  method: string,
-  maxBytes: number,
-): Promise<unknown> {
-  const declaredLength = response.headers.get("content-length");
-  if (
-    declaredLength !== null &&
-    /^\d+$/.test(declaredLength) &&
-    Number(declaredLength) > maxBytes
-  ) {
-    await cancelResponseBody(response);
-    throw malformedResponse(method, "response_size");
-  }
-  if (response.body === null) {
-    throw malformedResponse(method, "json_decode");
-  }
-
-  const reader = response.body.getReader();
-  const decoder = new TextDecoder();
-  let totalBytes = 0;
-  let text = "";
-  try {
-    while (true) {
-      const chunk = await reader.read();
-      if (chunk.done) break;
-      totalBytes += chunk.value.byteLength;
-      if (totalBytes > maxBytes) {
-        await reader.cancel();
-        throw malformedResponse(method, "response_size");
-      }
-      text += decoder.decode(chunk.value, { stream: true });
-    }
-    text += decoder.decode();
-    return JSON.parse(text) as unknown;
-  } catch (error) {
-    if (error instanceof RpcRequestError) throw error;
-    throw malformedResponse(method, "json_decode");
-  }
-}
-
-async function cancelResponseBody(response: Response): Promise<void> {
-  try {
-    await response.body?.cancel();
-  } catch {
-    // Cancellation is best-effort; retain the controlled RPC failure.
   }
 }
 
@@ -878,6 +838,8 @@ export function createRpcClient(
 }
 
 export const ALERT_RPC_MAX_BATCH_SIZE = 25;
+export const ALERT_RPC_REQUEST_TIMEOUT_MS = 30_000;
+export const ALERT_RPC_MAX_RESPONSE_BYTES = 16 * 1024 * 1024;
 export const ALERT_RPC_MAX_TRACE_RESPONSE_BYTES = 8 * 1024 * 1024;
 const ALERT_RPC_MAX_TRACE_DEPTH = 1_024;
 const ALERT_RPC_MAX_TRACE_FRAMES = 20_000;

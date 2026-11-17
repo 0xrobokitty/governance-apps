@@ -462,3 +462,19 @@ The duplicate window after Telegram accepts a message but before its receipt is
 written cannot be removed without an external transactional sender. If it
 occurs, keep the duplicate in history or remove it manually after comparing the
 transaction link and block.
+
+
+## Transport limits
+
+Each RPC request has one 30-second deadline for the fetch and response body.
+Ordinary responses permit at most 16 MiB. Transaction traces retain their stricter 8 MiB limit.
+An earlier scanner cancellation also stops the request.
+
+Each Telegram send has one 15-second deadline and a 64 KiB response limit.
+RPC and Telegram requests reject redirects. Failure records exclude endpoint credentials and response descriptions.
+A timeout ends the current run and releases its busy guard.
+The next scheduled run can retry from the saved cursor and delivery receipts.
+
+Messages remain serial, with the existing spacing and receipt order.
+A Telegram timeout cannot prove that the service rejected the message.
+The existing retry behavior can therefore repeat a message whose acknowledgement was lost.

@@ -13,4 +13,11 @@ Shared architecture and standards are documented in [`../../shared/README.md`](.
 The default asset selection resolves once from the first account payload and preserves later user selections.
 The shared clock supplies external veYFI lock status, including deterministic mock time.
 
-See the [dependency migration notes](../../shared/testing.md#dependency-migration-2026-10-05) for compiler and linter requirements.
+See the [compiler and linter requirements](../../shared/testing.md#dependency-migration-2026-10-05) for compiler and linter requirements.
+
+
+## Global feed limits
+
+The shared Stats reader permits at most 1 MiB and uses one 10-second request deadline.
+The browser reads through `/api/global-data`. Direct server reads use the same limits.
+A failed or invalid response never becomes valid global state.

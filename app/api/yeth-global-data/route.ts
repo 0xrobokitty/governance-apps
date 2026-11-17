@@ -1,49 +1,5 @@
-const YETH_GLOBAL_DATA_URL_ENV = "NEXT_PUBLIC_YETH_GLOBAL_DATA_URL";
-const FALLBACK_CACHE_CONTROL = "no-store";
+import { YETH_GLOBAL_FEED_POLICY } from "@/lib/clients/global-payload";
+import { createGlobalDataProxy } from "@/lib/server/global-data-proxy";
 
 export const dynamic = "force-dynamic";
-
-function jsonError(
-  message: string,
-  status: number,
-  upstreamStatus?: number,
-  cacheControl = FALLBACK_CACHE_CONTROL
-) {
-  return Response.json(
-    { error: message, upstreamStatus },
-    {
-      status,
-      headers: { "Cache-Control": cacheControl },
-    }
-  );
-}
-
-export async function GET() {
-  const upstreamUrl = process.env[YETH_GLOBAL_DATA_URL_ENV];
-  if (!upstreamUrl) {
-    return jsonError(`${YETH_GLOBAL_DATA_URL_ENV} is not configured`, 500);
-  }
-
-  try {
-    const upstream = await fetch(upstreamUrl);
-    const cacheControl = upstream.headers.get("cache-control");
-
-    if (!upstream.ok) {
-      return jsonError(
-        "yETH global data upstream request failed",
-        upstream.status,
-        upstream.status,
-        cacheControl ?? FALLBACK_CACHE_CONTROL
-      );
-    }
-
-    const json = await upstream.json();
-    return Response.json(json, {
-      headers: {
-        "Cache-Control": cacheControl ?? FALLBACK_CACHE_CONTROL,
-      },
-    });
-  } catch {
-    return jsonError("yETH global data upstream request failed", 500);
-  }
-}
+export const GET = createGlobalDataProxy("NEXT_PUBLIC_YETH_GLOBAL_DATA_URL", "yETH global data", YETH_GLOBAL_FEED_POLICY);

@@ -39,6 +39,8 @@ GovApps Stats 0.10.0 provides the v3 head and immutable history pages.
 Kong allocations and APY are already part of that publication.
 The dashboard does not query Kong separately.
 The legacy `yeth.json` remains available for the earlier claim page.
+Its proxy and direct reader allow at most 64 KiB and share a 10-second request deadline.
+The legacy reader retains its existing last-valid fallback when a request fails.
 
 Ethereum provides connected balances, allowance, withdrawal limits, and auction parameters.
 These contract reads share one block.

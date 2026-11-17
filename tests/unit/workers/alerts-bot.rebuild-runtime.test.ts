@@ -8,6 +8,7 @@ import {
   ALERT_DOMAIN_OBJECT_NAMES,
   ALERT_DOMAIN_REGISTRATIONS,
 } from "@/workers/alerts-bot/src/domain-registry";
+import { ALERT_RPC_REQUEST_TIMEOUT_MS } from "@/workers/alerts-bot/src/rpc";
 import { AlertState } from "@/workers/alerts-bot/src/runtime";
 import { YBC_REWARD_DISTRIBUTOR } from "@/workers/alerts-bot/src/contracts";
 import { YBC_REWARD_DISTRIBUTOR_EVENTS_ABI } from "@/workers/alerts-bot/src/product-abis";
@@ -100,6 +101,7 @@ function rpcFetch(params: {
 }
 
 afterEach(() => {
+  vi.useRealTimers();
   vi.unstubAllGlobals();
   vi.restoreAllMocks();
 });
@@ -452,7 +454,7 @@ describe("minimal durable runtime", () => {
     });
   });
 
-  it("logs a redacted stage when the head request throws unexpectedly", async () => {
+  it("logs a redacted RPC failure when the head transport throws", async () => {
     const { state, storage } = durableState();
     const secretMarker = "must-not-appear-in-alert-logs";
     const errorLog = vi.spyOn(console, "error").mockImplementation(() => undefined);
@@ -482,11 +484,34 @@ describe("minimal durable runtime", () => {
       domain: "styfi",
       code: "processing_failed",
       stage: "head",
-      failureKind: "unexpected",
-      exceptionName: "TypeError",
+      failureKind: "rpc",
+      rpcMethod: "eth_blockNumber",
+      rpcKind: "local",
       errorStateRecorded: true,
     });
     expect(JSON.stringify(log)).not.toContain(secretMarker);
+  });
+
+  it("releases the busy guard after a head timeout without advancing the cursor", async () => {
+    vi.useFakeTimers();
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { state, storage } = durableState();
+    vi.stubGlobal("fetch", vi.fn(() => new Promise<Response>(() => undefined)));
+    const object = new AlertState(state, baseEnv({ ALERTS_STYFI_ENABLED: "true" }));
+    const run = () => object.fetch(new Request("https://alerts.internal/run?domain=styfi", { method: "POST" }));
+    const pending = run();
+    await vi.advanceTimersByTimeAsync(0);
+    expect((await run()).status).toBe(202);
+    await vi.advanceTimersByTimeAsync(ALERT_RPC_REQUEST_TIMEOUT_MS);
+    expect((await pending).status).toBe(500);
+    expect(storage.values.get("state:v1")).toMatchObject({
+      cursorBlock: ALERT_DOMAIN_GENESIS_BLOCKS.styfi - 1,
+      lastErrorCode: "processing_failed",
+    });
+    vi.stubGlobal("fetch", rpcFetch({ latest: ALERT_DOMAIN_GENESIS_BLOCKS.styfi + 12 }));
+    const resumed = await run();
+    expect(resumed.status).toBe(200);
+    expect(storage.values.get("state:v1")).toMatchObject({ lastErrorCode: null });
   });
 
   it("logs safe RPC metadata without including provider response bodies", async () => {

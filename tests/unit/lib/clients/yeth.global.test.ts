@@ -36,6 +36,7 @@ function jsonResponse(body: unknown, status = 200): Response {
 
 describe("fetchYethGlobalData", () => {
   afterEach(() => {
+    vi.useRealTimers();
     restoreEnv();
     vi.unstubAllGlobals();
     vi.restoreAllMocks();
@@ -69,7 +70,8 @@ describe("fetchYethGlobalData", () => {
     expect(data?.generatedAt).toBe(100);
     expect(fetchMock).toHaveBeenCalledTimes(1);
     expect(fetchMock).toHaveBeenCalledWith(
-      "https://example.invalid/yeth-global.json"
+      "https://example.invalid/yeth-global.json",
+      expect.objectContaining({ signal: expect.any(AbortSignal) })
     );
   });
 
@@ -95,7 +97,24 @@ describe("fetchYethGlobalData", () => {
 
     expect(data?.generatedAt).toBe(200);
     expect(fetchMock).toHaveBeenCalledTimes(1);
-    expect(fetchMock).toHaveBeenCalledWith("/api/yeth-global-data");
+    expect(fetchMock).toHaveBeenCalledWith("/api/yeth-global-data", expect.objectContaining({ signal: expect.any(AbortSignal) }));
+  });
+
+  it("retains the last valid value after an oversized or stalled direct read", async () => {
+    vi.useFakeTimers();
+    process.env.NEXT_PUBLIC_YETH_GLOBAL_DATA_URL = "https://example.invalid/yeth-global.json";
+    vi.spyOn(console, "warn").mockImplementation(() => undefined);
+    vi.stubGlobal("fetch", vi.fn()
+      .mockResolvedValueOnce(jsonResponse(createPayload(100)))
+      .mockResolvedValueOnce(new Response("{}", { headers: { "content-length": String(64 * 1024 + 1) } }))
+      .mockImplementationOnce(() => new Promise<Response>(() => undefined)));
+    const { fetchYethGlobalData } = await loadFetcher();
+    const initial = await fetchYethGlobalData();
+    expect(initial?.generatedAt).toBe(100);
+    await expect(fetchYethGlobalData()).resolves.toEqual(initial);
+    const pending = fetchYethGlobalData();
+    await vi.advanceTimersByTimeAsync(10_000);
+    await expect(pending).resolves.toEqual(initial);
   });
 
   it("returns null when the same-origin proxy data is invalid", async () => {

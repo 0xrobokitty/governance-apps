@@ -26,18 +26,24 @@ export async function withFeedRequest<T>(
     response: Response,
     context: FeedRequestContext
   ) => Promise<T>,
-  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch
+  fetcher: (url: string, init: RequestInit) => Promise<Response> = fetch,
+  signal?: AbortSignal
 ): Promise<T> {
+  signal?.throwIfAborted();
   const abortController = new AbortController();
   const deadlineAt = Date.now() + policy.requestTimeoutMs;
   const timeoutError = policy.createTimeoutError();
   let timeout: ReturnType<typeof setTimeout> | undefined;
+  let abortRequest: (() => void) | undefined;
 
   const deadline = new Promise<never>((_resolve, reject) => {
-    timeout = setTimeout(() => {
-      abortController.abort(timeoutError);
-      reject(timeoutError);
-    }, policy.requestTimeoutMs);
+    const stop = (reason: unknown) => {
+      abortController.abort(reason);
+      reject(reason);
+    };
+    abortRequest = () => stop(signal!.reason);
+    signal?.addEventListener("abort", abortRequest, { once: true });
+    timeout = setTimeout(() => stop(timeoutError), policy.requestTimeoutMs);
   });
 
   try {
@@ -45,6 +51,13 @@ export async function withFeedRequest<T>(
       fetcher(url, {
         ...policy.fetchOptions,
         signal: abortController.signal,
+      }).then((response) => {
+        // A non-compliant fetch can resolve after cancellation. Do not retain its body.
+        if (abortController.signal.aborted) {
+          void response.body?.cancel().catch(() => undefined);
+          throw abortController.signal.reason;
+        }
+        return response;
       }),
       deadline,
     ]);
@@ -60,6 +73,7 @@ export async function withFeedRequest<T>(
     if (timeout !== undefined) {
       clearTimeout(timeout);
     }
+    if (abortRequest) signal?.removeEventListener("abort", abortRequest);
   }
 }
 

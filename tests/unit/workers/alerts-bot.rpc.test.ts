@@ -1,6 +1,8 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
   ALERT_RPC_MAX_TRACE_RESPONSE_BYTES,
+  ALERT_RPC_MAX_RESPONSE_BYTES,
+  ALERT_RPC_REQUEST_TIMEOUT_MS,
   createRpcClient,
   isRpcBatchPayloadTooLargeError,
   isRpcRangeTooLargeError,
@@ -682,5 +684,63 @@ describe("alerts-bot rpc client", () => {
 
     expect(isRpcRangeTooLargeError(caught)).toBe(testCase.expected);
     expect(String(caught)).not.toContain(testCase.message);
+  });
+});
+
+describe("RPC transport bounds", () => {
+  afterEach(() => { vi.useRealTimers(); });
+  it.each(["fetch", "body"])("times out a stalled %s and permits the next request", async (phase) => {
+    vi.useFakeTimers();
+    const cancel = vi.fn();
+    const fetcher = vi.fn().mockImplementationOnce(() => phase === "fetch" ? new Promise(() => undefined)
+      : Promise.resolve(new Response(new ReadableStream({ cancel }))))
+      .mockResolvedValueOnce(Response.json({ jsonrpc: "2.0", id: 2, result: "0x2" }));
+    const rpc = createRpcClient("https://rpc.example", fetcher as typeof fetch);
+    const assertion = expect(rpc.getBlockNumber()).rejects.toMatchObject({
+      name: "RpcRequestError", message: "RPC request timed out", kind: "local",
+    });
+    await vi.advanceTimersByTimeAsync(ALERT_RPC_REQUEST_TIMEOUT_MS);
+    await assertion;
+    if (phase === "body") expect(cancel).toHaveBeenCalled();
+    await expect(rpc.getBlockNumber()).resolves.toBe(2);
+    expect(vi.getTimerCount()).toBe(0);
+  });
+  it.each(["declared", "streamed"])("bounds %s ordinary RPC responses", async (kind) => {
+    const fetcher = vi.fn(async () => kind === "declared"
+      ? new Response("{}", { headers: { "content-length": String(ALERT_RPC_MAX_RESPONSE_BYTES + 1) } })
+      : new Response(new ReadableStream({
+          start(controller) { controller.enqueue(new Uint8Array(ALERT_RPC_MAX_RESPONSE_BYTES + 1)); },
+        })));
+    const rpc = createRpcClient("https://rpc.example", fetcher as typeof fetch);
+    await expect(rpc.getBlockNumber()).rejects.toMatchObject({ name: "RpcRequestError", kind: "protocol" });
+  });
+  it("preserves caller cancellation and forwards it to the transport", async () => {
+    const controller = new AbortController();
+    const reason = new Error("scanner stopped");
+    let signal: AbortSignal | undefined;
+    const fetcher = vi.fn((_url: RequestInfo | URL, init?: RequestInit) => {
+      signal = init?.signal as AbortSignal;
+      return new Promise<Response>(() => undefined);
+    });
+    const rpc = createRpcClient("https://rpc.example", fetcher as typeof fetch);
+    const assertion = expect(rpc.getBlockNumber(controller.signal)).rejects.toBe(reason);
+    controller.abort(reason);
+    await assertion;
+    expect(signal?.aborted).toBe(true);
+    expect(signal?.reason).toBe(reason);
+    await expect(rpc.getBlockNumber(controller.signal)).rejects.toBe(reason);
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+  it("refuses redirects and redacts credential-bearing fetch failures", async () => {
+    const fetcher = vi.fn(async (_url: RequestInfo | URL, init?: RequestInit) => {
+      expect(init?.redirect).toBe("manual");
+      expect(init?.credentials).toBe("omit");
+      throw new Error("fetch failed: https://rpc.example/secret-key");
+    });
+    const rpc = createRpcClient("https://rpc.example/secret-key", fetcher as typeof fetch);
+    const error = await rpc.getBlockNumber().catch((value: unknown) => value);
+    expect(error).toMatchObject({ name: "RpcRequestError", message: "RPC request failed" });
+    expect(String(error)).not.toContain("secret-key");
+    expect(JSON.stringify(error)).not.toContain("secret-key");
   });
 });

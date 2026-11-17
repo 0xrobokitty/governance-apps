@@ -73,7 +73,7 @@ describe("GET /api/global-data", () => {
     const response = await GET();
 
     expect(response.status).toBe(200);
-    expect(fetchMock).toHaveBeenCalledWith("https://example.invalid/stats.json");
+    expect(fetchMock).toHaveBeenCalledWith("https://example.invalid/stats.json", expect.objectContaining({ signal: expect.any(AbortSignal) }));
     await expect(response.json()).resolves.toEqual(payload);
   });
 
