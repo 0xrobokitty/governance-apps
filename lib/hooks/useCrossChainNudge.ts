@@ -217,7 +217,8 @@ export function useCrossChainNudge({
     try { raw = window.localStorage.getItem(dismissKey(candidate.id, address)); } catch { /* Optional preference storage. */ }
     const local = localDismissals[dismissKey(candidate.id, address)];
     if (raw || local !== undefined) {
-      const dismissedAt = Math.max(Number(raw ?? 0), local ?? 0);
+      const stored = Number(raw ?? 0);
+      const dismissedAt = Math.max(Number.isFinite(stored) ? stored : 0, local ?? 0);
       if (Number.isFinite(dismissedAt) && checkedAt - dismissedAt < DISMISS_TTL_MS) {
         nudge = null;
       }

@@ -17,3 +17,13 @@ it("dismisses locally when preference storage is unavailable", () => {
   rerender();
   expect(result.current.nudge).toBeNull();
 });
+
+it.each(["invalid", "Infinity"])("dismisses locally when stored %s cannot be replaced", stored => {
+  vi.spyOn(Storage.prototype, "getItem").mockReturnValue(stored);
+  vi.spyOn(Storage.prototype, "setItem").mockImplementation(() => { throw new DOMException("Quota exceeded", "QuotaExceededError"); });
+  const { result, rerender } = renderHook(() => useCrossChainNudge({ currentApp: "styfi" }));
+  expect(result.current.nudge?.id).toBe("nudge");
+  act(() => result.current.dismiss("nudge"));
+  rerender();
+  expect(result.current.nudge).toBeNull();
+});
