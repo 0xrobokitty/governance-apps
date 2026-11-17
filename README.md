@@ -19,7 +19,7 @@ The DAO Governance requirements and delivery plan live in
 
 ## Local development
 
-The repository requires Node 24 and npm 11.14.
+Use the Node.js version in `.nvmrc` (26.13.1) and npm 11.14.0.
 
 ```fish
 nvm use

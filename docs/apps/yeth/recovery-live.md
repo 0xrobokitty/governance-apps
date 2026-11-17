@@ -132,7 +132,7 @@ The page does not unwrap WETH into native ETH.
 
 ## Live read review
 
-Use a fresh task environment with Node 24 and the pinned dependencies.
+Use a fresh task environment with the Node.js version in `.nvmrc` and the pinned dependencies.
 This configuration enables the live page without mock transactions:
 
 ```sh
