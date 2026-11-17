@@ -119,12 +119,19 @@ See [`debug-runtime-contract.md`](debug-runtime-contract.md),
 All writes follow:
 
 ```text
-domain eligibility -> prepare/simulate -> useTx -> receipt -> query invalidation
+domain eligibility -> useTx -> prepare/simulate -> receipt -> query invalidation
 ```
 
 - Domain clients encode arguments and preserve protocol-specific checks.
 - `useTx` owns signing, submitted/mining state, receipt, normalized errors, and
   completion.
+- One hook instance accepts one execution at a time, including preparation and refresh.
+- Reset hides the current status. It does not cancel a submitted transaction or allow another execution before settlement.
+- Success requires a successful receipt for the original call or its repriced replacement.
+- A cancelled or changed replacement fails. Receipt links use the canonical transaction hash.
+- Refresh and observer errors do not change a confirmed transaction into a failed transaction.
+- Independent query refreshes run concurrently after confirmation.
+- Custom receipt handlers own their domain validation and pending-wallet behavior.
 - Approval and primary actions remain separate unless the protocol itself offers
   one atomic operation.
 - Wrong-network and simulation failures block normal submission.

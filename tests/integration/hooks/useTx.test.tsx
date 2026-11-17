@@ -37,7 +37,7 @@ describe("useTx", () => {
 
     let resolveReceipt!: () => void;
     const receiptPromise = new Promise<void>((resolve) => {
-      resolveReceipt = () => resolve();
+      resolveReceipt = () => resolve({ status: "success", transactionHash: "0x0000000000000000000000000000000000000000000000000000000000000001" } as never);
     });
     const mockedWait = vi.mocked(waitForTransactionReceipt);
     mockedWait.mockReturnValueOnce(receiptPromise as never);

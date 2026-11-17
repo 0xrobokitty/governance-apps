@@ -1,7 +1,7 @@
 // lib/tx/useTx.ts
 "use client";
 
-import { useCallback, useState } from "react";
+import { useCallback, useRef, useState } from "react";
 import type {
   PreparedTransaction,
   TransactionHash,
@@ -53,15 +53,34 @@ function mapNormalizedCode(code: string): TxErrorType {
 export function useTx() {
   const [state, setState] = useState<TxState>(initialState);
   const { publicClient } = useProtocol();
+  const running = useRef(false);
+  const generation = useRef(0);
   const txTransportFallbackEnabled = isSimulationTransportFallbackEnabled();
 
   const reset = useCallback(() => {
+    generation.current += 1;
     setState(initialState);
   }, []);
 
   const execute = useCallback(
     async (prepared: PreparedTransaction, options?: TxExecuteOptions) => {
-      if (!prepared) return;
+      // React state updates are asynchronous. Fence a second click immediately,
+      // including while reset hides the status of a transaction still in flight.
+      if (!prepared || running.current) return;
+      running.current = true;
+      const execution = generation.current;
+      const updateState = (next: TxState) => {
+        if (generation.current === execution) setState(next);
+      };
+      const callbackErrors: unknown[] = [];
+      const notify = async (callback: (() => void | Promise<void>) | undefined) => {
+        try {
+          await callback?.();
+        } catch (error) {
+          callbackErrors.push(error);
+          console.error("[tx] Transaction lifecycle callback failed.", error);
+        }
+      };
 
       let hash: TransactionHash | undefined;
       const toastId = toast.loading("Check your wallet...");
@@ -71,18 +90,18 @@ export function useTx() {
 
       const attemptExecute = async () => {
         try {
-          setState({
+          updateState({
             status: "signing",
           });
 
           hash = await prepared();
 
-          setState({
+          updateState({
             status: "submitted",
             hash,
           });
 
-          await options?.onSubmitted?.(hash);
+          await notify(options?.onSubmitted ? () => options.onSubmitted!(hash!) : undefined);
 
           if (options?.skipWaitForReceipt) {
             toast.success(
@@ -91,7 +110,7 @@ export function useTx() {
             );
           } else {
             toast.loading("Transaction submitted. Waiting...", { id: toastId });
-            setState({
+            updateState({
               status: "mining",
               hash,
             });
@@ -100,41 +119,51 @@ export function useTx() {
               const waited = await options.waitForReceipt(hash);
               if (waited && typeof waited === "object" && waited.pending) {
                 toast.dismiss(toastId);
-                setState({ status: "pending" });
+                updateState({ status: "pending" });
                 return;
               }
               if (typeof waited === "string") hash = waited;
-            } else if (publicClient) {
-              try {
-                await publicClient.waitForTransactionReceipt({ hash });
-              } catch (waitError) {
-                const normalizedWaitError = normalizeTxError(waitError);
-                if (!(txTransportFallbackEnabled && normalizedWaitError.code === "network")) {
-                  throw waitError;
-                }
-                console.warn(
-                  "[tx] Wallet RPC receipt wait failed; falling back to configured app RPC.",
-                  waitError
-                );
-                await waitForTransactionReceipt(wagmiConfig, { hash });
-              }
             } else {
-              await waitForTransactionReceipt(wagmiConfig, { hash });
+              let replacementReason: string | undefined;
+              const receiptOptions = {
+                hash,
+                onReplaced: ({ reason }: { reason: string }) => {
+                  replacementReason = reason;
+                },
+              };
+              const receipt = await (async () => {
+                if (!publicClient) return waitForTransactionReceipt(wagmiConfig, receiptOptions);
+                try {
+                  return await publicClient.waitForTransactionReceipt(receiptOptions);
+                } catch (waitError) {
+                  const normalizedWaitError = normalizeTxError(waitError);
+                  if (!(txTransportFallbackEnabled && normalizedWaitError.code === "network")) {
+                    throw waitError;
+                  }
+                  console.warn(
+                    "[tx] Wallet RPC receipt wait failed; falling back to configured app RPC.",
+                    waitError
+                  );
+                  return waitForTransactionReceipt(wagmiConfig, receiptOptions);
+                }
+              })();
+              hash = receipt.transactionHash;
+              if (receipt.status !== "success") throw new Error("Transaction reverted.");
+              if (replacementReason === "cancelled") throw new Error("Transaction cancelled by a replacement.");
+              if (replacementReason === "replaced") throw new Error("Transaction replaced by a different transaction.");
             }
             toast.success("Transaction confirmed!", { id: toastId });
           }
 
-          if (options?.invalidate) {
-            await options.invalidate();
+          // The receipt determines the chain outcome. A failed refresh or UI
+          // callback cannot turn a confirmed write into a failed transaction.
+          updateState({ status: "success", hash });
+          await notify(options?.invalidate);
+          if (generation.current === execution) {
+            await notify(options?.onSuccess ? () => options.onSuccess!(hash!) : undefined);
           }
-
-          setState({
-            status: "success",
-            hash,
-          });
-
-          if (options?.onSuccess) {
-            await options.onSuccess(hash);
+          if (callbackErrors.length > 0) {
+            toast.error("Transaction confirmed, but the app could not update. Refresh to check the latest state.", { id: toastId });
           }
         } catch (error: unknown) {
           const normalized = normalizeTxError(error);
@@ -155,20 +184,24 @@ export function useTx() {
             toast.error(errorMessage, { id: toastId });
           }
 
-          setState({
+          updateState({
             status: "error",
             hash,
             errorType,
             errorMessage,
           });
 
-          if (options?.onError) {
-            await options.onError(error, hash);
+          if (generation.current === execution) {
+            await notify(options?.onError ? () => options.onError!(error, hash) : undefined);
           }
         }
       };
 
-      await attemptExecute();
+      try {
+        await attemptExecute();
+      } finally {
+        running.current = false;
+      }
     },
     [publicClient, txTransportFallbackEnabled]
   );
