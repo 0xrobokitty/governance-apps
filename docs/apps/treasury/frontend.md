@@ -38,7 +38,7 @@ The app polls each minute while the route is visible. The producer publishes eac
 
 ## Local examples
 
-1. Use Node.js 24.
+1. Use the Node.js version in `.nvmrc`.
 2. Install the locked dependencies with `npm ci`.
 3. Start the app with `env NEXT_PUBLIC_USE_MOCKS=true npm run dev`.
 4. Open `/treasury`.

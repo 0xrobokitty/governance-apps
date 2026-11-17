@@ -6,7 +6,7 @@ The browser does not query chains, Envio, Kong, or paid analytics.
 
 ## Activation
 
-Use Node 24 and npm 11.14.0 for the local build.
+Use the Node.js version in `.nvmrc` and npm 11.14.0 for the local build.
 
 1. Add these values to the ignored `.env.local` file in the repository root:
 

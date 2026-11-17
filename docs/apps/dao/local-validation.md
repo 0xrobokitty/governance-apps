@@ -12,7 +12,7 @@ It does not represent a production Worker deployment.
 
 ## Prerequisites and source
 
-Use Node 24, the locked npm dependencies, Anvil, Docker, uvx, and the installed Playwright Chromium browser.
+Use the Node.js version in `.nvmrc`, the locked npm dependencies, Anvil, Docker, uvx, and the installed Playwright Chromium browser.
 The Docker CLI can use Colima without Docker Desktop. Inspect the existing Colima profile, Docker context, and container ownership label before use.
 `colima-m1-wp2` is this retained session's context, not a universal default. Its container is `dao-validation-857869440066`, labeled with the session directory.
 Do not start an unrelated profile or reset storage based on sandbox-restricted status output.
