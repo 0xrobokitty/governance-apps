@@ -6,7 +6,7 @@ Use **server-side publication through Pinata's legacy file-upload endpoint** as 
 This selects the implementation direction. It does not claim completed production acceptance or authorize deployment.
 
 The [live review](live-review-2026-09-16.md) separates measured results from missing evidence.
-The [implementation task](../../delivery/pinata-publication-task.md) defines the next work package.
+The [implementation task](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/pinata-publication-task.md) defines the next work package.
 This decision supersedes the earlier requirement to complete the full provider matrix before building.
 It also supersedes the per-document operator approval requirement for the planned public publication flow.
 Until the implementation changes it, the existing application still enforces that old grant policy.

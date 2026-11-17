@@ -1,15 +1,10 @@
-# DAO feed V2 producer handoff
+# DAO Feed V2 Producer Requirements
 
-> Historical producer handoff. Its V2 technical requirements remain applicable. Producer release and interoperability are recorded in [current acceptance](../publication-acceptance-20260923.md); the next-dependency statements below describe September 8.
-
-
-Status (2026-09-08): consumer external review completed; producer handoff approved and consumer integrated. WP9 producer implementation is the next dependency and may start in its own authorized producer task after lane and target preflight. This handoff supersedes the V1 handoff at `fb8bbb8735b336b5eadd6d42b26e56696ad688de`; historical acceptance remains recorded in [status](status.md). V2 remains open to small coordinated amendments supported by producer evidence and reviewed across both repositories.
-
-Approved consumer range: `639782376bcaf05ab43ed9d9759c73154d0723b6..98a51bfe1b3fa258f0c3d443207dcad7a64eb6ed`.
-Integration merge: `77a20d116c253a69945a85bd7213efb7f43cf2a8` on `agent/integration`.
-The user supplied external approval for this exact implementation, with all three P2 findings and both additional improvements resolved. See the [integration record](evidence/feed-v2/integration.md).
-
-Actual producer interoperability, live deployment/dependency verification, contract-executed lifecycle/reorg evidence, staging validation and production approval remain pending. Approval of this consumer does not establish production readiness. This local integration performed no Gov Apps Stats changes, publication, deployment or production writes.
+These technical requirements define the producer’s responsibilities at the frontend boundary.
+Use the [feed contract](../feed-schema-v2.md) and [publication operations](../pinata-publication.md) with this document.
+The [original handoff](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/producer-handoff.md) retains the consumer review range and implementation sequence.
+The [publication acceptance](../publication-acceptance-20260923.md) records the later interoperability and operator results.
+Review each new producer or consumer candidate against its exact source revision.
 
 ## Boundaries and inputs
 
@@ -23,7 +18,7 @@ Read-only inspection found a producer manifest candidate for Voting
 `0x543e8871562a8c53e8b6a26835aeecb3a5a13070`, mainnet block `25883944`,
 with source revision `054e3e391f0fe4cd41c68b1a97263cb3234faee1`.
 These are inventory facts, not live verification or permission to use this deployment.
-The reviewer and this implementation follow-up independently downloaded and compared `contracts/governance/{Voting,Voter,Executor}.vy` at both revisions: all three files are byte-for-byte identical. The [comparison record](evidence/feed-v2/source-comparison.md) includes URLs, lengths and SHA-256 hashes. This resolves the file-level discrepancy for those contracts, without changing the consumer pin. Before implementation against a live target, verify deployed Voting/Voter/Executor code and any other relevant dependencies. A source URL alone proves no deployment. Keep code/deployment verification records and diagnostics private to operator evidence; do not put compiler manifests into the public feed.
+The reviewer and this implementation follow-up independently downloaded and compared `contracts/governance/{Voting,Voter,Executor}.vy` at both revisions: all three files are byte-for-byte identical. The [comparison record](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/feed-v2/source-comparison.md) includes URLs, lengths and SHA-256 hashes. This resolves the file-level discrepancy for those contracts, without changing the consumer pin. Before implementation against a live target, verify deployed Voting/Voter/Executor code and any other relevant dependencies. A source URL alone proves no deployment. Keep code/deployment verification records and diagnostics private to operator evidence; do not put compiler manifests into the public feed.
 
 The synthetic example addresses are never production defaults. The app defaults to no trusted DAO deployments. Operators must review the exact chain, Voting address, inclusive deployment block, fixed genesis and supported Voter/Executor allowlists before configuring `NEXT_PUBLIC_DAO_DEPLOYMENTS`. The feed cannot select these authorities.
 

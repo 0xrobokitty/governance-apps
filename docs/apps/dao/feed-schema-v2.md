@@ -1,8 +1,10 @@
 # DAO feed V2 consumer contract
 
-Status (2026-09-08): Governance Apps consumer external review completed, integrated and approved for producer handoff. See the [approved range and integration record](delivery/evidence/feed-v2/integration.md). The producer is reported released and active. The [milestone plan](delivery/milestone-plan.md) governs combined live implementation and distinguishes inspected evidence from pending lifecycle and rollout gates. V2 remains open to small coordinated amendments supported by producer evidence.
+This is the active DAO feed contract.
+Coordinated producer changes require consumer validation and review.
+Use the [release checklist](release-checklist.md) for deployment requirements and the [historical index](delivery/historical-index.md) for the original consumer review.
 
-This replaces `yearn.dao.feed.v1`. The immutable content format remains `yearn.dao.proposal.v1`; the Executor frame format is unchanged. There is one active feed parser and one publication contract. Historical V1 code and accepted bytes are recoverable at the commits recorded in [the reset decision](delivery/feed-v2-reset.md).
+This replaces `yearn.dao.feed.v1`. The immutable content format remains `yearn.dao.proposal.v1`; the Executor frame format is unchanged. There is one active feed parser and one publication contract. Historical V1 code and accepted bytes are recoverable at the commits recorded in [the reset decision](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/feed-v2-reset.md).
 
 ## Contract and ownership
 
@@ -67,4 +69,4 @@ Receipt-confirmed local mock proposals retain their full identity while awaiting
 
 Run `npm run generate:dao-feed` to update the JSON Schema and saved examples. Run `npm run generate:dao-feed -- --check` to detect drift; the Security And Quality CI workflow runs this same check for all four generated artifacts. The generator uses Zod's schema exporter with shared references; there is no handwritten schema interpreter. Synthetic fixture builders are test inputs, never production feed acquisition.
 
-See [reset evidence and measurements](delivery/feed-v2-reset.md). A saved consumer response is not producer interoperability evidence. Real producer-generated candidate bytes must pass this transport/parser/adapter and routes in the later cross-repository gate.
+See [reset evidence and measurements](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/feed-v2-reset.md). A saved consumer response is not producer interoperability evidence. Real producer-generated candidate bytes must pass the transport, parser, adapter, and route checks before a coordinated release.

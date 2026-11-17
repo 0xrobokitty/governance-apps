@@ -1,5 +1,10 @@
 # yETH Onchain Integration Planning Spec (v2 - simplified)
 
+This document records the original integration design.
+Use the [integration references](README.md) for current contracts, implementation context, and acceptance procedures.
+The original assignment sequence remains in Git history.
+
+
 Last updated: 2026-02-26  
 Route: `/yeth`  
 Target: Onchain MVP (mainnet fork test first, then production behind feature flag)

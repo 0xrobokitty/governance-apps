@@ -1,71 +1,58 @@
 # Shared Documentation
 
-Shared docs define requirements and architecture that apply across multiple apps.
-App behavior and active delivery status belong under `docs/apps/<domain>`.
+Shared documents define requirements that apply across applications.
+Use the [app index](../apps/README.md) for domain behavior and operations.
 
-## Current Architecture
+## Architecture and product standards
 
-- [`frontend-architecture.md`](frontend-architecture.md)
-- [`architecture-blueprint.md`](architecture-blueprint.md) is a compatibility
-  pointer for older links.
+- [Frontend architecture](frontend-architecture.md)
+- [Design system](design-system.md), [copy and tone](copy-and-tone.md), and [design review](design-review-process.md)
 
-## Historical Specifications
+## Implementation and validation
 
-These remain for traceability. They do not define new app behavior.
+- [Delivery guide](codex-usage-guide.md): worktrees, ownership, independent review, and integration
+- [Testing](testing.md): unit, component, browser, and fork checks
+- [Runtime modes](runtime-modes.md), [mock selection](mock-toggles.md), and [debug contract](debug-runtime-contract.md)
+- [Security policy](security-hardening.md)
+- [Branch protection](master-branch-protection.md)
+- [Worker runtime](cloudflare-worker-runtime.md), [size limits](cloudflare-worker-size.md), and [release checklist template](release-checklist-template.md)
 
-- [`normative-spec-yip88.md`](normative-spec-yip88.md)
-- [`frontend-frd.md`](frontend-frd.md)
+## Data contracts and rollout planning
 
-## Design and Product Standards
+- [Global data schema](schemas/global-data-schema.md)
+- [Teams/YBC producer contract](gov-apps-stats-teams-ybc-feed-brief.md)
+- [Teams/YBC production plan](teams-ybc-production-plan.md)
+- [RPC reliance roadmap](rpc-reliance-reduction-roadmap.md)
 
-- [`design-system.md`](design-system.md)
-- [`copy-and-tone.md`](copy-and-tone.md)
-- [`design-review-process.md`](design-review-process.md)
+## Reusable task templates
 
-Historical review evidence:
+Use the [delivery guide](codex-usage-guide.md) with these templates:
 
-- [`polished-app-baseline-audit.md`](polished-app-baseline-audit.md)
+- [Orchestrator](prompt-templates/orchestrator-template.md) and [implementor](prompt-templates/implementor-template.md)
+- [Reviewer](prompt-templates/reviewer-template.md) and [auditor](prompt-templates/auditor-template.md)
+- [Fixer](prompt-templates/fixer-template.md) and [integrator](prompt-templates/integrator-template.md)
 
-## Delivery and Testing
+## History
 
-- [`codex-usage-guide.md`](codex-usage-guide.md) is the canonical worktree,
-  review, and integration workflow.
-- [`teams-ybc-production-plan.md`](teams-ybc-production-plan.md)
-- [`rpc-reliance-reduction-roadmap.md`](rpc-reliance-reduction-roadmap.md)
-- [`testing.md`](testing.md)
-- [`master-branch-protection.md`](master-branch-protection.md)
-- [`cloudflare-worker-size.md`](cloudflare-worker-size.md)
-  - Future deployment directions: per-app Workers, OpenNext multi-worker, and static SPA options.
-- [`mock-toggles.md`](mock-toggles.md)
-- [`debug-runtime-contract.md`](debug-runtime-contract.md)
-- [`runtime-modes.md`](runtime-modes.md)
-- [`security-hardening.md`](security-hardening.md)
-- [`security-hardening-backlog.md`](security-hardening-backlog.md)
+The original [YIP-88 specification](normative-spec-yip88.md), [frontend requirements](frontend-frd.md), and [baseline review](polished-app-baseline-audit.md) retain design context.
+They do not define requirements for new applications.
 
-## Shared Work Packages
+Completed implementation assignments and review records are available at the immutable source revision below.
+Their pending statuses describe the original task, not the current release.
 
-These packages record the Teams/YBC delivery history. They are not templates
-for new app work. New domains use the shared delivery guide and an app-owned
-delivery plan.
+| Historical material | Source snapshot |
+| --- | --- |
+| Shared Teams/YBC packages | [Work packages](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/shared/work-packages) |
+| Teams implementation assignments and prompts | [Integration directory](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/teams/onchain-integration-plan) |
+| YBC implementation assignments and prompts | [Integration directory](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/ybc/onchain-integration-plan) |
+| Legacy yETH claim integration assignments and prompts | [Integration directory](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/yeth/onchain-integration-plan) |
+| Completed February security checklist | [Checklist](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/shared/security-hardening-backlog.md) |
+| October dependency migration record | [Original testing guide](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/shared/testing.md#dependency-migration-2026-10-05) |
+| Retired architecture and task-list pointers | [Architecture pointer](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/shared/architecture-blueprint.md), [task-list pointer](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/shared/master-task-list.md) |
+| DAO delivery packages and raw evidence | [Historical index](../apps/dao/delivery/historical-index.md) |
 
-- [`work-packages/WP0-debug-runtime-shared-seam.md`](work-packages/WP0-debug-runtime-shared-seam.md)
-- [`work-packages/WP1-teams-ybc-data-contracts.md`](work-packages/WP1-teams-ybc-data-contracts.md)
-- [`work-packages/WP2-gov-apps-stats-teams-ybc-feeds.md`](work-packages/WP2-gov-apps-stats-teams-ybc-feeds.md)
-- [`work-packages/WP3-teams-ybc-feed-validation.md`](work-packages/WP3-teams-ybc-feed-validation.md)
+Retrieve a file without changing the worktree:
 
-## Producer Handoffs
-
-- [`gov-apps-stats-teams-ybc-feed-brief.md`](gov-apps-stats-teams-ybc-feed-brief.md)
-
-## Prompt Templates
-
-- [`prompt-templates/orchestrator-template.md`](prompt-templates/orchestrator-template.md)
-- [`prompt-templates/implementor-template.md`](prompt-templates/implementor-template.md)
-- [`prompt-templates/reviewer-template.md`](prompt-templates/reviewer-template.md)
-- [`prompt-templates/auditor-template.md`](prompt-templates/auditor-template.md)
-- [`prompt-templates/fixer-template.md`](prompt-templates/fixer-template.md)
-- [`prompt-templates/integrator-template.md`](prompt-templates/integrator-template.md)
-
-## Data Schemas
-
-- [`schemas/global-data-schema.md`](schemas/global-data-schema.md)
+```sh
+git show d0332e0a9ebb99d69085ac8cbbd2a638994bbab7:<repository-path>
+```

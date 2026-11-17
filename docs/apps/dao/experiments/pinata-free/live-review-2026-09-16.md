@@ -80,4 +80,4 @@ Unpinning from this account does not erase public IPFS caches.
 7. Keep setup and publication keys private. Report only selected, sanitized results; crop dashboard key columns.
 8. Stop expanding the experiment. Build the chosen server-side path and validate it through the real application.
 
-The [decision](decision.md) is the current policy. The [next task](../../delivery/pinata-publication-task.md) carries it into implementation.
+The [decision](decision.md) is the current policy. The [next task](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/pinata-publication-task.md) carries it into implementation.

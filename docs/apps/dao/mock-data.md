@@ -10,7 +10,7 @@ The [saved V2 response](examples/feed-v2/dao-feed-v2.example.json) contains 27 s
 
 Acceptance tests reject matching-digest BOM-prefixed content locally while accepting canonical non-ASCII content. They also add empty feeds, multiple configured Voting deployments with duplicate numeric IDs, invalid envelopes, wrong chains, canonical replacement, out-of-order/failed refreshes, bounds and deadlines. Controlled ABI responses exercise current wallet state, wrong network/account changes, disconnect, stale heads, RPC failure and immutable commitment disagreement.
 
-All new examples are synthetic. They are not node recordings, producer output or contract-execution evidence. See [reset evidence](delivery/feed-v2-reset.md) for the later integration gate.
+All new examples are synthetic. They are not node recordings, producer output or contract-execution evidence. See [reset evidence](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/feed-v2-reset.md) for the later integration gate.
 
 ## Mutable actions and creation
 

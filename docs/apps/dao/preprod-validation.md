@@ -10,13 +10,13 @@ Repository preparation does not authorize deployment, remote changes, publicatio
 
 | Stage | Status and evidence |
 | --- | --- |
-| Repository preparation | The candidate retains the shared D1 binding and policy, completes preprod workflow inputs, and records the reviewed deployment JSON. See the [preparation handoff](delivery/preprod-preparation-20260930.md) for local checks and review scope. |
+| Repository preparation | The candidate retains the shared D1 binding and policy, completes preprod workflow inputs, and records the reviewed deployment JSON. See the [preparation handoff](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/preprod-preparation-20260930.md) for local checks and review scope. |
 | Remote setup | The operator reports completing setup steps 1–5, including database setup. This preparation has only local configuration evidence. Remote migration, bindings, secrets, and dashboard values were not independently verified. |
 | Private configuration | Preprod success is operator-reported. This production preparation does not independently inspect private runtime values or secrets. |
 | Preprod deployment | Deployed with two successful proposals, according to the operator. A separately retrieved public producer snapshot contains mainnet IDs 0 and 1. |
 | Production rollout | Approved with reads, wallet actions, and publication from launch. Follow the [production procedure](production-release.md) after independent candidate review. |
 
-The [manual UAT closeout](delivery/uat-closeout-20260930.md) and [Pinata acceptance](publication-acceptance-20260923.md) remain completed evidence.
+The [manual UAT closeout](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/uat-closeout-20260930.md) and [Pinata acceptance](publication-acceptance-20260923.md) remain completed evidence.
 Do not repeat those campaigns or start their retained services for this preparation.
 
 ## Approved shared infrastructure

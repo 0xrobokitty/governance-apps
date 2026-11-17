@@ -1,46 +1,42 @@
-# DAO historical records and maintenance inventory
+# DAO Historical Records
 
-The [DAO entry point](../README.md), [operations](../pinata-publication.md), [local development](../local-development.md), and [release checklist](../release-checklist.md) describe current behavior.
-The [September 23 acceptance](../publication-acceptance-20260923.md) closes publication acceptance.
-Earlier “pending” statements below describe their recorded dates. They are not additional live acceptance gates.
+Use the [DAO overview](../README.md), [local development](../local-development.md), [publication operations](../pinata-publication.md), and [release checklist](../release-checklist.md) for current work.
+The [September publication acceptance](../publication-acceptance-20260923.md) records the original operator acceptance.
 
-| Historical record | Retained purpose |
+Completed plans, package prompts, dated handoffs, logs, and screenshots are available at an immutable source revision.
+Their pending statements describe their recorded dates.
+Their validation results apply only to their recorded commits.
+
+| Historical material | Source snapshot |
 | --- | --- |
-| [Original implementation task](pinata-publication-task.md) | Scope and constraints before implementation; superseded by the current milestone plan |
-| [September 17 acceptance procedure](../pinata-acceptance.md) and [prepared session](../pinata-acceptance-session.md) | Original A/C/B plan, budgets, ownership, and interrupted preparation |
-| [Recovery and follow-up procedure](../pinata-recovery.md) | Missing original accounting, exact-document recovery, and separately bounded follow-up |
-| [Original M5 evidence](evidence/m5-live/README.md) | Fork, producer, and build evidence at its recorded revision |
-| [M5 review corrections](evidence/m5-live-review/README.md) | Review findings and recovery checks inherited by this package |
-| [Pinata implementation](evidence/m5-pinata/README.md) | Initial implementation results, failed attempts, and corrected reruns |
-| [Acknowledgement correction](evidence/m5-pinata-review/README.md) | Rejected-upload defect and original failing validation run |
-| [September 17 validation closure](evidence/m5-pinata-validation/README.md) | Full rerun after the acknowledgement correction; does not validate later code |
-| [Provider decision](../experiments/pinata-free/decision.md) | Closed provider choice and accepted constraints |
+| Delivery sequence, milestones, dependencies, and status | [Delivery directory](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery) |
+| Earlier V2 consumer review procedure | [Superseded beta runbook](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/dao-beta-runbook.md) |
+| Implementation assignments | [Work packages](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/work-packages) |
+| App-specific agent prompts | [Prompts](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/prompts) |
+| Screenshots, logs, checksums, feed samples, and review evidence | [Evidence directory](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence) |
+| October proposal layout and voting reviews | [Delivery directory](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery) |
+| Provider selection and accepted constraints | [Provider decision](../experiments/pinata-free/decision.md) |
+| Earlier publication procedures | [Acceptance](../pinata-acceptance.md), [prepared session](../pinata-acceptance-session.md), [recovery](../pinata-recovery.md) |
 
-## September 24 maintenance inventory
+Retrieve any archived file without changing the worktree:
 
-The original committed version for every path in this inventory is:
-`6f78a0840feafdb26e8256e7212529156beb6c72:<path>`.
-Retrieve any original artifact without changing the worktree:
+```sh
+git show d0332e0a9ebb99d69085ac8cbbd2a638994bbab7:docs/apps/dao/delivery/status.md
+```
 
-```fish
+## Regression inputs and earlier cleanup
+
+The three [DAO regression fixtures](../../../../tests/fixtures/dao-live-evidence/README.md) remain in the test tree.
+Tests still use their original bytes.
+They cover producer parsing, receipt-backed execution, and local deployment configuration.
+
+The earlier September cleanup used source revision `6f78a0840feafdb26e8256e7212529156beb6c72`.
+That revision also retains duplicate logs removed before this archive:
+
+```sh
 git show 6f78a0840feafdb26e8256e7212529156beb6c72:docs/apps/dao/delivery/evidence/m5-pinata/checks/typecheck-7.log
 ```
 
-| Original repository path | Current location or reason |
-| --- | --- |
-| `docs/apps/dao/delivery/evidence/m5-live/fork-execution.json` | [Regression fixture](../../../../tests/fixtures/dao-live-evidence/fork-execution.json); unchanged bytes |
-| `docs/apps/dao/delivery/evidence/m5-live/producer-created.json` | [Regression fixture](../../../../tests/fixtures/dao-live-evidence/producer-created.json); unchanged bytes |
-| `docs/apps/dao/delivery/evidence/m5-live/local-deployments.json` | [Regression fixture](../../../../tests/fixtures/dao-live-evidence/local-deployments.json); unchanged bytes |
-| `docs/apps/dao/delivery/evidence/m5-pinata/checks/typecheck-7.log` | Removed duplicate passing output; identical `typecheck-final.log` remains |
-| `docs/apps/dao/delivery/evidence/m5-pinata/checks/typecheck-8.log` | Removed duplicate passing output; identical `typecheck-final.log` remains |
-| `docs/apps/dao/delivery/evidence/m5-pinata/checks/lint-4.log` | Removed duplicate passing output; identical `lint-final.log` remains |
-| `docs/apps/dao/delivery/evidence/m5-pinata/checks/lint-5.log` | Removed duplicate passing output; identical `lint-final.log` remains |
-
-Historical checksum manifests are unchanged and describe their original artifact sets.
-Run their complete checks against the recorded Git revision, not against the reorganized current tree.
-Tests now import the three JSON inputs from the fixture directory. Historical evidence links point to their current locations.
-Significant failed logs, screenshots, review findings, and provider decisions remain discoverable in the current tree.
-
-No application helper or configuration was removed without evidence that it was unused.
-Fork tooling, schemas/examples, migrations, supported mocks, and generated Cloudflare types remain required and retained.
-No external acceptance directory, credential, database, ledger, checkpoint, or browser profile was copied into Git or changed.
+Historical checksum manifests describe their original artifact sets.
+Run complete checksum checks against their recorded Git revision.
+The current tree retains the contract references, schemas, examples, migrations, fork tooling, and operational procedures.

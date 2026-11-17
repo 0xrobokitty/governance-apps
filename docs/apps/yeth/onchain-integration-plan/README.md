@@ -1,35 +1,16 @@
-# yETH Onchain Integration Plan (v2 - simplified)
+# Legacy yETH Claim Integration
 
-This folder contains the planning spec and work packages to integrate **onchain support**
-for the `/yeth` app in `governance-apps`.
+These references describe the claim page retained in `YethPageClient`.
+The [implementation map](../implementation-status.md) explains route selection.
+Use the [live recovery runbook](../recovery-live.md) for the recovery dashboard, auctions, and current fork acceptance.
 
-## What changed vs v1 plan
+- [Legacy global feed contract](yeth-global-data-schema-v1.md)
+- [Legacy claim fork procedure](fork-runbook.md)
+- [Original claim integration specification](planning-spec.md)
 
-This plan intentionally **reduces scope** to ship an initial production-ready onchain MVP:
+The earlier claim interface uses live claimable amounts, recovery shares, and the contract deadline.
+Its original scope excluded historical accounting.
+The live recovery dashboard has a separate Stats v3 publication and receipt verification path.
 
-- **No `opensAt` / pre-window state.** Claims are treated as **open** until the onchain `deadline`.
-- **No snapshots.** We do not ship or host `snapshot.json` data in this app.
-- **No log/event lookups.** We do not attempt to classify "ineligible" vs "claimed/exited" or compute historical amounts.
-- **Dedicated yETH global data feed.** `/yeth` uses its own versioned R2/static JSON (`yeth-global.json`) for disconnected-wallet global rendering.
-- **Static trust text for MVP.** `yieldSources`, `risks`, and governance links remain app constants unless explicit operational need emerges.
-- Account UX is based on only two signals:
-  1) `claimable(address) > 0` (show claim UI)
-  2) `recoveryVault.balanceOf(address) > 0` (show Recovery Vault position UI)
-
-If neither is true, the app shows **no wallet-specific recovery state** (only global content like the footer).
-
-## Where to place
-
-Unzip at the **repo root**. It will add:
-
-- `docs/apps/yeth/onchain-integration-plan/**` (this plan)
-- `lib/clients/yeth/deployment.json` (yETH-only deployment config)
-- yETH global feed schema/spec docs (for external data producer)
-
-## How to start
-
-1. Complete **WP0** first (deployment config + yETH global feed contract).
-2. Then run **WP1** (UI + type simplification) so the app no longer assumes `opensAt`.
-3. Implement **WP2/WP3** (R2-backed global reads + onchain account reads/writes) in parallel.
-4. Merge with **WP4** (protocol wiring).
-5. Validate with **WP5** (mainnet fork runbook).
+Completed [work packages and prompts](https://github.com/yearn/governance-apps/tree/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/yeth/onchain-integration-plan) remain in Git history.
+Use them as implementation history, not as instructions to restart the integration.

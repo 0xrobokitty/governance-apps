@@ -181,7 +181,7 @@ Require a successful canonical receipt with B's digest and empty script. Do not 
 Copy the retained configuration:
 
 ```fish
-cp docs/apps/dao/delivery/evidence/m5-pinata/local-producer-config.json "$DAO_ACCEPTANCE_DIR/producer-config.json"
+git show d0332e0a9ebb99d69085ac8cbbd2a638994bbab7:docs/apps/dao/delivery/evidence/m5-pinata/local-producer-config.json > "$DAO_ACCEPTANCE_DIR/producer-config.json"
 ```
 This retained configuration uses one content request and no retries. Verify its deployment identities against the new fork.
 Verify the unchanged released binary before execution:

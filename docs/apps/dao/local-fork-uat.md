@@ -162,7 +162,7 @@ It checks actual app responses and rendered content without wallet RPC or mocked
 The publication package requires this checkpoint. Ordinary saved-fixture checks remain independent.
 `DAO_EVIDENCE_DIR` selects retained browser captures. Without it, captures go to the current test output directory.
 
-The [original evidence](delivery/evidence/m5-live/README.md) and [review-fix evidence](delivery/evidence/m5-live-review/README.md) record what actually ran.
+The [original evidence](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/m5-live/README.md) and [review-fix evidence](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/m5-live-review/README.md) record what actually ran.
 
 ## Stop
 

@@ -15,8 +15,8 @@ Acknowledged uploads retry gateway retrieval without reuploading.
 
 [Publication operations](pinata-publication.md) defines configuration, atomic budgets, retries, backup, key replacement, and rollback.
 [Publication acceptance](publication-acceptance-20260923.md) records the completed 23 September follow-up.
-[Closeout validation](delivery/evidence/closeout-20260924/README.md) records the subsequent offline checks.
-[Publication review correction](delivery/evidence/m5-pinata-review/README.md) tracks the acknowledgement requirement and its regression results.
+[Closeout validation](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/closeout-20260924/README.md) records the subsequent offline checks.
+[Publication review correction](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/m5-pinata-review/README.md) tracks the acknowledgement requirement and its regression results.
 Historical grant and Kubo evidence remains historical. Those settings are obsolete for production.
 
 ## Other service configuration

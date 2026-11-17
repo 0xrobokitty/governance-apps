@@ -2,8 +2,8 @@
 
 This is the current local walkthrough entry point on `agent/integration`.
 The approved publication acceptance remains complete. This session does not repeat that experiment.
-The [September 26 completion record](delivery/integration-20260926.md) identifies the tested source, durable populated session, and retained evidence.
-The manual walkthrough completed on September 30. The [UAT closeout](delivery/uat-closeout-20260930.md) records its evidence and subsequent product corrections.
+The [September 26 completion record](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/integration-20260926.md) identifies the tested source, durable populated session, and retained evidence.
+The manual walkthrough completed on September 30. The [UAT closeout](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/uat-closeout-20260930.md) records its evidence and subsequent product corrections.
 The retained session uses `ad2c18a47c9366f50037e9daa79b08641d09affa`. Preserve it as completed evidence. This closeout does not require another walkthrough or rebuild.
 
 The launcher builds optimized Next.js output with `NODE_ENV=production` and explicit `NEXT_PUBLIC_RUNTIME_MODE=development`.

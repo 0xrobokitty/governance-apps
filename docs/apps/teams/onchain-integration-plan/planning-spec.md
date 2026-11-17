@@ -1,5 +1,10 @@
 # Team Finances Planning Spec
 
+This document records the original integration design.
+Use the [integration references](README.md) for current contracts, implementation context, and acceptance procedures.
+The original assignment sequence remains in Git history.
+
+
 ## 1. Canonical naming
 
 - app name / slug: `teams`

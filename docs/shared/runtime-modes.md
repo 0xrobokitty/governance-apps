@@ -83,7 +83,7 @@ DAO mock-first acceptance is complete. Real preproduction reads require these in
 Public `NEXT_PUBLIC_*` values are compiled into the browser build. Server `DAO_DATA_URL` and private service credentials remain server configuration.
 Protected preview/development environments can select deterministic mocks with `NEXT_PUBLIC_USE_MOCKS=true`.
 Local real-client work sets `NEXT_PUBLIC_USE_MOCKS=false`. Production errors never trigger a mock fallback.
-The [DAO milestone plan](../apps/dao/delivery/milestone-plan.md) governs implementation, fork UAT, review, and separately approved rollout.
+The [DAO release checklist](../apps/dao/release-checklist.md) defines validation, review, and separately approved rollout requirements.
 
 The DAO flag applies to the shared preproduction deployment, not only the beta
 hostname. Other hosts served by the same Worker can reach `/dao` while it is

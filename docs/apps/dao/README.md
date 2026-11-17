@@ -1,41 +1,29 @@
 # DAO Governance
 
-Publication acceptance completed on 23 September 2026. The operator reports preprod deployed with two successful proposals.
-Production launch includes reads, wallet actions, and publication. Independent candidate review precedes operator deployment.
-The [acceptance record](publication-acceptance-20260923.md) separates checked artifacts, operator observations, and historical limitations.
-The [closeout evidence](delivery/evidence/closeout-20260924/README.md) covers subsequent corrections and offline validation.
+The DAO app displays proposals, supports wallet governance actions, and publishes proposal content.
+Use the current behavior and operator references below.
+The [historical index](delivery/historical-index.md) retains completed delivery records and their source revisions.
 
-| Purpose | Current entry point |
+| Purpose | Reference |
 | --- | --- |
 | Architecture, transaction checks, and recovery | [Live services](live-services.md) |
-| Combined DAO interface, Vote Boost, voting power, and local previews | [Combined release review](delivery/combined-release-20261023.md) |
-| Voter details, shared names, participation, and authoring changes | [Voting clarity delivery](delivery/voting-clarity-20261023.md) |
-| Proposal, Votes, and Details tabs with section links | [Proposal navigation](proposal-navigation.md) |
-| Compact wallet controls, YBC endpoints, and percentage tooltips | [Voting clarity refinement](delivery/voting-clarity-refinement-20261023.md) |
-| Earlier wallet layout, aligned voter rows, and integrated YBC results | [Voting clarity UI follow-up](delivery/voting-clarity-review-20261023.md) |
+| Proposal, Votes, and Details tabs | [Proposal navigation](proposal-navigation.md) |
+| Voting results, wallet controls, and authoring | [UI specification](ui-spec.md), [authoring fields](authoring-title-and-body.md) |
 | Public corrections to proposal display titles | [Title corrections](title-overrides.md) |
-| Telegram lifecycle, deadline, and operator alerts | [DAO alerts and rollout](telegram-alerts.md) |
+| Telegram lifecycle, deadline, and operator alerts | [DAO alerts](telegram-alerts.md) |
 | Built local walkthrough and real producer snapshots | [Local validation](local-validation.md) |
-| Ordered production release and private operator inputs | [Production procedure](production-release.md) |
-| Preprod status, shared infrastructure, and historical preparation | [Preprod reference](preprod-validation.md) |
+| Production release and private operator inputs | [Production procedure](production-release.md), [release checklist](release-checklist.md) |
+| Preprod infrastructure and acceptance | [Preprod reference](preprod-validation.md) |
 | Publication configuration, budgets, backup, and rollback | [Publication operations](pinata-publication.md) |
-| Development, file-based D1 setup, and regression commands | [Local development](local-development.md) and [disposable fork UAT](local-fork-uat.md) |
-| Accepted validation and remaining release work | [Acceptance](publication-acceptance-20260923.md), [release checklist](release-checklist.md), and [delivery status](delivery/status.md) |
-| Dated plans, failed attempts, and evidence locations | [Historical index](delivery/historical-index.md) |
-
-The current candidate lives on `agent/integration`. The [production handoff](delivery/production-release-20261001.md) records its review range and validation.
-The earlier approved publication package is `da041f5eaa5abe55ed5221f2642d3f0b047e5315`.
-The [integration record](delivery/integration-20260924.md) identifies the merge, added tooling, validation, and remaining release inputs.
-Provider selection and live publication acceptance are closed. The completed A/C/B procedures are historical material.
+| Development and disposable fork acceptance | [Local development](local-development.md), [fork UAT](local-fork-uat.md) |
 
 ## Canonical references
 
-1. [Contract behavior and source pin](contract-reference.md).
-2. [Functional requirements](functional-requirements.md), [user stories](user-stories.md), and [UI specification](ui-spec.md).
-3. [Feed V2 specification](feed-schema-v2.md), [field/source mapping](feed-v2-field-sources.md), [generated schema](feed-schema-v2.schema.json), and [saved examples](examples/feed-v2/dao-feed-v2.example.json).
-4. [Internal domain and mocks](mock-data.md).
-5. [Producer handoff](delivery/producer-handoff.md), [dependency graph](delivery/dependency-graph.md), and [status](delivery/status.md).
-6. [Reset decision and evidence](delivery/feed-v2-reset.md).
+- [Contract behavior and source pin](contract-reference.md)
+- [Functional requirements](functional-requirements.md), [user stories](user-stories.md), and [UI specification](ui-spec.md)
+- [Feed V2 specification](feed-schema-v2.md), [field/source mapping](feed-v2-field-sources.md), [generated schema](feed-schema-v2.schema.json), and [example](examples/feed-v2/dao-feed-v2.example.json)
+- [Domain model and mocks](mock-data.md)
+- [Producer technical handoff](delivery/producer-handoff.md)
 
 ## Product and trust boundaries
 

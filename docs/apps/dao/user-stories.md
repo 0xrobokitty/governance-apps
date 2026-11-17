@@ -1,7 +1,7 @@
 # DAO Governance User Stories
 
 Consumer reads, publication, and live write flows are implemented. [Publication acceptance](publication-acceptance-20260923.md) is complete.
-Production rollout remains gated; supported mock flows remain available in preview. [Status](delivery/status.md) controls remaining release work.
+Production rollout remains gated; supported mock flows remain available in preview. Use the [release checklist](release-checklist.md) for release requirements.
 
 ## Observers
 

@@ -1,49 +1,15 @@
 # App Documentation Index
 
-Each app folder contains app-scoped specs, UX notes, and delivery status.
+These references describe the current applications and their supported integrations.
+Each app’s release procedure defines its deployment checks and approvals.
 
-## stYFI
-
-- [`styfi/README.md`](styfi/README.md)
-- [`styfi/user-stories.md`](styfi/user-stories.md)
-- [`styfi/ui-spec.md`](styfi/ui-spec.md)
-
-## veYFI
-
-- [`veyfi/README.md`](veyfi/README.md)
-- [`veyfi/user-stories.md`](veyfi/user-stories.md)
-- [`veyfi/ui-spec.md`](veyfi/ui-spec.md)
-
-## yETH
-
-- [`yeth/README.md`](yeth/README.md)
-- [`yeth/mechanism-spec.md`](yeth/mechanism-spec.md)
-- [`yeth/ui-ux-spec.md`](yeth/ui-ux-spec.md)
-- [`yeth/implementation-status.md`](yeth/implementation-status.md)
-- [`yeth/production-readiness-checklist.md`](yeth/production-readiness-checklist.md)
-
-## Teams
-
-- [`teams/README.md`](teams/README.md)
-- [`teams/ui-spec.md`](teams/ui-spec.md)
-- [`teams/user-stories.md`](teams/user-stories.md)
-- [`teams/onchain-integration-plan/README.md`](teams/onchain-integration-plan/README.md)
-- [`teams/onchain-integration-plan/teams-feed-schema-v1.md`](teams/onchain-integration-plan/teams-feed-schema-v1.md)
-
-## YBC
-
-- [`ybc/README.md`](ybc/README.md)
-- [`ybc/ui-spec.md`](ybc/ui-spec.md)
-- [`ybc/user-stories.md`](ybc/user-stories.md)
-- [`ybc/onchain-integration-plan/README.md`](ybc/onchain-integration-plan/README.md)
-- [`ybc/onchain-integration-plan/ybc-feed-schema-v1.md`](ybc/onchain-integration-plan/ybc-feed-schema-v1.md)
-
-## DAO Governance
-
-- [`dao/README.md`](dao/README.md)
-- [`dao/contract-reference.md`](dao/contract-reference.md)
-- [`dao/functional-requirements.md`](dao/functional-requirements.md)
-- [`dao/user-stories.md`](dao/user-stories.md)
-- [`dao/ui-spec.md`](dao/ui-spec.md)
-- [`dao/mock-data.md`](dao/mock-data.md)
-- [`dao/delivery/README.md`](dao/delivery/README.md)
+| App | Behavior and scope | Data and operations |
+| --- | --- | --- |
+| stYFI | [Overview](styfi/README.md), [UI specification](styfi/ui-spec.md) | [User stories](styfi/user-stories.md) |
+| veYFI | [Overview](veyfi/README.md), [UI specification](veyfi/ui-spec.md) | [User stories](veyfi/user-stories.md) |
+| yETH | [Overview](yeth/README.md), [implementation map](yeth/implementation-status.md) | [Live recovery and fork UAT](yeth/recovery-live.md), [release checklist](yeth/production-readiness-checklist.md) |
+| Teams | [Overview](teams/README.md), [UI specification](teams/ui-spec.md) | [Feed and fork references](teams/onchain-integration-plan/README.md) |
+| YBC | [Overview](ybc/README.md), [UI specification](ybc/ui-spec.md) | [Feed and fork references](ybc/onchain-integration-plan/README.md) |
+| DAO | [Overview](dao/README.md), [contract reference](dao/contract-reference.md) | [Live services](dao/live-services.md), [production procedure](dao/production-release.md) |
+| Treasury | [Frontend contract](treasury/frontend.md) | [Feed schema](treasury/feed.schema.json), [production rollout](treasury/production-rollout.md), [testing](treasury/testing-handoff.md) |
+| Pulse | [Live dashboard](pulse/live-mvp.md) | [History contract and release checks](pulse/history-release.md) |

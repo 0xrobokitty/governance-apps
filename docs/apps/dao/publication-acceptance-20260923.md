@@ -7,11 +7,11 @@ No live provider request was repeated during this closeout.
 The tested application revision was `6f78a0840feafdb26e8256e7212529156beb6c72` on `codex/dao/m5/pinata`.
 This revision comes from the operator handoff and unchanged branch at closeout start.
 The saved provider artifacts do not independently attest an application commit.
-Later transaction, interface, and setup corrections have separate [offline validation](delivery/evidence/closeout-20260924/README.md).
+Later transaction, interface, and setup corrections have separate [offline validation](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/closeout-20260924/README.md).
 
 ## Checked artifacts
 
-The [sanitized record](delivery/evidence/closeout-20260924/acceptance.json) includes identities, counters, comparisons, and SHA-256 checksums.
+The [sanitized record](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/closeout-20260924/acceptance.json) includes identities, counters, comparisons, and SHA-256 checksums.
 Checks used the retained `dao-pinata-followup-20260923` directory and the `dao-pinata-acceptance-20260917-recovery` packet.
 Both remain outside this repository and unchanged.
 
@@ -50,7 +50,7 @@ The follow-up does not claim that its fresh database was the original ledger or 
 Two defects were observed during the completed follow-up: ordinary block advancement rejected preparation, and the authoring frame appeared cropped.
 A proposal retry subsequently succeeded. The failed preparation submitted no transaction.
 The file-based database setup repair also followed an unsuccessful inline initializer.
-The [closeout record](delivery/evidence/closeout-20260924/README.md) records these corrections and all new validation failures and reruns.
+The [closeout record](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/evidence/closeout-20260924/README.md) records these corrections and all new validation failures and reruns.
 
 ## Release requirements
 

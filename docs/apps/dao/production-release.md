@@ -1,6 +1,7 @@
 # DAO production procedure
 
-This is the canonical production procedure for the October 1, 2026 release.
+This procedure retains the approved DAO launch configuration and release controls.
+Verify the selected candidate and current deployment state for each release.
 The launch includes real DAO reads, wallet actions, and content publication.
 Set `DAO_PUBLICATION_ENABLED=true` before the first DAO production deployment. No separate publication approval or disabled launch stage is required.
 
@@ -30,14 +31,15 @@ Keep the existing non-DAO application configuration and preprod access protectio
 
 ### 1. Review the exact candidate and validation report
 
-Review the complete range in the [production handoff](delivery/production-release-20261001.md).
+Use the release handoff’s exact base and candidate SHAs.
 Record the accepted full SHA and independent review result before promotion.
-The command below resolves the commit that adds the final handoff. Compare it with the supplied final SHA.
+Run these commands from the reviewed candidate worktree:
 
 ```fish
-cd /Users/hydra/Developer/yearn/governance-apps.agent.integration
-set release_base 937784605df3054e489b852cbdb641c76b909b36
-set release_candidate (git log --diff-filter=A -1 --format=%H -- docs/apps/dao/delivery/production-release-20261001.md)
+read -P 'Reviewed release base (full SHA): ' release_base
+read -P 'Reviewed release candidate (full SHA): ' release_candidate
+git rev-parse --verify "$release_base^{commit}"; or exit 1
+git rev-parse --verify "$release_candidate^{commit}"; or exit 1
 git show --no-patch --format=fuller "$release_candidate"
 git log --reverse --format='%H %s' "$release_base..$release_candidate"
 git diff --check "$release_base" "$release_candidate"
@@ -45,7 +47,9 @@ git diff --stat "$release_base" "$release_candidate"
 git status --short
 ```
 
-Preserve the integration worktree's untracked `outputs/` directory. Do not stage it or use cleanup/reset commands.
+The [original October handoff](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/delivery/production-release-20261001.md) records the launch candidate.
+It does not select the candidate for a later release.
+Preserve untracked review evidence. Do not stage it or remove it with cleanup/reset commands.
 Manual lifecycle UAT and live Pinata acceptance are complete. Do not repeat those campaigns or restart their retained services.
 Automated checks use disposable local databases and offline provider fixtures.
 
@@ -56,13 +60,7 @@ Inspect both fetch and push identities. Do not assume that `origin` owns product
 ```fish
 git remote -v
 git worktree list
-git ls-remote https://github.com/0xPickles/governance-apps.git refs/heads/master
-git ls-remote https://github.com/yearn/governance-apps.git refs/heads/master
 ```
-
-At preparation, `origin` identifies `0xPickles/governance-apps`. Its public master was `2863876b2a06f40fa26f2cbbc9c16b82bcc43d56`.
-`upstream` identifies `yearn/governance-apps`. Its public master was `06d9ec46458675e36d72b2165ff80189914efb03`.
-Both commits are ancestors of the starting integration commit. These observations do not establish deployment ownership or future branch state.
 
 Select the repository that owns the existing GitHub `production` environment, deployment credentials, approval controls, and production workflow history.
 Record its `OWNER/REPOSITORY` and matching remote name. Deployment ownership remains an operator input until checked.
@@ -83,11 +81,12 @@ If remote master contains additional work, review it before promotion. Never dis
 
 ### 3. Promote accepted changes to master while preserving history
 
-Use the checkout that owns `master`. The observed checkout is `/Users/hydra/Developer/yearn/governance-apps`.
+Use the checkout that owns `master`. Verify its location with `git worktree list`.
 Check that it is clean before changing it. Resolve any dirty state separately without deleting unrelated files.
 
 ```fish
-cd /Users/hydra/Developer/yearn/governance-apps
+read -P 'Absolute path of the master checkout: ' master_checkout
+cd "$master_checkout"; or exit 1
 test (git branch --show-current) = master; or exit 1
 test (git status --porcelain | count) -eq 0; or exit 1
 git diff --check "$remote_master" "$release_candidate"; or exit 1

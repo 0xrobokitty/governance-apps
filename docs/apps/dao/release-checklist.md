@@ -1,15 +1,10 @@
-# DAO release and integration checklist
+# DAO Release Checklist
 
-Publication acceptance is [complete](publication-acceptance-20260923.md).
-The approved package is integrated. DAO integration through `9bee14b9037396899d8f1d3d3b604eabeeba7427` passed independent review.
-The [UAT closeout](delivery/uat-closeout-20260930.md) retains completed walkthrough evidence and finding dispositions.
-The operator reports preprod deployed and two successful mainnet proposals. The public producer snapshot independently contains proposal IDs 0 and 1.
-These are distinct evidence sources. Repository checks do not independently establish private preprod configuration or its complete deployed behavior.
-Use the [production handoff](delivery/production-release-20261001.md) for the current candidate, validation, and review range.
-Independent candidate review and operator deployment are next. Manual UAT and live Pinata acceptance remain complete.
-The operator owns master promotion, push, deployment, private configuration, and dashboard hostname setup.
+Use this checklist with the exact candidate’s validation report and independent review.
+The operator owns promotion, publication, deployment, private configuration, and hostname setup.
+Historical acceptance does not establish the state of a later deployment.
 
-## Remaining release inputs
+## Release procedure
 
 Follow the [canonical production procedure](production-release.md) in order:
 
@@ -38,52 +33,16 @@ Keep the build flag and server publication switch separate. Publication disablem
 Use [publication operations](pinata-publication.md) for shared policy semantics, key replacement, backup, budget recovery, and rollback.
 Do not repeat the completed A/C/B experiment as a normal production procedure.
 
-## Completed integration procedure (historical)
+## Validation requirements
 
-The procedure below records the September integration scope. Do not rerun it for production release.
-Its earlier branch divergence was addressed by the [master reconciliation](delivery/master-reconciliation-20260926.md).
-The production procedure requires a fresh remote comparison before promotion.
+Follow the [shared testing policy](../../shared/testing.md) for unit, component, and browser checks.
+Use disposable databases, offline provider fixtures, and the [fork acceptance procedure](local-fork-uat.md) for transaction validation.
 
-The package includes M5 live at `fc81ae0502efe45ed84367062a57df16c6dab46c` and all reviewed publication/recovery commits.
-Do not cherry-pick the closeout onto the older integration baseline.
-On September 24, integration was `28dd8fff2e7ff00961174635715be8d18ecd8d42`; master was `06d9ec46458675e36d72b2165ff80189914efb03`.
-Their 141/18 divergence requires separate release reconciliation. This package does not resolve it.
+Also verify the repository’s generated artifacts and deployment checks:
 
-Run these proposed commands only after approval. Compare `candidate` with the exact final SHA in the approval record.
-Require clean status and the expected integration branch before merging.
-
-```fish
-cd /Users/hydra/Developer/yearn/governance-apps.agent.integration
-git status --short
-test (git status --porcelain | count) -eq 0; or exit 1
-test (git branch --show-current) = agent/integration; or exit 1
-set candidate (git rev-parse codex/dao/m5/pinata)
-git show --no-patch --format=fuller "$candidate"
-git merge-base --is-ancestor fc81ae0502efe45ed84367062a57df16c6dab46c "$candidate"; or exit 1
-git diff --check agent/integration..."$candidate"
-or exit 1
-git merge --no-ff --no-commit "$candidate"
-```
-
-Resolve any conflicts through review. Preserve both sides' requirements; do not silently reconcile master or server automation.
-With the merge still uncommitted, run the checks below in an isolated checkout of the merged files.
-Supply only dummy local settings there. Do not copy private environment files or retained acceptance state.
-
-```fish
-npm run typecheck
-npm run lint
-npm run test -- --maxWorkers=2
-npm run test:e2e
-npm run test:e2e:full -- --workers=1
+```sh
 npm run generate:dao-feed -- --check
 npm run validate:deps
-env NODE_ENV=production NEXT_PUBLIC_RUNTIME_MODE=production \
-  NEXT_PUBLIC_USE_MOCKS=false NEXT_PUBLIC_E2E=false \
-  NEXT_PUBLIC_ENABLE_SIMULATION_TRANSPORT_FALLBACK=false \
-  NEXT_PUBLIC_ENABLE_YETH=false NEXT_PUBLIC_ENABLE_YBC=false NEXT_PUBLIC_ENABLE_TEAMS=false \
-  NEXT_PUBLIC_WC_PROJECT_ID=offline-validation \
-  NEXT_PUBLIC_GLOBAL_DATA_URL=http://127.0.0.1:18546/global.json \
-  NEXT_PUBLIC_RPC_URLS=http://127.0.0.1:18551 npm run validate:prod-env
 node scripts/check-dao-doc-links.mjs
 npm run cf-typegen
 git diff --exit-code -- cloudflare-env.d.ts
@@ -91,36 +50,25 @@ npm run test:e2e:dao-feed
 npm run test:e2e:dao-feed -- --disabled
 npm run worker:build
 npm run validate:worker-size
-```
-
-The two production feed commands each build the production app and check actual routes against local fixture upstreams.
-The dummy environment check validates configuration rules only; it does not approve production inputs or contact those URLs.
-Also run the [local fork suite](local-fork-uat.md) on a new disposable fork and content store.
-It must cover ordinary advancement, canonical replacement, exact-call execution, publication recovery, and receipt/index recovery.
-Check changed Markdown links and `git diff --check` after any conflict resolution.
-Generate Cloudflare types before the builds in the isolated checkout and compare them with the retained file; investigate differences before committing.
-No validation step requires a live Pinata request.
-
-After all required checks and conflict review pass:
-
-```fish
 git diff --check
-git status --short
-git commit -m "merge(dao): integrate reviewed publication acceptance closeout"
-git log -1 --format='%H %P %s'
-git status --short
 ```
 
-The merge must have two parents. Record its SHA and post-merge results in the delivery ledger.
-Do not push, tag, deploy, or enable flags without the corresponding authorization.
+Run `npm run validate:prod-env` with the selected release configuration.
+Keep private values out of reports.
+Investigate generated-type changes before committing.
+Review any conflict resolution and validate the resulting source SHA.
+No routine code validation requires a live Pinata upload.
 
-## Historical enablement checks
+Verify deployment identities independently of the producer feed.
+Confirm canonical block-hash reads and exact-call simulation. Stale or replaced observations must fail closed.
+Check disabled publication, retained-content reads, missing bindings, protected-host routing, and public error redaction.
+Confirm the stored limits and schema across replicas. Preserve publication counters during release and rollback.
+A code rollback retains the same database and spent allowances.
+Do not push, deploy, or change production flags without the required authorization.
 
-The [production procedure](production-release.md) supersedes these earlier launch instructions.
+## Historical acceptance
 
-Verify the exact deployment identities independently of the producer feed.
-Check that the RPC supports canonical block-hash reads and simulation; a stale or replaced observation must fail closed.
-Confirm the migration and stored limits match every replica. Preserve all counters during releases and recovery.
-Check disabled publication, retained-content reads, missing-binding behavior, protected-host routing, and public error redaction.
-Review the backup and rollback plan. A code rollback keeps the same D1 database and spent allowances.
-Operator-specific secrets and retention decisions stay outside this repository.
+The [publication acceptance](publication-acceptance-20260923.md) records the completed A/C/B follow-up.
+The [historical index](delivery/historical-index.md) links to walkthrough results, review corrections, and dated release handoffs.
+The [original checklist](https://github.com/yearn/governance-apps/blob/d0332e0a9ebb99d69085ac8cbbd2a638994bbab7/docs/apps/dao/release-checklist.md) retains the September integration procedure and its source identities.
+Do not restart retained acceptance services or repeat those experiments as a routine release step.
