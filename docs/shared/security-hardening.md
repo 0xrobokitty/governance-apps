@@ -111,13 +111,8 @@ The Undici override pins every installed copy to 7.30.1, which includes the
 [October security fixes](https://github.com/nodejs/undici/releases/tag/v7.30.1).
 Both versions meet the seven-day release-age policy. The install-script allowlist is unchanged.
 
-Two wallet SDK dependencies still require Zod 3:
-`@coinbase/cdp-sdk` uses 3.25.76 and `@reown/appkit-wallet` uses 3.22.4.
-They remain advisory findings. Their runtime exposure is not established by the lockfile.
-A global Zod 4 override breaks their declared API compatibility and is not a safe patch.
-The wallet dependency review in [#123](https://github.com/yearn/governance-apps/issues/123)
-must retain these findings until supported SDK changes or separate containment work resolves them.
-A wallet UI migration alone does not prove their removal.
+The completed wallet migration removed `@coinbase/cdp-sdk` and `@reown/appkit-wallet` from the lockfile.
+Their historical Zod findings no longer apply to the installed dependency graph.
 
 ### 2.6 DAO immutable attachment boundary
 
@@ -141,25 +136,55 @@ makes no asset request until the user opens one. A card is accepted only for a
 sole image token in a top-level body paragraph after the summary; nested or
 mixed image contexts fail. It never renders SVG inline.
 
-### 2.7 OpenNext minifier security override
+### 2.7 Glob and minimatch compatibility overrides
 
-OpenNext's `@node-minify/core@9.0.2` pins `glob@10.3.3`.
-That version has the CLI command-injection issue
-[GHSA-5j98-mcp5-4vw2](https://github.com/advisories/GHSA-5j98-mcp5-4vw2).
-The package override selects the patched `glob@10.5.0` only for this minifier version.
-
-This update stays within glob's existing major version and meets the seven-day release-age rule.
-The minifier uses `globSync`, whose API remains compatible.
-The regression test exercises OpenNext's minifier, string and array wildcard inputs, and literal filename handling in the glob CLI.
-
-Remove this override when an accepted OpenNext update removes the vulnerable exact pin.
-Run `tests/unit/scripts/opennext-minifier-compatibility.test.ts` and the Worker build after that update.
-
-Moderate advisories remain:
+The following exact-parent overrides address
 [glob cancellation](https://github.com/advisories/GHSA-3g3m-2fjr-6pw4) and
 [minimatch pattern amplification](https://github.com/advisories/GHSA-g3hv-75wg-m249).
-Their fixes require newer major versions in existing dependency chains.
-The minifier override does not claim to resolve those advisories.
+They also replace the earlier minifier-only glob 10.5.0 override.
+
+| Parent | Installed child |
+| --- | --- |
+| `@opennextjs/cloudflare@1.20.16` | `glob@14.0.4` |
+| `@node-minify/core@9.0.2` | `glob@14.0.4` |
+| `eslint@10.12.0` | `minimatch@11.0.6` |
+| `@eslint/config-array@0.23.5` | `minimatch@11.0.6` |
+| `@typescript-eslint/typescript-estree@8.70.1` | `minimatch@11.0.6` |
+| `glob@14.0.4` | `minimatch@11.0.6` |
+
+Upgrade glob and minimatch together. Minimatch 11 uses Matcher objects where older glob releases expect regular expressions.
+Glob 14 supports that representation. ESLint and its parser use the retained matching APIs.
+The legacy React, import, and accessibility plugins retain their callable minimatch 3 dependency.
+Do not replace those copies with a global minimatch 11 override.
+
+Glob 14 provides CommonJS and ESM module APIs but removes its CLI.
+The app's build tools use module APIs and need no CLI replacement.
+Tests cover OpenNext manifest discovery, cache Path objects, real minification, hostile filenames, cancellation, lint discovery, and parser boundaries.
+The cancellation tests check that filesystem reads stop after rejection.
+The pattern test checks the default preprocessing limit in a process with bounded time and memory.
+
+All selected releases meet the seven-day rule. The Node 26 toolchain meets their engine requirements.
+No direct dependency, install-script exception, or release-age exception is added.
+When an accepted parent upgrade provides compatible patched children, remove its override and rerun the compatibility tests and Worker build.
+
+### 2.8 Unpatched picomatch advisory (2026-11-17)
+
+The current registry audit also reports
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf).
+At review time, picomatch has no published fixed release.
+[Upstream PR 194](https://github.com/micromatch/picomatch/pull/194) remains open and does not fix every reported repeated-extglob case.
+Do not treat that patch or an audit-suggested tooling downgrade as remediation.
+
+The installed graph retains picomatch through development tools and WalletConnect's storage dependency.
+WalletConnect's active browser adapters use IndexedDB or localStorage. Its server adapter uses unstorage's fs-lite driver.
+These reviewed paths do not import anymatch or interpret storage keys as glob patterns.
+Unstorage's unused full filesystem driver and development tools still contain affected matcher paths.
+This reachability check does not remove the advisory.
+
+After the glob/minimatch upgrades, the audit reports zero moderate entries and 24 inherited high entries from this one picomatch advisory.
+The high-entry count changed from 19 as npm reclassified five TypeScript ESLint parents after their moderate dependency findings disappeared.
+The upgrade adds no picomatch dependency path. No advisory is suppressed.
+Reassess the callers when a complete upstream fix is published, then update the lockfile and rerun the full checks.
 
 ## 3. Production Runtime Invariants
 

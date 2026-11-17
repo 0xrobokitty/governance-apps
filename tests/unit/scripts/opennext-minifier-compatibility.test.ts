@@ -12,7 +12,6 @@ const projectRequire = createRequire(import.meta.url);
 const cloudflareRequire = createRequire(projectRequire.resolve("@opennextjs/cloudflare"));
 const minifyModule = cloudflareRequire.resolve("@opennextjs/aws/minimize-js.js");
 const awsRequire = createRequire(minifyModule);
-const coreRequire = createRequire(awsRequire.resolve("@node-minify/core"));
 const directories: string[] = [];
 
 function fixtureDirectory() {
@@ -79,22 +78,27 @@ describe("OpenNext minifier dependency compatibility", () => {
     }
   );
 
-  it("passes matched filenames to the CLI command without shell evaluation", () => {
+  it("minifies a command-substitution filename without shell evaluation", () => {
     const directory = fixtureDirectory();
-    const filename = "$(touch injected).js";
-    writeFileSync(path.join(directory, filename), 'process.stdout.write("literal filename");');
-    const manifestPath = coreRequire.resolve("glob/package.json");
-    const manifest = JSON.parse(readFileSync(manifestPath, "utf8")) as {
-      bin: string | Record<string, string>;
-    };
-    const bin = typeof manifest.bin === "string" ? manifest.bin : manifest.bin.glob;
-    const cli = path.resolve(path.dirname(manifestPath), bin);
+    const inputs = path.join(directory, "inputs");
+    mkdirSync(inputs);
+    writeFileSync(path.join(inputs, "$(touch injected).js"), "globalThis.answer = 6 * 7;");
+    const output = path.join(directory, "result.js");
+    const script = `
+      const { createRequire } = require("node:module");
+      const fromAws = createRequire(process.argv[1]);
+      fromAws("@node-minify/core")({
+        compressor: fromAws("@node-minify/terser"), input: process.argv[2], output: process.argv[3],
+      }).catch(error => { console.error(error); process.exitCode = 1; });
+    `;
+    execFileSync(process.execPath, ["-e", script, minifyModule, path.join(inputs, "*.js"), output], {
+      cwd: directory, timeout: 5000,
+    });
 
-    const output = execFileSync(process.execPath,
-      [cli, "--cmd", process.execPath, "*.js"],
-      { cwd: directory, encoding: "utf8", timeout: 5000 });
-
-    expect(output).toBe("literal filename");
+    const context: { answer?: number } = {};
+    runInNewContext(readFileSync(output, "utf8"), context, { timeout: 1000 });
+    expect(context.answer).toBe(42);
     expect(existsSync(path.join(directory, "injected"))).toBe(false);
+    expect(existsSync(path.join(inputs, "injected"))).toBe(false);
   });
 });
