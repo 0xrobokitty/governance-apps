@@ -45,6 +45,7 @@
   // --keep-vars preserves dashboard-only values; this policy overrides its dashboard value.
   // Coordinate policy changes with the stored D1 policy and both Workers.
   "vars": {
+    "PULSE_DATA_URL": "https://data.dao-ops.com/prod/pulse.json",
     "DAO_PUBLICATION_LIMITS": "{\"hourlyDocuments\":10,\"dailyDocuments\":30,\"monthlyDocuments\":100,\"documents\":400,\"bytes\":52428800,\"concurrent\":2,\"uploadAttempts\":1200,\"documentUploadAttempts\":3,\"retrievalAttempts\":2400,\"documentRetrievalAttempts\":6,\"documentReservations\":6}",
   },
 }

@@ -57,6 +57,7 @@ jobs:
 
       - name: Validate Production Env Invariants
         env:
+          NEXT_PUBLIC_ENABLE_PULSE: ${{ vars.NEXT_PUBLIC_ENABLE_PULSE || 'false' }}
           NODE_ENV: production
           NEXT_PUBLIC_RUNTIME_MODE: production
           NEXT_PUBLIC_USE_MOCKS: "false"
@@ -83,6 +84,7 @@ jobs:
 
       - name: Build OpenNext Worker
         env:
+          NEXT_PUBLIC_ENABLE_PULSE: ${{ vars.NEXT_PUBLIC_ENABLE_PULSE || 'false' }}
           NODE_ENV: production
           NEXT_PUBLIC_RUNTIME_MODE: production
           NEXT_PUBLIC_USE_MOCKS: "false"
@@ -112,6 +114,7 @@ jobs:
 
       - name: Validate Worker Runtime
         env:
+          NEXT_PUBLIC_ENABLE_PULSE: ${{ vars.NEXT_PUBLIC_ENABLE_PULSE || 'false' }}
           NEXT_PUBLIC_ENABLE_DAO: ${{ vars.NEXT_PUBLIC_ENABLE_DAO || 'false' }}
           NEXT_PUBLIC_ENABLE_YETH: ${{ vars.NEXT_PUBLIC_ENABLE_YETH || secrets.NEXT_PUBLIC_ENABLE_YETH || 'false' }}
           NEXT_PUBLIC_YETH_RECOVERY_LIVE: "true"
@@ -119,6 +122,7 @@ jobs:
 
       - name: Deploy To Cloudflare Preprod
         env:
+          NEXT_PUBLIC_ENABLE_PULSE: ${{ vars.NEXT_PUBLIC_ENABLE_PULSE || 'false' }}
           NODE_ENV: production
           NEXT_PUBLIC_RUNTIME_MODE: production
           NEXT_PUBLIC_USE_MOCKS: "false"

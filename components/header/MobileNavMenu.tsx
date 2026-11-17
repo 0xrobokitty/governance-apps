@@ -55,6 +55,7 @@ type MobileNavMenuProps = {
   onClose: () => void;
   returnFocusRef: RefObject<HTMLButtonElement | null>;
   e2eWalletPresentation?: E2EWalletPresentation;
+  hideWallet?: boolean;
   governanceLink?: {
     href: string;
     label: string;
@@ -83,6 +84,7 @@ const LIST_BUTTON_CLASS =
 
 export function MobileNavMenu({
   e2eWalletPresentation,
+  hideWallet = false,
   isOpen,
   onClose,
   returnFocusRef,
@@ -245,10 +247,10 @@ export function MobileNavMenu({
                 </span>
               </Link>
             ) : null}
-            <MobileWalletButton
+            {!hideWallet && <MobileWalletButton
               e2ePresentation={e2eWalletPresentation}
               onSelect={handleClose}
-            />
+            />}
             <button
               type="button"
               onClick={toggleTheme}
