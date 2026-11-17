@@ -16,12 +16,8 @@ const msPerDay = 24 * 60 * 60 * 1000;
 
 const allowedInstallScriptPackages = new Map([
   [
-    "node_modules/@opennextjs/cloudflare/node_modules/esbuild@0.28.2",
-    "OpenNext Cloudflare adapter uses esbuild's platform binary validation.",
-  ],
-  [
     "node_modules/esbuild@0.28.2",
-    "Wrangler uses esbuild's platform binary validation.",
+    "OpenNext and Wrangler use esbuild's platform binary validation.",
   ],
   [
     "node_modules/fsevents@2.3.3",

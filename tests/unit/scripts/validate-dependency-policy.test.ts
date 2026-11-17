@@ -16,10 +16,6 @@ const runningNpmVersion = spawnSync("npm", ["--version"], {
 const exactNpmPackageManager = `npm@${runningNpmVersion}`;
 
 const allowlistedInstallScriptLockPackages = {
-  "node_modules/@opennextjs/cloudflare/node_modules/esbuild": {
-    version: "0.28.2",
-    hasInstallScript: true,
-  },
   "node_modules/esbuild": {
     version: "0.28.2",
     hasInstallScript: true,
