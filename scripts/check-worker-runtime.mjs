@@ -37,8 +37,14 @@ if (process.env.NEXT_PUBLIC_ENABLE_YETH === "true") {
 }
 
 const pulseEnabled = process.env.NEXT_PUBLIC_ENABLE_PULSE === "true";
+const pulseOrigin = path.basename(config) === "wrangler.preprod.jsonc"
+  ? "https://pulse-beta.dao-ops.com"
+  : "https://pulse.yearn.fi";
 if (pulseEnabled) {
-  probes.push(["https://app.dao-ops.com/pulse", "Pulse | Yearn"]);
+  probes.push(
+    ["https://app.dao-ops.com/pulse", "Pulse | Yearn"],
+    [`${pulseOrigin}/`, "Pulse | Yearn"],
+  );
 }
 
 let worker;
@@ -139,8 +145,8 @@ try {
     console.log(`PASS ${url}: HTTP 200 and complete server-rendered HTML`);
   }
   if (pulseEnabled) {
-    const response = await worker.fetch("https://app.dao-ops.com/api/pulse-data", {
-      headers: { "x-forwarded-host": "app.dao-ops.com" },
+    const response = await worker.fetch(`${pulseOrigin}/api/pulse-data`, {
+      headers: { "x-forwarded-host": new URL(pulseOrigin).host },
       signal: AbortSignal.timeout(20_000),
     });
     assert.equal(response.status, 200, "Live Pulse feed proxy failed in workerd");
@@ -151,7 +157,7 @@ try {
     assert.equal(feed.mode, "live");
     assert.equal(feed.reviewedCapital?.schema, "pulse-kong-envio/v4");
     assert.equal(feed.reviewedCapital?.encoding, "dictionary-tuples/v1");
-    console.log("PASS Pulse proxy: live compact v4 feed in workerd");
+    console.log(`PASS ${pulseOrigin}/api/pulse-data: live compact v4 feed in workerd`);
   }
   if (process.env.YETH_VERIFY_PUBLIC_FEED === "true") {
     const response = await worker.fetch("https://yeth.yearn.fi/api/yeth-recovery-data", {
