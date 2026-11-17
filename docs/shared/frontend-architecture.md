@@ -159,6 +159,7 @@ Independent account, reward, metadata, and statistics reads run concurrently. Ep
 APR reads share one pinned block and retain the final canonical-block check. Chain validation precedes YBC snapshot reads.
 Post-confirmation refreshes run concurrently. stYFI, veYFI, and legacy yETH preparation runs inside the transaction lifecycle.
 Polling resolves custom app hostnames through the shared route map.
+Each protocol client retains its caches until its own feed or usable RPC client changes. An unrelated domain feed does not recreate it.
 
 Pulse and recovery readers retain accepted publications for the lifetime of their query cache. Teams retains its accepted canonical baseline for that lifetime.
 A route or wallet-session remount cannot reset those rollback guards. Separate query clients keep separate acceptance state.
