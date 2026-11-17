@@ -62,3 +62,25 @@ describe("Global capital consumer contract",()=>{
     expect(accountTrend(parse(f),7).deposits.at(-1)).toBe(p.depositingAccounts);
   });
 });
+
+
+it("keeps top-five USD ties, partially priced days, observed zero and missing dates", () => {
+  const feed = globalCapitalFixture();
+  const latest = feed.globalCapital!.history[0];
+  const original = latest.products[0];
+  const amounts = [60, -60, 50, 40, 30, 20, 10];
+  latest.products = [7, 6, 5, 4, 3, 2, 1].map(id => ({
+    ...original, chainId: 1, address: "0x" + id.toString(16).padStart(40, "0"), name: "Product " + id,
+    netUsd: amounts[id - 1].toFixed(2), depositActions: 2, withdrawalActions: 0, pricedActions: 2,
+  }));
+  latest.products.push({ ...original, address: "0x" + "f".repeat(40), name: "Unpriced", netUsd: null, pricedActions: 0 });
+  const earlier = { ...latest, day: latest.day - 2 * 86400, products: [{ ...latest.products.at(-2)!, netUsd: null, pricedActions: 0 }] };
+  const zero = { ...latest, day: latest.day - 3 * 86400, products: [] };
+  feed.globalCapital!.history = [zero, earlier, latest];
+  const trend = globalCapitalTrend(feed, 7);
+  expect(trend.products.map(product => product.name)).toEqual(["Product 1", "Product 2", "Product 3", "Product 4", "Product 5"]);
+  expect(trend.products[0].values.slice(-4)).toEqual([0, null, null, 60]);
+  expect(trend.products[0].partial).toBe(true);
+  expect(trend.products[1].values.slice(-4)).toEqual([0, 0, null, -60]);
+  expect(trend.products[1].partial).toBe(false);
+});

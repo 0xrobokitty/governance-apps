@@ -1,5 +1,5 @@
 "use client";
-import { createContext, useContext, useId, useState } from "react";
+import { createContext, useContext, useId, useMemo, useState } from "react";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import {SourceDetails} from "./SourceDetails";
@@ -7,7 +7,7 @@ import { useLivePulse } from "@/lib/hooks/useLivePulse";
 import {MARKET_METRIC_IDS,marketMetrics} from "@/lib/clients/pulse/market-history";
 import {flexMetrics} from "@/lib/clients/pulse/flex";
 import { CHAIN_NAMES, type LiveMetric,type PulseFeed } from "@/lib/clients/pulse/feed";
-import { accountTrend, lockerPegValue, capitalChains, globalCapitalTrend, coveredDays, dayAt, metricStatus, metricTrend, productActivity, windowDays, xTrend, tvlTrend } from "@/lib/clients/pulse/live";
+import { accountTrend, lockerPegTrend, capitalChains, globalCapitalTrend, dayAt, metricStatus, metricTrend, productActivity, windowDays, xTrend, tvlTrend } from "@/lib/clients/pulse/live";
 import type { XTab } from "@/lib/clients/pulse/x";
 import type { Period } from "@/lib/clients/pulse/types";
 import { TrendChart, type TrendSeries } from "./TrendChart";
@@ -87,7 +87,7 @@ export function MetricCard({ feed, period, title, options, note, href, scopeLabe
 }
 export function TvlCard({ feed, period }: { feed: PulseFeed; period: Period }) {
   const data = feed.tvlHistory;
-  const trend = tvlTrend(feed, period);
+  const trend = useMemo(() => tvlTrend(feed, period), [feed, period]);
   const latest = data?.latest;
   const observed = trend.values.filter(v => v !== null).length;
   const status = !data || data.status === "unavailable" ? c.pending : data.status === "stale" ? c.staleMetric : c.tvlEstimated;
@@ -107,13 +107,14 @@ function Lockers({ feed, period }: { feed: PulseFeed; period: Period }) {
   const data = feed.yLockers;
   const start = windowDays(feed.generatedAt, period)[0];
   const rewards = (data?.rewards.history ?? []).filter(r => !r.provisional && r.end >= start && r.end <= feed.generatedAt);
-  const dates = tab === "rewards" ? [...new Set(rewards.map(r => dayAt(r.end)))].sort() : windowDays(feed.generatedAt, period).map(dayAt);
+  const peg = useMemo(() => lockerPegTrend(feed, period), [feed, period]);
+  const dates = tab === "rewards" ? [...new Set(rewards.map(r => dayAt(r.end)))].sort() : peg.dates;
   const series: TrendSeries[] = (["ycrv", "yyb"] as const).map((id, i) => ({
     label: id === "ycrv" ? "yCRV" : "yYB", color: i ? PURPLE : BLUE, kind: tab === "rewards" ? "bar" : "line",
-    values: dates.map(date => {
-      if (tab === "rewards") { const r = rewards.find(r => r.product === id && dayAt(r.end) === date); return r ? Number(r.assetsRaw) / 1e18 : null; }
-      return lockerPegValue(feed, id, date);
-    }),
+    values: tab === "rewards" ? dates.map(date => {
+      const reward = rewards.find(r => r.product === id && dayAt(r.end) === date);
+      return reward ? Number(reward.assetsRaw) / 1e18 : null;
+    }) : peg[id],
   }));
   const current = (data?.rewards.history ?? []).filter(r => r.provisional && r.start <= feed.generatedAt && r.end > feed.generatedAt);
   return <Tile title={c.ylockers} status={!data || !series.some(s=>s.values.some(v=>v!==null)) ? c.pending : data.status === "stale" ? c.staleMetric : c.observed} note={tab === "rewards" ? c.rewardsNote : c.pegNote} href="https://ybs.wavey.info/" details={<><p>{c.lockerHistoryNote}</p><p>{c.lockerFlowsNote}</p></>}>
@@ -126,7 +127,7 @@ function Lockers({ feed, period }: { feed: PulseFeed; period: Period }) {
 }
 export function XAudience({ feed, period }: { feed: PulseFeed; period: Period }) {
   const data = feed.x;
-  const trend = xTrend(feed, period);
+  const trend = useMemo(() => xTrend(feed, period), [feed, period]);
   const last = trend.latest;
   const [tab, setTab] = useState<XTab>(() => last?.intervalStart === null && last.followers !== null ? "followers" : "impressions");
   const options = [{ value: "impressions", label: c.xImpressions }, { value: "linkClicks", label: c.xClicks }, { value: "followers", label: c.xFollowers }];
@@ -166,10 +167,9 @@ export function XAudience({ feed, period }: { feed: PulseFeed; period: Period })
   </Tile>;
 }
 
-function GlobalFlows({feed,period}:{feed:PulseFeed;period:Period}) {
+function GlobalFlows({feed,period,trend}:{feed:PulseFeed;period:Period;trend:ReturnType<typeof globalCapitalTrend>}) {
   const [tab,setTab]=useState("usd");
   const data=feed.globalCapital;
-  const trend=globalCapitalTrend(feed,period);
   const usdValues=trend.net.filter((v):v is number=>v!==null);
   const headline=tab==="usd" ? usdValues.length ? usd(usdValues.reduce((n,v)=>n+v,0)) : "—" : trend.periodBalance === null ? "—" : percent(trend.periodBalance);
   const status=!data||!trend.observed?c.pending:data.status==="stale"?c.staleMetric:trend.partial?c.pricedSubtotal:c.estimated;
@@ -188,10 +188,8 @@ function GlobalFlows({feed,period}:{feed:PulseFeed;period:Period}) {
     </div>
   </Tile>;
 }
-function Movers({feed,period}:{feed:PulseFeed;period:Period}) {
+function Movers({feed,period,activity,priced}:{feed:PulseFeed;period:Period;activity:ReturnType<typeof productActivity>;priced:ReturnType<typeof globalCapitalTrend>}) {
   const [tab,setTab]=useState("activity");
-  const activity=productActivity(feed,period);
-  const priced=globalCapitalTrend(feed,period);
   const hasUsd=priced.products.length>0;
   const view=tab==="flows"&&hasUsd?"flows":"activity";
   const rows=view==="activity"?activity.products:priced.products;
@@ -217,8 +215,15 @@ export function LivePulsePage() {
   const publishedDays=feed?.reviewedCapital.coverage.publishedHistory?.days;
   const publicationNote=publishedDays?c.capitalWindow.replace("{days}",String(publishedDays)):null;
   const windowExceedsPublication=publishedDays!==undefined&&period>publishedDays;
-  const accounts=feed?accountTrend(feed,period):null;
-  const chains=feed?capitalChains(feed):[];
+  const accounts = useMemo(() => feed ? accountTrend(feed, period) : null, [feed, period]);
+  const capital = useMemo(() => feed ? globalCapitalTrend(feed, period) : null, [feed, period]);
+  const activity = useMemo(() => feed ? productActivity(feed, period) : null, [feed, period]);
+  const chains = useMemo(() => feed ? capitalChains(feed) : [], [feed]);
+  const flex = useMemo(() => flexMetrics(feed?.flex), [feed?.flex]);
+  const governance = useMemo(() => feed ? [
+    ...feed.metrics.filter(metric => !MARKET_METRIC_IDS.some(id => id === metric.id)),
+    ...marketMetrics(feed.marketHistory),
+  ] : [], [feed]);
   return <PlotHeight.Provider value={wall?108:140}><section aria-label="Pulse dashboard" className={styles.page+(wall?" "+styles.wall:"")}><div className={styles.overview}>
     <div className={styles.liveHeader+" flex flex-wrap items-center justify-between gap-3"}>
       <div><h1 className="text-2xl font-bold">{c.title}</h1><p className="mt-1 text-sm text-text-secondary">{c.subtitle}</p></div>
@@ -227,25 +232,25 @@ export function LivePulsePage() {
     <div className="mb-3 flex flex-wrap items-center justify-between gap-2 text-xs text-text-secondary"><span data-testid={windowExceedsPublication?"pulse-capital-horizon":undefined}>{windowExceedsPublication?publicationNote:c.live}</span><span>{feed?c.updated+" "+new Date(feed.generatedAt*1000).toISOString().replace("T"," ").slice(0,19)+" UTC":c.loading}</span></div>
     {(query.stale||query.isError)&&<p role="status" className="mb-3 rounded-box border border-border p-2 text-sm text-text-secondary">{query.stale?c.stale:c.failed}</p>}
     {!feed?<Card><p role="status">{query.isPending?c.loading:c.unavailable}</p></Card>:<>
-      <div className="mb-3"><SourceDetails title={c.coverage} label={c.coverage}><p>{c.coverageNote}</p>{publicationNote&&<p>{publicationNote} {c.capitalWindowNote}</p>}<p>{c.rangeCoverage}: {coveredDays(feed,period).length}/{period*chains.length}.</p><p>{c.scope}</p><p>{c.liveHistory}</p>{feed.reviewedCapital.coverage.gaps.map((gap,i)=><p key={i}>{gap}</p>)}{feed.reviewedCapital.sources.chains.map(s=><p key={s.chainId}>{CHAIN_NAMES[s.chainId]}: {s.status} · {s.coveredThrough?c.closedDaysThrough+" "+dayAt(s.coveredThrough-1):c.chainPending}</p>)}</SourceDetails></div>
+      <div className="mb-3"><SourceDetails title={c.coverage} label={c.coverage}><p>{c.coverageNote}</p>{publicationNote&&<p>{publicationNote} {c.capitalWindowNote}</p>}<p>{c.rangeCoverage}: {accounts?.chainDays ?? 0}/{period*chains.length}.</p><p>{c.scope}</p><p>{c.liveHistory}</p>{feed.reviewedCapital.coverage.gaps.map((gap,i)=><p key={i}>{gap}</p>)}{feed.reviewedCapital.sources.chains.map(s=><p key={s.chainId}>{CHAIN_NAMES[s.chainId]}: {s.status} · {s.coveredThrough?c.closedDaysThrough+" "+dayAt(s.coveredThrough-1):c.chainPending}</p>)}</SourceDetails></div>
       <div className={styles.grid} data-testid="pulse-main-grid">
         <TvlCard feed={feed} period={period}/>
-        <GlobalFlows feed={feed} period={period}/>
+        {capital && <GlobalFlows feed={feed} period={period} trend={capital}/>}
         <Tile title={c.accounts} status={!accounts?.completeDays?c.pending:feed.reviewedCapital.sources.chains.some(s=>s.status==="stale")?c.staleMetric:c.reviewed} note={c.accountsNote}
           details={<><p>{accounts?.chainDays}/{accounts?.expected} {c.chainDays}.</p><p>{c.scope}</p></>}>
           <div className={styles.metric}><span className="text-xs text-text-secondary">{c.chainQualified} · {accounts?.completeDays}/{period} {c.observedDays}</span></div>
           {accounts&&<Plot title={c.accounts} dates={accounts.dates} series={[{label:c.depositing,color:BLUE,values:accounts.deposits},{label:c.withdrawing,color:ORANGE,values:accounts.withdrawals}]} format={v=>numeric(Math.round(v))} integerAxis zero/>}
         </Tile>
         <Lockers feed={feed} period={period}/>
-        <MetricCard feed={feed} period={period} title="Flex" metricSource={flexMetrics(feed.flex)} note={c.flexSeparate} href="https://flexmeow.com/info"
+        <MetricCard feed={feed} period={period} title="Flex" metricSource={flex} note={c.flexSeparate} href="https://flexmeow.com/info"
           methodDetails={<><p>{feed.flex?.scope}</p>{feed.flex?.limitations.map((limit,i)=><p key={i}>{limit}</p>)}{feed.flex?.participation.activeTroves!==null&&feed.flex?.participation.activeTroves!==undefined&&<p>{feed.flex.participation.activeTroves} {c.flexTroves} · {feed.flex.participation.marketCount??"—"} {c.flexMarkets}</p>}</>}
           options={[{value:"capital",label:c.flexCapital,ids:["flex.value_usd","flex.debt_usd","flex.deposits_usd"],labels:[c.flexValue,c.flexDebt,c.flexDeposits],format:usd},
           {value:"accounts",label:c.flexAccounts,ids:["flex.borrower_accounts"]},
           {value:"fees",label:c.flexFees,ids:["flex.claimable_fees_usd"],format:usd}]}/>
 
-        <Movers feed={feed} period={period}/>
+        {activity && capital && <Movers feed={feed} period={period} activity={activity} priced={capital}/>}
         <XAudience feed={feed} period={period}/>
-        <MetricCard feed={feed} period={period} title={c.governance} metricSource={[...feed.metrics.filter(m=>!MARKET_METRIC_IDS.some(id=>id===m.id)),...marketMetrics(feed.marketHistory)]} methodDetails={hasMarketHistory&&feed.marketHistory&&<><p>{c.marketNote}</p><p>{c.priceAxesNote}</p>{feed.marketHistory.history.at(-1)&&<p>{c.marketSamples(new Date(feed.marketHistory.history.at(-1)!.yfiQuoteAt*1000).toISOString(),new Date(feed.marketHistory.history.at(-1)!.wethQuoteAt*1000).toISOString())}</p>}</>} note={c.governanceNote} href="https://styfi.yearn.fi" options={[
+        <MetricCard feed={feed} period={period} title={c.governance} metricSource={governance} methodDetails={hasMarketHistory&&feed.marketHistory&&<><p>{c.marketNote}</p><p>{c.priceAxesNote}</p>{feed.marketHistory.history.at(-1)&&<p>{c.marketSamples(new Date(feed.marketHistory.history.at(-1)!.yfiQuoteAt*1000).toISOString(),new Date(feed.marketHistory.history.at(-1)!.wethQuoteAt*1000).toISOString())}</p>}</>} note={c.governanceNote} href="https://styfi.yearn.fi" options={[
           {value:"stake",label:c.stake,ids:["yfi.veyfi_migrated","yfi.liquid_lockers_backing","yfi.styfix","yfi.styfi_direct"],labels:["Migrated veYFI","Liquid lockers","stYFIx","Direct stYFI"],headlineId:"yfi.participating",stacked:true},
           {value:"rate",label:c.rate,ids:["yfi.participation_rate_bps"],divisor:100,format:percent},
           {value:"apr",label:c.apr,ids:["yfi.styfix_apr_bps"],divisor:100,format:percent},

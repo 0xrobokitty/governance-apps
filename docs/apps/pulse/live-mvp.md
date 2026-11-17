@@ -98,6 +98,10 @@ Integration reallocations can increase both sides. These are not proven new cust
 
 Product movers ranks reviewed actions or absolute net USD flows across all supported chains and assets.
 Its five rows have right-aligned daily mini charts.
+The browser ranks products before it builds those five charts.
+It reuses the capital trends for the flow and product cards until the feed or selected range changes.
+UTC-day indexes keep account and peg lookup costs proportional to the available history.
+Missing dates and unpriced observations retain their existing gaps.
 Daily accounts are distinct chain-qualified beneficiaries. They are not people or verified EOAs.
 
 TVL uses the separate DeFiLlama Yearn Finance vault series and shows its seven chains.

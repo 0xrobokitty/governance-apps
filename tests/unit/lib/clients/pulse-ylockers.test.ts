@@ -1,6 +1,6 @@
 import { describe, expect, it } from "vitest";
 import { parsePulseFeed } from "@/lib/clients/pulse/feed";
-import { dayAt, lockerPegValue } from "@/lib/clients/pulse/live";
+import { dayAt, lockerPegTrend } from "@/lib/clients/pulse/live";
 import fixture from "../../../fixtures/pulse-live.json";
 import { getPulse } from "@/lib/clients/pulse/client";
 import { getYLockers } from "@/lib/clients/pulse/ylockers";
@@ -54,9 +54,11 @@ describe("Historical live peg availability", () => {
     const peg = f.yLockers.peg.history[0];
     (peg.quoteOutRaw as Record<string, string>) = {ycrv: peg.quoteOutRaw.ycrv};
     const parsed = parsePulseFeed(f, f.generatedAt + 60);
-    expect(lockerPegValue(parsed, "ycrv", dayAt(peg.observedAt))).toBeGreaterThan(0);
-    expect(lockerPegValue(parsed, "yyb", dayAt(peg.observedAt))).toBeNull();
-    expect(lockerPegValue(parsed, "ycrv", "2020-01-01")).toBeNull();
+    const trend = lockerPegTrend(parsed, 365);
+    const observed = trend.dates.indexOf(dayAt(peg.observedAt));
+    expect(trend.ycrv[observed]).toBeGreaterThan(0);
+    expect(trend.yyb[observed]).toBeNull();
+    expect(trend.ycrv[0]).toBeNull();
   });
   it("rejects empty quotes and unknown product keys", () => {
     for (const quotes of [{}, {ycrv: "1", other: "2"}] as Record<string,string>[]) {

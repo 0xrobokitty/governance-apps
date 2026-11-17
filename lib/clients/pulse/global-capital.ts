@@ -101,12 +101,12 @@ export function validateGlobalCapital(data: GlobalCapital, feed: PulseFeed) {
     }))).filter(p=>p.depositActions+p.withdrawalActions>0).map(p=>[p.chainId+":"+p.address,p]));
     if (p.products.length !== expectedProducts.size) throw new Error("Global product coverage disagrees with reviewed capital.");
     const products = new Set<string>();
+    const unpriced = new Set(coverage.unpricedAssets.map(a=>a.chainId+":"+a.address));
     for (const product of p.products) {
       const key = product.chainId + ":" + product.address;
       if (!chains.includes(product.chainId) || products.has(key) || product.pricedActions > product.depositActions + product.withdrawalActions) throw new Error("Invalid global capital product.");
       const expected = expectedProducts.get(key);
       if (!expected || expected.name !== product.name || expected.depositActions !== product.depositActions || expected.withdrawalActions !== product.withdrawalActions) throw new Error("Global product actions disagree with reviewed capital.");
-      const unpriced = new Set(coverage.unpricedAssets.map(a=>a.chainId+":"+a.address));
       const pricedActions = expected.totals.assets.filter(a=>!unpriced.has(a.chainId+":"+a.asset.address)).reduce((n,a)=>n+a.depositActions+a.withdrawalActions,0);
       if (product.pricedActions !== pricedActions) throw new Error("Global product priced actions disagree with asset coverage.");
       if ((product.pricedActions === 0) !== (product.netUsd === null)) throw new Error("Global product price availability disagrees with actions.");

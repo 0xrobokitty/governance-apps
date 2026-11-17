@@ -5,11 +5,22 @@ export function windowDays(now: number, period: Period, closed = false) {
   const end = Math.floor(now / 86400) * 86400 - (closed ? 86400 : 0);
   return Array.from({ length: period }, (_, i) => end - (period - 1 - i) * 86400);
 }
-export function lockerPegValue(feed: PulseFeed, product: "ycrv" | "yyb", date: string): number | null {
+/** Index each observed UTC day once for both product series. */
+export function lockerPegTrend(feed: PulseFeed, period: Period) {
+  const days = windowDays(feed.generatedAt, period);
   const peg = feed.yLockers?.peg;
-  const quote = peg?.history.find(p => dayAt(p.observedAt) === date)?.quoteOutRaw[product];
-  if (quote === undefined || !peg || BigInt(peg.quoteInRaw) === 0n) return null;
-  return Number(quote) / Number(peg.quoteInRaw) * 100;
+  const quotes = new Map<number, { ycrv?: string; yyb?: string }>();
+  for (const point of peg?.history ?? []) {
+    const day = Math.floor(point.observedAt / 86400) * 86400;
+    // Keep the first published observation when a UTC day occurs more than once.
+    if (!quotes.has(day)) quotes.set(day, point.quoteOutRaw);
+  }
+  const input = peg && BigInt(peg.quoteInRaw) !== 0n ? Number(peg.quoteInRaw) : null;
+  const values = (product: "ycrv" | "yyb") => days.map(day => {
+    const quote = quotes.get(day)?.[product];
+    return quote === undefined || input === null ? null : Number(quote) / input * 100;
+  });
+  return { dates: days.map(dayAt), ycrv: values("ycrv"), yyb: values("yyb") };
 }
 export function coveredDays(feed: PulseFeed, period: Period) {
   const dates = windowDays(feed.generatedAt, period, true);
@@ -34,7 +45,8 @@ export function capitalTrend(feed: PulseFeed, period: Period, selected: string) 
   const dates = windowDays(feed.generatedAt, period, true);
   const chain = Number(selected.split(":")[0]);
   const selectedDays = days.filter(d => d.chainId === chain);
-  const rows = dates.map(t => selectedDays.find(d => d.day === t));
+  const byDay = new Map(selectedDays.map(day => [day.day, day]));
+  const rows = dates.map(day => byDay.get(day));
   const read = (d: CapitalDay | undefined, direction: "deposits" | "withdrawals" | "net") => !d ? null : Number(d.totals.assets.find(a => assetId(a) === selected)?.[direction] ?? "0");
   const products = new Map<string, { name: string; netRaw: bigint; decimals: number; actions: number }>();
   for (const d of selectedDays) for (const p of d.products) {
@@ -54,20 +66,28 @@ export function capitalTrend(feed: PulseFeed, period: Period, selected: string) 
     gapIn: Number(unknown.reduce((n, a) => n + BigInt(a.depositsRaw), 0n)) / scale,
     gapOut: Number(unknown.reduce((n, a) => n + BigInt(a.withdrawalsRaw), 0n)) / scale,
     unresolved: selectedDays.reduce((n, d) => n + d.totals.unresolvedEvents, 0),
-    products: [...products].map(([id, p]) => ({ id, name: p.name, net: Number(p.netRaw) / 10 ** p.decimals, actions: p.actions, values: rows.map(d => !d ? null : Number(d.products.find(row => row.address === id)?.totals.assets.find(a => assetId(a) === selected)?.net ?? "0")) })).sort((a, b) => Math.abs(b.net) - Math.abs(a.net)).slice(0, 5),
+    products: [...products].map(([id, p]) => ({ id, name: p.name, net: Number(p.netRaw) / 10 ** p.decimals, actions: p.actions }))
+      .sort((a, b) => Math.abs(b.net) - Math.abs(a.net)).slice(0, 5)
+      .map(product => ({ ...product, values: rows.map(d => !d ? null : Number(d.products.find(row => row.address === product.id)?.totals.assets.find(a => assetId(a) === selected)?.net ?? "0")) })),
   };
 }
 export function accountTrend(feed: PulseFeed, period: Period, chainId?: number) {
   const covered = coveredDays(feed, period).filter(d => chainId === undefined || d.chainId === chainId);
   const dates = windowDays(feed.generatedAt, period, true);
-  const rows = dates.map(t => covered.filter(d => d.day === t));
+  const byDay = new Map<number, CapitalDay[]>();
+  for (const day of covered) {
+    const group = byDay.get(day.day);
+    if (group) group.push(day);
+    else byDay.set(day.day, [day]);
+  }
+  const rows = dates.map(day => byDay.get(day) ?? []);
   const expectedChains = chainId === undefined ? capitalChains(feed) : [chainId];
-  const complete = (ds: CapitalDay[]) => expectedChains.length > 0 && expectedChains.every(id => ds.some(d => d.chainId === id));
+  const complete = rows.map(ds => expectedChains.length > 0 && expectedChains.every(id => ds.some(d => d.chainId === id)));
   return {
     dates: dates.map(dayAt),
-    deposits: rows.map(ds => complete(ds) ? ds.reduce((n, d) => n + d.totals.depositingChainAddresses, 0) : null),
-    withdrawals: rows.map(ds => complete(ds) ? ds.reduce((n, d) => n + d.totals.withdrawingChainAddresses, 0) : null),
-    chainDays: covered.length, expected: period * expectedChains.length, completeDays: rows.filter(complete).length,
+    deposits: rows.map((ds, index) => complete[index] ? ds.reduce((n, d) => n + d.totals.depositingChainAddresses, 0) : null),
+    withdrawals: rows.map((ds, index) => complete[index] ? ds.reduce((n, d) => n + d.totals.withdrawingChainAddresses, 0) : null),
+    chainDays: covered.length, expected: period * expectedChains.length, completeDays: complete.filter(Boolean).length,
   };
 }
 export function metricTrend(feed: Pick<PulseFeed,"generatedAt"|"metrics">, period: Period, id: string, closed=false) {
@@ -127,10 +147,11 @@ export function productActivity(feed: PulseFeed, period: Period) {
   const observed = new Set(days.map(d => d.chainId + ":" + d.day));
   return {
     dates: dates.map(dayAt), observedChainDays: days.length, expectedChainDays: period * capitalChains(feed).length,
-    products: [...products].map(([id, product]) => ({
-      id, chainId: product.chainId, address: product.address, name: product.name, actions: product.actions,
-      values: dates.map(day => observed.has(product.chainId + ":" + day) ? product.byDay.get(day) ?? 0 : null),
-    })).sort((a, b) => b.actions - a.actions || a.id.localeCompare(b.id)).slice(0, 5),
+    products: [...products].sort(([aId, a], [bId, b]) => b.actions - a.actions || aId.localeCompare(bId)).slice(0, 5)
+      .map(([id, product]) => ({
+        id, chainId: product.chainId, address: product.address, name: product.name, actions: product.actions,
+        values: dates.map(day => observed.has(product.chainId + ":" + day) ? product.byDay.get(day) ?? 0 : null),
+      })),
   };
 }
 
@@ -175,7 +196,10 @@ export function globalCapitalTrend(feed: PulseFeed, period: Period) {
     partial:rows.some(p=>p && p.priceCoverage.pricedActionCount < p.priceCoverage.actionCount),
     products:[...products].filter(([,p])=>[...p.byDay.values()].some(v=>v!==null)).map(([id,p])=>({
       id,chainId:p.chainId,name:p.name,net:Number(p.netCents)/100,actions:p.actions,partial:p.pricedActions<p.actions,
-      values:days.map(day=>!points.has(day)?null:p.byDay.has(day)?p.byDay.get(day)!:0),
-    })).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)||a.id.localeCompare(b.id)).slice(0,5),
+    })).sort((a,b)=>Math.abs(b.net)-Math.abs(a.net)||a.id.localeCompare(b.id)).slice(0,5)
+      .map(product => {
+        const byDay = products.get(product.id)!.byDay;
+        return { ...product, values: days.map(day => !points.has(day) ? null : byDay.has(day) ? byDay.get(day)! : 0) };
+      }),
   };
 }

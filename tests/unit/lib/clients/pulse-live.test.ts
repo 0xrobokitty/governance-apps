@@ -1,8 +1,9 @@
 import { describe, expect, it } from "vitest";
 import fixture from "../../../fixtures/pulse-live.json";
+import { globalCapitalFixture } from "../../../fixtures/pulse-global-capital";
 import { packCapital } from "../../../fixtures/pulse-packed";
 import { parsePulseFeed, PulseFeedReader } from "@/lib/clients/pulse/feed";
-import { accountTrend, capitalAssets, capitalChains, capitalTrend, coveredDays, metricStatus, metricTrend, productActivity } from "@/lib/clients/pulse/live";
+import { accountTrend, capitalAssets, capitalChains, capitalTrend, coveredDays, metricStatus, metricTrend, productActivity, lockerPegTrend } from "@/lib/clients/pulse/live";
 const now = fixture.generatedAt + 60;
 const parse = (value: unknown) => parsePulseFeed(value, now);
 describe("Pulse live data boundary", () => {
@@ -142,4 +143,69 @@ describe("Pulse live data boundary", () => {
     expect(() => parse(packCapital(feed))).toThrow(/Duplicate or aliased capital product/);
   });
 
+});
+
+
+describe("Pulse indexed history and bounded rankings", () => {
+  it("preserves sparse product quotes and the first quote within each UTC day", () => {
+    const feed = parse(fixture);
+    const today = Math.floor(feed.generatedAt / 86400) * 86400;
+    const peg = feed.yLockers!.peg;
+    const original = peg.history[0];
+    peg.quoteInRaw = "1000";
+    peg.history = [
+      { ...original, observedAt: today - 2 * 86400 + 600, quoteOutRaw: { ycrv: "980" } },
+      { ...original, observedAt: today - 2 * 86400 + 900, quoteOutRaw: { ycrv: "999", yyb: "999" } },
+      { ...original, observedAt: today + 600, quoteOutRaw: { ycrv: "1000", yyb: "1010" } },
+    ];
+    const trend = lockerPegTrend(feed, 7);
+    expect(trend.ycrv).toEqual([null, null, null, null, 98, null, 100]);
+    expect(trend.yyb).toEqual([null, null, null, null, null, null, 101]);
+    expect(trend.dates.at(-1)).toBe(new Date(today * 1000).toISOString().slice(0, 10));
+    peg.quoteInRaw = "0";
+    expect(lockerPegTrend(feed, 7).ycrv.every(value => value === null)).toBe(true);
+    delete feed.yLockers;
+    expect(lockerPegTrend(feed, 7).yyb.every(value => value === null)).toBe(true);
+  });
+
+  it("keeps incomplete, absent, quarantined and complete-zero account days distinct", () => {
+    const feed = globalCapitalFixture();
+    const current = feed.reviewedCapital.history;
+    const zero = current.map(row => ({ ...row, day: row.day - 3 * 86400, totals: { ...row.totals, depositingChainAddresses: 0, withdrawingChainAddresses: 0 } }));
+    const incomplete = { ...current[0], day: current[0].day - 86400 };
+    feed.reviewedCapital.history = [...zero, incomplete, ...current];
+    const expectedDeposits = current.reduce((sum, row) => sum + row.totals.depositingChainAddresses, 0);
+    const expectedWithdrawals = current.reduce((sum, row) => sum + row.totals.withdrawingChainAddresses, 0);
+    expect(accountTrend(feed, 7).deposits.slice(-4)).toEqual([0, null, null, expectedDeposits]);
+    expect(accountTrend(feed, 7).withdrawals.slice(-4)).toEqual([0, null, null, expectedWithdrawals]);
+    expect(accountTrend(feed, 7).completeDays).toBe(2);
+    expect(accountTrend(feed, 7, current[0].chainId).deposits.at(-2)).toBe(current[0].totals.depositingChainAddresses);
+    feed.reviewedCapital.coverage.quarantined.push(current[0].chainId + ":" + current[0].day);
+    expect(accountTrend(feed, 7).deposits.at(-1)).toBeNull();
+  });
+
+  it("ranks before drawing the five native and activity sparklines without changing ties or gaps", () => {
+    const feed = parse(fixture);
+    const day = structuredClone(feed.reviewedCapital.history[0]);
+    day.day = Math.floor(feed.generatedAt / 86400) * 86400 - 86400;
+    const original = day.products.find(product => product.totals.assets.length)!;
+    const originalAsset = original.totals.assets[0];
+    const amounts = [60, 60, 50, 40, 30, 20, 10];
+    day.products = [7, 6, 5, 4, 3, 2, 1].map(id => {
+      const amount = amounts[id - 1];
+      return {
+        ...original, address: "0x" + id.toString(16).padStart(40, "0"), name: "Product " + id,
+        totals: { ...original.totals, assets: [{ ...originalAsset, asset: { ...originalAsset.asset, decimals: 0 }, depositsRaw: String(amount), withdrawalsRaw: "0", net: String(amount), depositActions: amount, withdrawalActions: 0 }] },
+      };
+    });
+    day.totals.assets = [{ ...originalAsset, asset: { ...originalAsset.asset, decimals: 0 } }];
+    const zero = { ...day, day: day.day - 2 * 86400, products: [] };
+    feed.reviewedCapital.history = [zero, day];
+    const activity = productActivity(feed, 7);
+    expect(activity.products.map(product => product.name)).toEqual(["Product 1", "Product 2", "Product 3", "Product 4", "Product 5"]);
+    expect(activity.products[0].values.slice(-3)).toEqual([0, null, 60]);
+    const native = capitalTrend(feed, 7, day.chainId + ":" + originalAsset.asset.address);
+    expect(native.products.map(product => product.name)).toEqual(["Product 2", "Product 1", "Product 3", "Product 4", "Product 5"]);
+    expect(native.products[0].values.slice(-3)).toEqual([0, null, 60]);
+  });
 });

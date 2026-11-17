@@ -2,6 +2,7 @@ import { fireEvent, render, screen, within } from "@testing-library/react";
 import { describe, expect, it, vi } from "vitest";
 import type {TrendSeries} from "@/app/pulse/TrendChart";
 import { LivePulsePage } from "@/app/pulse/LivePulsePage";
+import * as trends from "@/lib/clients/pulse/live";
 import { parsePulseFeed } from "@/lib/clients/pulse/feed";
 import { globalCapitalFixture } from "../../../fixtures/pulse-global-capital";
 import {marketFixture} from "../../../fixtures/pulse-market-history";
@@ -118,4 +119,35 @@ describe("Pulse overview and method dialogs",()=>{
   expect(series[1].values.some((v:unknown)=>v!==null)).toBe(true);
  });
 
+});
+
+
+it("reuses feed-derived charts on display updates and recalculates after a range or feed change", () => {
+  const account = vi.spyOn(trends, "accountTrend");
+  const capital = vi.spyOn(trends, "globalCapitalTrend");
+  const activity = vi.spyOn(trends, "productActivity");
+  const peg = vi.spyOn(trends, "lockerPegTrend");
+  const selectors = [account, capital, activity, peg];
+  try {
+    const fixture = globalCapitalFixture();
+    const feed = parsePulseFeed(packCapital(fixture), fixture.generatedAt + 60);
+    query.data = feed;
+    const { rerender } = render(<LivePulsePage />);
+    for (const selector of selectors) expect(selector).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "Wall view" }));
+    fireEvent.click(screen.getByRole("tab", { name: "Flow balance" }));
+    rerender(<LivePulsePage />);
+    for (const selector of selectors) expect(selector).toHaveBeenCalledTimes(1);
+
+    fireEvent.click(screen.getByRole("button", { name: "365D" }));
+    for (const selector of selectors) expect(selector).toHaveBeenCalledTimes(2);
+    expect(capital).toHaveBeenLastCalledWith(feed, 365);
+
+    query.data = { ...feed, generatedAt: feed.generatedAt + 60 };
+    rerender(<LivePulsePage />);
+    for (const selector of selectors) expect(selector).toHaveBeenCalledTimes(3);
+  } finally {
+    for (const selector of selectors) selector.mockRestore();
+  }
 });
