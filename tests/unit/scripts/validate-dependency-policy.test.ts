@@ -40,6 +40,7 @@ const allowlistedInstallScriptLockPackages = {
 
 function createTempRepo(options?: {
   packageManager?: string;
+  scripts?: Record<string, string>;
   dependencies?: Record<string, string>;
   devDependencies?: Record<string, string>;
   optionalDependencies?: Record<string, string>;
@@ -49,6 +50,7 @@ function createTempRepo(options?: {
 }) {
   const {
     packageManager = exactNpmPackageManager,
+    scripts = {},
     dependencies = { foo: "1.0.0" },
     devDependencies = { bar: "2.0.0" },
     optionalDependencies = {},
@@ -71,6 +73,7 @@ function createTempRepo(options?: {
         version: "0.0.0",
         private: true,
         packageManager,
+        scripts,
         dependencies,
         devDependencies,
         optionalDependencies,
@@ -286,6 +289,22 @@ describe("validate-dependency-policy", () => {
       "surprise-build@1.2.3 declares an install script"
     );
   });
+
+  it.each(["prepare", "dependencies"])(
+    "allows the picomatch hook but rejects an extra %s hook",
+    (event) => {
+      const lockPackages = {
+        "": { version: "0.0.0", hasInstallScript: true },
+        ...allowlistedInstallScriptLockPackages,
+      };
+      const scripts = { postinstall: "node scripts/guard-picomatch.mjs" };
+      expect(runValidator(createTempRepo({ scripts, lockPackages })).status).toBe(0);
+      const extraHook = { ...scripts, [event]: "node unexpected.mjs" };
+      const result = runValidator(createTempRepo({ scripts: extraHook, lockPackages }));
+      expect(result.status).not.toBe(0);
+      expect(result.stderr).toContain("Only the reviewed picomatch guard");
+    },
+  );
 
   it("passes with a non-expired release-age override for a locked package", () => {
     const cwd = createTempRepo();

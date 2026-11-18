@@ -151,14 +151,24 @@ function lockPackageKey(lockPath, packageInfo) {
   return `${lockPath}@${packageInfo.version}`;
 }
 
-function assertAllowedInstallScripts(lock) {
+function assertAllowedInstallScripts(lock, scripts = {}) {
   if (!lock?.packages || typeof lock.packages !== "object") return [];
 
   const violations = [];
   const seenAllowlistedEntries = new Set();
+  const rootInstallScripts = [
+    "preinstall", "install", "postinstall", "prepublish", "preprepare", "prepare", "postprepare",
+    "predependencies", "dependencies", "postdependencies",
+  ].filter((script) => Object.hasOwn(scripts, script));
+  const hasApprovedRootHook = rootInstallScripts.length === 1 &&
+    scripts.postinstall === "node scripts/guard-picomatch.mjs";
+  if ((rootInstallScripts.length || lock.packages[""]?.hasInstallScript) &&
+      (!hasApprovedRootHook || !lock.packages[""]?.hasInstallScript)) {
+    violations.push("Only the reviewed picomatch guard is allowed as a root install hook");
+  }
 
   for (const [lockPath, packageInfo] of Object.entries(lock.packages)) {
-    if (!packageInfo?.hasInstallScript) continue;
+    if (!lockPath || !packageInfo?.hasInstallScript) continue;
 
     const key = lockPackageKey(lockPath, packageInfo);
     if (!allowedInstallScriptPackages.has(key)) {
@@ -332,7 +342,7 @@ if (lock && (typeof lock.lockfileVersion !== "number" || lock.lockfileVersion < 
   pinViolations.push("package-lock.json must use lockfileVersion >= 3");
 }
 
-pinViolations.push(...assertAllowedInstallScripts(lock));
+pinViolations.push(...assertAllowedInstallScripts(lock, pkg.scripts));
 pinViolations.push(...assertNpmReleaseAgeOverrides(lock));
 
 if (pinViolations.length > 0) {

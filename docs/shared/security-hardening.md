@@ -167,24 +167,27 @@ All selected releases meet the seven-day rule. The Node 26 toolchain meets their
 No direct dependency, install-script exception, or release-age exception is added.
 When an accepted parent upgrade provides compatible patched children, remove its override and rerun the compatibility tests and Worker build.
 
-### 2.8 Unpatched picomatch advisory (2026-11-17)
+### 2.8 Picomatch repeated extglob guard
 
-The current registry audit also reports
-[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf).
-At review time, picomatch has no published fixed release.
-[Upstream PR 194](https://github.com/micromatch/picomatch/pull/194) remains open and does not fix every reported repeated-extglob case.
-Do not treat that patch or an audit-suggested tooling downgrade as remediation.
+[GHSA-fc5q-39xc-vjpf](https://github.com/advisories/GHSA-fc5q-39xc-vjpf) has no
+published fix as of 18 November 2026. Picomatch is used by the wallet
+dependency tree and by build and test tools. Some tools bundle their own copies.
 
-The installed graph retains picomatch through development tools and WalletConnect's storage dependency.
-WalletConnect's active browser adapters use IndexedDB or localStorage. Its server adapter uses unstorage's fs-lite driver.
-These reviewed paths do not import anymatch or interpret storage keys as glob patterns.
-Unstorage's unused full filesystem driver and development tools still contain affected matcher paths.
-This reachability check does not remove the advisory.
+The root `postinstall` hook patches the locked picomatch 2.3.2 and 4.0.7
+parsers and the copies embedded in Next.js, Playwright, and dotenvx. The guard
+checks the original and patched file hashes. A changed version or unexpected
+file stops the install for review. Production-only installs patch all present
+copies and can omit the development-only ones.
 
-After the glob/minimatch upgrades, the audit reports zero moderate entries and 24 inherited high entries from this one picomatch advisory.
-The high-entry count changed from 19 as npm reclassified five TypeScript ESLint parents after their moderate dependency findings disappeared.
-The upgrade adds no picomatch dependency path. No advisory is suppressed.
-Reassess the callers when a complete upstream fix is published, then update the lockfile and rerun the full checks.
+The patched parser rejects repeated extglob operators `+(…)` and `*(…)` before
+it compiles a regular expression. Use standard globs such as `**/*.ts` or
+braces such as `*.{ts,tsx}` for repository file selection.
+
+Run `npm ci` with scripts enabled. Both build commands run
+`npm run check:picomatch` to verify the installed guard. The registry audit
+still reports the affected upstream versions because the fix is local.
+Keep that finding visible. When an upstream fix is available, update all
+standalone and bundled copies, rerun the full checks, then remove the guard.
 
 ## 3. Production Runtime Invariants
 
