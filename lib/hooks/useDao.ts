@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import { useQuery, useQueryClient } from "@tanstack/react-query";
-import type { Address } from "viem";
+import type { Address, Hex } from "viem";
 import { useAccount } from "wagmi";
 import { useOptionalProtocol } from "@/state/protocol";
 import { OnchainDaoClient, daoRpcFromPublicClient } from "@/lib/clients/dao/onchain";
@@ -58,8 +58,15 @@ import { useTx } from "@/lib/tx/useTx";
 import { daoPreparedCall, type DaoTransactionCall } from "@/lib/clients/dao/writes";
 import type { TxState } from "@/lib/tx/types";
 import type { PreparedTransaction } from "@/lib/tx/types";
+import { isDaoSmartWalletSubmission, assertDaoSubmissionWallet, prepareDaoWalletSubmission, explicitlyRejectedDaoSubmission, isDaoSubmissionHash } from "@/lib/clients/dao/wallet-submission";
+import { withDaoSubmissionLock } from "@/lib/clients/dao/submission-lock";
+import { DaoTransactionPendingError, DaoReconciliationRequiredError } from "@/lib/clients/dao/live-receipt";
 
 import { daoActionStorageKey, subscribeDaoActionRecovery, readDaoActionRaw, parseDaoActionRecovery, saveDaoActionRecovery, confirmDaoAction, daoActionIsPending, type DaoActionRecovery } from "@/lib/clients/dao/action-recovery";
+
+function withDaoWriteLock<T>(chainId: number, account: Address, operation: () => Promise<T>) {
+  return isDaoMockRuntimeEnabled() ? operation() : withDaoSubmissionLock(chainId, account, operation);
+}
 
 let mockClient: DaoClient | null = null;
 let feedClient: { scope: string; client: DaoClient } | null = null;
@@ -273,27 +280,38 @@ export function useDaoProposalActions(
   );
 
   useEffect(() => {
-    if (!key || pending?.receiptState !== "confirmed") return;
+    if (!key || pending?.receiptState !== "confirmed" || !pending.transactionHash) return;
     const indexed = actionFeed.data?.proposals.some(p => p.ref.chainId === ref.chainId && p.ref.proposalId === ref.proposalId &&
       p.ref.votingAddress.toLowerCase() === ref.votingAddress.toLowerCase() && p.events.some(e =>
-        e.type === pending.action && e.log.transactionHash?.toLowerCase() === pending.transactionHash.toLowerCase() && e.log.blockHash === pending.receiptBlockHash));
-    if (indexed && readDaoActionRaw(key) === raw) saveDaoActionRecovery(key, null);
-  }, [actionFeed.data, key, pending, raw, ref]);
+        e.type === pending.action && e.log.transactionHash?.toLowerCase() === pending.transactionHash?.toLowerCase() && e.log.blockHash === pending.receiptBlockHash));
+    if (indexed && address) void withDaoSubmissionLock(ref.chainId, address, () => { if (readDaoActionRaw(key) === raw) saveDaoActionRecovery(key, null); }).catch(() => undefined);
+  }, [actionFeed.data, key, pending, raw, ref, address]);
 
-  const retryConfirmation = useCallback(async () => {
+  const retryConfirmation = useCallback(async (recoveredHash?: Hex) => {
     if (!key || !pending || pending.receiptState !== "unknown" || inFlight.current) return;
+    let record = pending;
+    if (recoveredHash && (!record.transactionHash || record.walletSubmission?.reconciliationRequired) && record.walletSubmission) {
+      if (!isDaoSubmissionHash(recoveredHash)) return;
+      record = { ...record, transactionHash: recoveredHash, walletSubmission: { ...record.walletSubmission, submissionHash: recoveredHash, reconciliationRequired: true, reconciliationVerified: false, hashKind: isDaoSmartWalletSubmission(record.walletSubmission) ? "unknown" : "transaction" } };
+      if (!await withDaoSubmissionLock(ref.chainId, record.actor, () => readDaoActionRaw(key) === raw && saveDaoActionRecovery(key, record))) return;
+    }
+    if (recoveredHash && isDaoSmartWalletSubmission(record.walletSubmission) && !record.walletSubmission.reconciliationRequired) {
+      if (!isDaoSubmissionHash(recoveredHash)) return;
+      record = { ...record, walletSubmission: { ...record.walletSubmission, executionHash: recoveredHash } };
+      if (!await withDaoSubmissionLock(ref.chainId, record.actor, () => readDaoActionRaw(key) === raw && saveDaoActionRecovery(key, record))) return;
+    }
     inFlight.current = true;
-    setConfirmationResult({ key, state: { status: "mining", hash: pending.transactionHash } });
+    setConfirmationResult({ key, state: { status: "mining", hash: record.transactionHash ?? undefined } });
     try {
-      const hash = await confirmDaoAction(key, pending);
+      const hash = await confirmDaoAction(key, record);
       setConfirmationResult({ key, state: { status: "success", hash } });
       await invalidate();
     } catch (error) {
       const saved = parseDaoActionRecovery(readDaoActionRaw(key), ref, address);
-      setConfirmationResult({ key, state: { status: "error", hash: saved?.transactionHash ?? pending.transactionHash,
+      setConfirmationResult({ key, state: { status: (error instanceof DaoTransactionPendingError || error instanceof DaoReconciliationRequiredError) ? "pending" : "error", hash: saved?.transactionHash ?? record.transactionHash ?? undefined,
         errorMessage: error instanceof Error ? error.message : "Receipt confirmation is unavailable." } });
     } finally { inFlight.current = false; }
-  }, [invalidate, key, pending, ref, address]);
+  }, [invalidate, key, pending, ref, address, raw]);
 
   const requireAddress = useCallback(() => {
     if (!address) throw new Error("Connect a wallet to continue.");
@@ -313,23 +331,51 @@ export function useDaoProposalActions(
       setActiveAction(action);
       reset();
       try { await execute(
-        async () => {
+        async () => withDaoWriteLock(ref.chainId, requireAddress(), async () => {
+          if (key) {
+            const savedRaw = readDaoActionRaw(key);
+            const saved = parseDaoActionRecovery(savedRaw, ref, address);
+            if (savedRaw && !saved) throw new Error("The saved DAO wallet submission cannot be read. Restore its recovery record before sending another action.");
+            if (daoActionIsPending(saved)) throw new Error("A DAO action is already pending in another tab.");
+          }
           const prepared = await prepare(getDaoRouteClient(), requireAddress());
-          if (!isDaoMockRuntimeEnabled()) call = daoPreparedCall(prepared);
-          return prepared();
-        },
+          if (!isDaoMockRuntimeEnabled()) {
+            call = daoPreparedCall(prepared);
+            if (!key || !address) throw new Error("Missing DAO wallet recovery scope.");
+            const { submission } = await prepareDaoWalletSubmission(call);
+            submitted = { action, ref, actor: address, transactionHash: null, submittedAt: Math.floor(Date.now() / 1000),
+              direction: null, effectiveVotingWeight: null, reason: null, call, walletSubmission: submission, receiptState: "unknown" };
+            if (!saveDaoActionRecovery(key, submitted)) {
+              saveDaoActionRecovery(key, null);
+              throw new Error("Transaction storage is unavailable. No DAO action was sent.");
+            }
+          }
+          try {
+            const hash = await prepared();
+            if (key && submitted && isDaoSubmissionHash(hash)) {
+              submitted = { ...submitted, transactionHash: hash, walletSubmission: submitted.walletSubmission ? { ...submitted.walletSubmission, submissionHash: hash } : undefined };
+              saveDaoActionRecovery(key, submitted);
+            }
+            return hash;
+          }
+          catch (error) {
+            if (key && submitted) {
+              if (explicitlyRejectedDaoSubmission(error)) saveDaoActionRecovery(key, null);
+              else saveDaoActionRecovery(key, { ...submitted, confirmationError: "Wallet submission is unresolved. Check your wallet and recover its transaction or Safe proposal hash before another action." });
+            }
+            throw error;
+          }
+        }),
         {
           invalidate,
+          tracking: "domain",
           onSubmitted: !key ? undefined : hash => {
-            if (!call || !address) throw new Error("Missing DAO transaction expectation.");
-            submitted = { action, ref, actor: address, transactionHash: hash, submittedAt: Math.floor(Date.now() / 1000),
-              direction: null, effectiveVotingWeight: null, reason: null, call, receiptState: "unknown" };
-            saveDaoActionRecovery(key, submitted);
+            if (!submitted || !isDaoSubmissionHash(hash)) throw new Error("Missing DAO transaction expectation or valid submission hash.");
           },
           skipWaitForReceipt: isDaoMockRuntimeEnabled(),
           waitForReceipt: !key ? undefined : async () => {
             if (!submitted) throw new Error("Missing DAO submitted transaction.");
-            return confirmDaoAction(key, submitted);
+            try { return await confirmDaoAction(key, submitted); } catch (error) { if (error instanceof DaoTransactionPendingError) return { pending: true }; throw error; }
           },
           submittedMessage: options.submittedMessage,
         }
@@ -338,11 +384,28 @@ export function useDaoProposalActions(
     [execute, invalidate, options.submittedMessage, requireAddress, reset, ref, address, key]
   );
 
+  const displayedState = confirmationResult?.key === key ? confirmationResult.state : state;
+  const unconfirmedSmartWallet = isDaoSmartWalletSubmission(pending?.walletSubmission) &&
+    (pending?.receiptState === "unknown" || pending?.receiptState === "consumed");
   return {
     pendingAction: pending,
     retryConfirmation,
+    finishWalletReview: async () => {
+      if (!key || !pending?.walletSubmission) return;
+      const noHash = pending.receiptState === "unknown" && ((!pending.transactionHash && !pending.walletSubmission.submissionHash) || pending.walletSubmission.reconciliationRequired);
+      if (!noHash && !(pending.receiptState === "reconciliation_required" && pending.walletSubmission.reconciliationVerified)) return;
+      const finished = await withDaoSubmissionLock(ref.chainId, pending.actor, () => {
+        if (readDaoActionRaw(key) !== raw) return false;
+        assertDaoSubmissionWallet(pending.walletSubmission!);
+        return saveDaoActionRecovery(key, null);
+      });
+      if (!finished) return;
+      setConfirmationResult({ key, state: { status: "idle" } });
+      setActiveAction(null);
+      await invalidate();
+    },
     activeAction: pending?.action ?? activeAction,
-    state: confirmationResult?.key === key ? confirmationResult.state : state,
+    state: unconfirmedSmartWallet ? { ...displayedState, hash: undefined, submissionHash: pending?.walletSubmission?.submissionHash } : displayedState,
     reset: () => {
       setActiveAction(null);
       reset();

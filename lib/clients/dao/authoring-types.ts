@@ -1,3 +1,4 @@
+import type { DaoWalletSubmission as WalletSubmission } from "./wallet-submission";
 import type { DaoParsedProposalContent } from "./content";
 import type { Hex } from "viem";
 import type { DaoMockTransactionOutcome, DaoProposalContent, DaoProposeReceiptDecodeResult, DaoScriptCheck, DaoTransactionReceipt } from "./types";
@@ -56,11 +57,13 @@ export type DaoProposalSubmissionResult =
   | {
       state: "submitted";
       transactionHash: Hex;
+      walletSubmission?: WalletSubmission;
     }
   | {
       state: "failed";
+      walletSubmission?: WalletSubmission;
       error: {
-        code: "WALLET_REJECTED" | "PROPOSAL_REVERTED" | "PROPOSAL_REPLACED" | "PREPARATION_CHANGED" | "NETWORK_ERROR";
+        code: "WALLET_REJECTED" | "PROPOSAL_REVERTED" | "PROPOSAL_REPLACED" | "PREPARATION_CHANGED" | "NETWORK_ERROR" | "SUBMISSION_UNKNOWN" | "PROPOSAL_CONSUMED";
         transactionHash?: Hex;
         message: string;
       };

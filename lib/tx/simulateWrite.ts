@@ -1,3 +1,4 @@
+import { trackedContractWrite } from "./tracked-write";
 import { simulateContract, writeContract } from "wagmi/actions";
 import type { TransactionHash } from "@/lib/tx/types";
 import { isSimulationTransportFallbackEnabled } from "@/lib/runtime/features";
@@ -66,9 +67,10 @@ export async function simulateThenWrite(
   writeRequest: WriteRequest,
   context: string
 ): Promise<TransactionHash> {
+  let request: WriteRequest;
   try {
     const simulation = await simulateContract(wagmiConfig, simulateRequest as never);
-    return writeContract(wagmiConfig, simulation.request as never);
+    request = simulation.request as WriteRequest;
   } catch (error) {
     const fallbackEnabled = isSimulationTransportFallbackEnabled();
     const shouldFallback =
@@ -83,6 +85,9 @@ export async function simulateThenWrite(
       `[tx] Simulation failed for ${context}; falling back to direct wallet write.`,
       error
     );
-    return writeContract(wagmiConfig, writeRequest as never);
+    request = writeRequest;
   }
+  // Only simulation failures may select the transport fallback. A wallet error
+  // must never invoke a second send.
+  return trackedContractWrite(request, () => writeContract(wagmiConfig, request as never), context);
 }

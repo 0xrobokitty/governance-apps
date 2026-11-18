@@ -5,6 +5,7 @@ import { Web3Providers } from "@/web3/providers";
 import { ProtocolProvider } from "@/state/protocol";
 import { IdentityProvider } from "@/state/identity";
 import { Toaster } from "@/components/ui/Toast";
+import { PendingTransactions } from "@/components/PendingTransactions";
 import { Header } from "@/components/Header";
 import { GovernanceAppFooter, GovernanceAppNotice } from "./GovernanceShell";
 
@@ -30,6 +31,7 @@ export default function RootLayout({
               <div className="flex min-h-screen flex-col bg-app text-text-primary font-sans">
                 <Header />
                 <GovernanceAppNotice />
+                <PendingTransactions />
                 <main className="flex-1">{children}</main>
                 <GovernanceAppFooter />
               </div>

@@ -47,6 +47,7 @@ const safeEvent = (
 });
 const mined = (hash = hashA, logs = [safeEvent()]) => ({
   status: "success",
+  from: account,
   transactionHash: hash,
   blockNumber: 101n,
   blockHash,
@@ -249,9 +250,10 @@ describe("wallet-aware canonical receipt resolution", () => {
         Object.assign(new Error(), { name: "TransactionReceiptNotFoundError" }),
       )
       .mockResolvedValueOnce(mined());
-    provider.request.mockResolvedValue({
-      transactionHash: proposal,
-      logs: [{ transactionHash: hashA }],
+    provider.request.mockImplementation(async (request: { method: string }) => {
+      if (request.method === "wallet_getCallsStatus")
+        throw Object.assign(new Error("unsupported method"), { code: 4200 });
+      return { transactionHash: proposal, logs: [{ transactionHash: hashA }] };
     });
     expect(
       await resolveRecoveryReceipt(

@@ -22,6 +22,10 @@ function position(principalKnown: boolean): RecoverySnapshot {
   };
 }
 describe("live recovery headline", () => {
+  it("rounds the preview position's 48.45 percent recovery consistently", () => {
+    render(<RecoveryHeadline snapshot={new MockRecoveryPreviewClient().getSnapshot()} />);
+    expect(screen.getByTestId("recovery-headline")).toHaveTextContent("48.5%");
+  });
   it("never counts unrelated wallet WETH as recovered principal", () => {
     render(<RecoveryHeadline snapshot={position(true)} />);
     expect(screen.getByTestId("recovery-headline")).toHaveTextContent("48.5%");

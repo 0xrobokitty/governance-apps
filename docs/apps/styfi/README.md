@@ -21,3 +21,9 @@ See the [compiler and linter requirements](../../shared/testing.md#dependency-mi
 The shared Stats reader permits at most 1 MiB and uses one 10-second request deadline.
 The browser reads through `/api/global-data`. Direct server reads use the same limits.
 A failed or invalid response never becomes valid global state.
+
+## Safe submissions
+
+The shared transaction writer retains unresolved Safe submissions across reloads.
+The wallet status panel checks execution without sending another transaction.
+See [Safe transaction tracking](../../shared/frontend-architecture.md#safe-transaction-tracking) for receipt checks and recovery limits.

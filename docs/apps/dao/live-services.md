@@ -47,14 +47,37 @@ Changed eligibility, review facts, account, network, trusted configuration, or i
 Repeated advancement stops with a preparation message. No transaction was submitted in that case.
 Once the wallet send starts, this preparation never sends again, even if its result is uncertain.
 DAO simulation and receipt checks have no alternate-transport shortcut.
-Receipt confirmation verifies success, sender, exact transaction input and destination, zero value, chain and canonical block.
-Creation also decodes and validates the actual Propose event, including ID zero.
+EOA receipt confirmation validates the sender, exact call, zero value, chain, and canonical block.
+Safe confirmation uses the shared wallet resolver and a canonical Safe execution event.
+The Safe event must identify the original proposal. The canonical transaction must contain the exact prepared Safe CALL.
+Outer transaction success alone does not prove that the inner DAO call succeeded.
+Unsupported wrappers, batches, or delegate calls remain unresolved.
+Creation also validates the actual Propose event, including proposal ID zero.
 
-Unpublished reviews, published review data, and submitted creation or action hashes survive reloads in the same browser tab.
-Wallet rejection and confirmed reverts retain the publication.
-A known hash is confirmed again; it is not submitted again while the feed lags.
-Only an exact proposal and Propose-log match completes indexing and retires that recovery record.
-Another device, a cleared browser session or an unavailable wallet response needs manual transaction reconciliation.
+Unpublished reviews and published drafts remain in session storage.
+Before a wallet send, DAO saves the exact action or creation intent in local storage.
+The intent survives reloads and tab closure. A shared account-and-chain Web Lock protects preparation, submission, and recovery updates.
+An unavailable lock or durable store prevents the wallet send.
+Another tab cannot submit the same pending action or creation again.
+
+The original Safe proposal hash remains separate from its canonical execution hash.
+Queued Safe proposals remain pending and link to the Safe queue.
+A supplied execution hash can resolve a known proposal when the wallet cannot provide its execution hash.
+Canonical proof must still identify the original proposal and exact call.
+Legacy records retain their original schema. A connected Safe can restore missing wallet context during receipt recovery.
+Wallet rejection removes an unsent intent only after an explicit rejection code.
+Confirmed reverts retain the publication. Safe nonce consumption remains a neutral outcome.
+A known submission resumes receipt checks without another wallet send.
+Only an exact proposal and Propose-log match completes indexing and removes the recovery record.
+
+If a wallet response contains no usable hash, the intent remains unresolved.
+A recovered hash requires canonical proof and exact-call validation.
+An earlier identical proposal can produce the same proof, so recovery cannot identify the interrupted submission.
+The app requires a separate wallet review before it removes this local block.
+This review also supports a submission with no recoverable hash.
+The user acknowledges that the wallet queue and recent activity contain no unresolved submission.
+This acknowledgment permits another attempt. It does not cancel a wallet proposal, report success, or register a new proposal.
+The acknowledgment requires the original connected account, chain, and saved intent.
 
 The authoring UI currently creates content with an empty attachment manifest, as in the accepted product.
 Existing read-only attachment handling and both wire schemas remain unchanged.
@@ -77,7 +100,7 @@ A fee replacement is accepted only after its canonical mined transaction matches
 Recovery, receipt decoding and feed matching then use the accepted hash.
 A cancellation or changed call is a separate terminal outcome. The app retains its transaction link and does not infer a successful DAO action.
 
-Ordinary actions save their hash and prepared call when the wallet returns.
+Ordinary actions save the prepared call before submission and add the hash after the wallet response.
 Receipt timeouts retain an unknown receipt state and block another submission.
 The user can retry confirmation after a temporary error or reload. Confirmation retries never send a transaction.
 Confirmed actions remain separate from actions whose receipt is unknown.

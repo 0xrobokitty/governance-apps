@@ -1,3 +1,5 @@
+import type { DaoWalletSubmission as WalletSubmission } from "./wallet-submission";
+import { parseDaoWalletSubmission } from "./wallet-submission";
 import type { Address, Hex } from "viem";
 import { deriveDaoProposalContentIdentity, parseDaoProposalContent } from "./content";
 import { checkDaoExecutorScript } from "./script";
@@ -32,25 +34,28 @@ export function restoreDaoAuthoringReview(bytes: Uint8Array, address: Address, t
 export function daoAuthoringStorageKey(scope: string, address: Address) {
   return "yearn.dao.live.authoring.v1:" + scope + ":" + address.toLowerCase();
 }
-export function saveDaoAuthoringRecovery(key: string, review: DaoAuthoringReview, publication: DaoPublishedContent | null = null, transactionHash: Hex | null = null, expectedEpoch: bigint | null = null, lastFailure?: DaoAuthoringRecovery["lastFailure"]): boolean {
+export function saveDaoAuthoringRecovery(key: string, review: DaoAuthoringReview, publication: DaoPublishedContent | null = null, transactionHash: Hex | null = null, expectedEpoch: bigint | null = null, lastFailure?: DaoAuthoringRecovery["lastFailure"], walletSubmission?: WalletSubmission): boolean {
   try {
     const identity = deriveDaoProposalContentIdentity(review.content);
     const raw = JSON.stringify({
       state: publication ? "published" : "unpublished",
-      lastFailure, content: review.content, topic: review.topic, script: review.scriptCheck.script,
+      walletSubmission, lastFailure, content: review.content, topic: review.topic, script: review.scriptCheck.script,
       digest: identity.digest, cid: identity.cid, publishedAt: publication?.publishedAt ?? null,
       transactionHash: publication ? transactionHash : null, expectedEpoch: publication ? expectedEpoch?.toString() ?? null : null,
     });
     if (raw.length > 262144) return false;
-    sessionStorage.setItem(key, raw);
-    return sessionStorage.getItem(key) === raw;
+    const durable = Boolean(walletSubmission || transactionHash || lastFailure);
+    const storage = durable ? localStorage : sessionStorage;
+    storage.setItem(key, raw);
+    return storage.getItem(key) === raw;
   } catch { return false; }
 }
 export function readDaoAuthoringRecovery(key: string, address: Address): DaoAuthoringRecovery | null {
   try {
-    const raw = sessionStorage.getItem(key);
+    const raw = localStorage.getItem(key) ?? sessionStorage.getItem(key);
     if (!raw || raw.length > 262144) return null;
     const value = JSON.parse(raw);
+    const walletSubmission = parseDaoWalletSubmission(value.walletSubmission, address, 1);
     const identity = deriveDaoProposalContentIdentity(value.content);
     const review = restoreDaoAuthoringReview(identity.bytes, address, value.topic, value.script);
     if (identity.digest !== value.digest || (value.cid !== undefined && value.cid !== identity.cid)) return null;
@@ -64,10 +69,10 @@ export function readDaoAuthoringRecovery(key: string, address: Address): DaoAuth
         !Number.isSafeInteger(value.publishedAt) || value.publishedAt <= 0 ||
         (value.expectedEpoch !== null && !/^(0|[1-9][0-9]*)$/.test(value.expectedEpoch))) return null;
     return {
-      state: "published", review,
+      state: "published", review, walletSubmission,
       publication: { fingerprint: identity.digest, cid: identity.cid, canonicalBytes: identity.bytes, publishedAt: value.publishedAt },
       lastFailure: value.lastFailure && /^0x[0-9a-f]{64}$/i.test(value.lastFailure.transactionHash) &&
-        ["PROPOSAL_REVERTED", "PROPOSAL_REPLACED"].includes(value.lastFailure.code) && typeof value.lastFailure.message === "string" &&
+        ["PROPOSAL_REVERTED", "PROPOSAL_REPLACED", "PROPOSAL_CONSUMED"].includes(value.lastFailure.code) && typeof value.lastFailure.message === "string" &&
         value.lastFailure.message.length <= 1024 ? value.lastFailure : undefined,
       transactionHash: value.transactionHash,
       expectedEpoch: value.expectedEpoch === null ? null : BigInt(value.expectedEpoch),
@@ -85,4 +90,14 @@ export function readDaoPendingCreation(ref: import("./types").DaoProposalRef): {
     const value = JSON.parse(raw);
     return typeof value.title === "string" && value.title.length <= 1024 && /^0x[0-9a-f]{64}$/i.test(value.transactionHash) ? value : null;
   } catch { return null; }
+}
+
+/** Call only under the account/chain submission lock after explicit resolution. */
+export function clearDaoAuthoringSubmission(key: string) {
+  try { localStorage.removeItem(key); return localStorage.getItem(key) === null; } catch { return false; }
+}
+
+/** An unreadable durable record must not turn into permission to send again. */
+export function assertDaoAuthoringStorageReadable(key: string, address: Address) {
+  if (localStorage.getItem(key) && !readDaoAuthoringRecovery(key, address)) throw new Error("The saved DAO wallet submission cannot be read. Restore its recovery record before sending another proposal.");
 }

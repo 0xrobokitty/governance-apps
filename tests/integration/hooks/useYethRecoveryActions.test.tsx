@@ -4,6 +4,7 @@ import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import {
   encodeAbiParameters,
+  encodeFunctionData,
   encodeEventTopics,
   erc20Abi,
   parseAbi,
@@ -14,13 +15,16 @@ import {
   RECOVERY_AUCTION,
   RECOVERY_WETH,
   RECOVERY_WRAPPER,
+  recoveryAuctionAbi,
   type RecoveryAccountState,
 } from "@/lib/clients/yeth/recovery/onchain";
 import {
   getRecoveryPending,
   recoveryPendingKey,
   saveRecoveryPending,
+  withRecoveryPendingLock,
 } from "@/lib/clients/yeth/recovery/pending";
+import { safeExecTransactionAbi } from "@/lib/tx/safe-call";
 import { YETH_RECOVERY_VAULT } from "@/lib/clients/yeth/deployment";
 import { useYethRecoveryActions } from "@/lib/hooks/useYethRecoveryActions";
 const HASH = ("0x" + "a".repeat(64)) as `0x${string}`;
@@ -47,7 +51,9 @@ const mocks = vi.hoisted(() => ({
   capture: vi.fn(),
   replacement: vi.fn(),
   nonce: vi.fn(),
+  context: vi.fn(),
 }));
+vi.mock("@/lib/tx/wallet-context", () => ({ readWalletSubmissionContext: mocks.context }));
 vi.mock("@/web3/wagmi", () => ({ wagmiConfig: {} }));
 vi.mock("wagmi", () => ({
   useAccount: () => mocks.account,
@@ -168,8 +174,16 @@ function renderActions() {
 }
 describe("live yETH wallet execution", () => {
   beforeEach(() => {
+    vi.restoreAllMocks();
     vi.resetAllMocks();
     window.localStorage.clear();
+    Object.defineProperty(navigator, "locks", { configurable: true, value: { request: async (_key: string, _options: unknown, callback: (lock: object) => unknown) => callback({}) } });
+    mocks.context.mockImplementation(async () => ({
+      account: mocks.account.address, chainId: 1, connectorId: mocks.account.connector.id,
+      kind: mocks.account.connector.id === "safe" ? "safe" : "transaction",
+      hashKind: mocks.account.connector.id === "safe" ? "safe-proposal" : "transaction",
+      submittedBlock: "100", provider: { request: mocks.provider },
+    }));
     mocks.account.address = ADDRESS;
     mocks.account.chainId = 1;
     mocks.account.connector.id = "injected";
@@ -184,7 +198,16 @@ describe("live yETH wallet execution", () => {
     mocks.getChainId.mockResolvedValue(1);
     mocks.getBlock.mockResolvedValue({ hash: BLOCK });
     mocks.readContract.mockResolvedValue(parseEther("9"));
-    mocks.getTransaction.mockRejectedValue(new Error("unavailable"));
+    mocks.getTransaction.mockImplementation(async () => {
+      const inner = encodeFunctionData({ abi: recoveryAuctionAbi, functionName: "take", args: [RECOVERY_WETH, parseEther("1"), ADDRESS] });
+      const safe = mocks.account.connector.id === "safe" || mocks.account.connector.id === "walletConnect";
+      const zero = "0x0000000000000000000000000000000000000000";
+      return {
+        hash: HASH, from: safe ? RECOVERY_WRAPPER : ADDRESS, to: safe ? ADDRESS : RECOVERY_AUCTION,
+        input: safe ? encodeFunctionData({ abi: safeExecTransactionAbi, functionName: "execTransaction", args: [RECOVERY_AUCTION, 0n, inner, 0, 0n, 0n, 0n, zero, zero, "0x"] }) : inner,
+        value: 0n, chainId: 1, blockNumber: 101n, blockHash: BLOCK,
+      };
+    });
     mocks.cancel.mockResolvedValue(null);
     mocks.nonce.mockResolvedValue(null);
   });
@@ -215,6 +238,16 @@ describe("live yETH wallet execution", () => {
     });
     expect(mocks.write).toHaveBeenCalledTimes(1);
   });
+  it("retains uncertain submission for a name-only rejection without provider code 4001", async () => {
+    mocks.write.mockRejectedValue(Object.assign(new Error("relay response lost"), { name: "UserRejectedRequestError" }));
+    const { result } = renderActions();
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    expect(result.current.pending).toMatchObject({ status: "attention" });
+    expect(result.current.pending?.submissionHash).toBeUndefined();
+    expect(result.current.completion).toBeNull();
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
   it("records a canonical reverted transaction as failed, never recovery", async () => {
     const { result } = renderActions();
     mocks.getReceipt.mockResolvedValue({
@@ -334,6 +367,52 @@ describe("live yETH wallet execution", () => {
     expect(restored.result.current.pending).toBeNull();
     expect(mocks.write).toHaveBeenCalledTimes(1);
   });
+  it.each(["ExecutionSuccess", "ExecutionFailure"] as const)("retains a known proposal when %s belongs to a different inner call", async eventName => {
+    mocks.account.connector.id = "safe";
+    mocks.write.mockResolvedValue(PROPOSAL);
+    mocks.provider.mockResolvedValue({ id: PROPOSAL, chainId: "0x1", status: 200, receipts: [{ transactionHash: HASH }] });
+    const event = {
+      address: ADDRESS,
+      topics: encodeEventTopics({ abi: parseAbi(["event ExecutionSuccess(bytes32 txHash,uint256 payment)", "event ExecutionFailure(bytes32 txHash,uint256 payment)"]), eventName }),
+      data: encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [PROPOSAL, 0n]),
+    };
+    mocks.getReceipt.mockResolvedValue({ ...executed(), logs: [...executed().logs, event] });
+    const zero = "0x0000000000000000000000000000000000000000";
+    mocks.getTransaction.mockResolvedValue({
+      hash: HASH, from: RECOVERY_WRAPPER, to: ADDRESS, value: 0n, chainId: 1, blockNumber: 101n, blockHash: BLOCK,
+      input: encodeFunctionData({ abi: safeExecTransactionAbi, functionName: "execTransaction", args: [RECOVERY_AUCTION, 0n, "0x1234", 0, 0n, 0n, 0n, zero, zero, "0x"] }),
+    });
+    const { result } = renderActions();
+    await act(async () => { expect(await result.current.take(createRecoveryActionQuote(state()))).toBeNull(); });
+    expect(result.current.pending?.submissionHash).toBe(PROPOSAL);
+    expect(result.current.completion).toBeNull();
+    expect(result.current.receipt).toBeNull();
+    expect(result.current.tx.status).not.toBe("success");
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
+  it("reports a matching Safe inner failure with the canonical execution hash and no payout", async () => {
+    mocks.account.connector.id = "safe";
+    mocks.write.mockResolvedValue(PROPOSAL);
+    mocks.provider.mockResolvedValue({ id: PROPOSAL, chainId: "0x1", status: 200, receipts: [{ transactionHash: HASH }] });
+    mocks.getReceipt.mockResolvedValue({
+      ...executed(),
+      logs: [{
+        address: ADDRESS,
+        topics: encodeEventTopics({ abi: parseAbi(["event ExecutionFailure(bytes32 txHash,uint256 payment)"]), eventName: "ExecutionFailure" }),
+        data: encodeAbiParameters([{ type: "bytes32" }, { type: "uint256" }], [PROPOSAL, 0n]),
+      }],
+    });
+    const { result } = renderActions();
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow("reverted"); });
+    expect(result.current.pending).toBeNull();
+    expect(result.current.completion).toMatchObject({ status: "failed", hash: HASH });
+    expect(result.current.receipt).toBeNull();
+    expect(result.current.tx.state).toMatchObject({ status: "error", submissionHash: PROPOSAL });
+    expect(result.current.tx.state.hash).toBeUndefined();
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
   it("keeps pending Safe proposals after provider or RPC errors", async () => {
     mocks.account.connector.id = "safe";
     mocks.write.mockResolvedValue(PROPOSAL);
@@ -386,12 +465,9 @@ describe("live yETH wallet execution", () => {
     });
     const oldIntent = result.current.completion!.intent;
     await act(async () => {
-      saveRecoveryPending({
-        ...oldIntent,
-        id: "newer-intent",
-        submissionHash: undefined,
-        status: "submitting",
-      });
+      await withRecoveryPendingLock(1, ADDRESS, async () => saveRecoveryPending({
+        ...oldIntent, id: "newer-intent", submissionHash: undefined, status: "submitting",
+      }));
     });
     await act(async () => {
       rejectFirst(
@@ -443,22 +519,217 @@ describe("live yETH wallet execution", () => {
     expect(result.current.receipt?.hash).toBe(HASH);
     expect(mocks.write).toHaveBeenCalledTimes(1);
   });
-  it("recovers a missing wallet response hash by checking execution without submitting again", async () => {
+  it("keeps candidate hashes ephemeral and requires neutral queue reconciliation", async () => {
     const { result } = renderActions();
     mocks.write.mockRejectedValue(new Error("connection lost"));
-    await act(async () => {
-      await expect(
-        result.current.take(createRecoveryActionQuote(state())),
-      ).rejects.toThrow();
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    const uncertain = result.current.pending!;
+    mocks.getTransaction.mockResolvedValue({
+      hash: HASH, from: ADDRESS, to: RECOVERY_AUCTION, input: encodeFunctionData({ abi: recoveryAuctionAbi, functionName: "take", args: [RECOVERY_WETH, parseEther("1"), ADDRESS] }),
+      value: 0n, chainId: 1, blockNumber: 101n, blockHash: BLOCK,
     });
     await act(async () => {
-      expect((await result.current.refreshPending(HASH))?.status).toBe(
-        "confirmed",
-      );
+      expect(await result.current.refreshPending(HASH)).toEqual({ status: "reconciliation-required", hash: HASH });
     });
+    expect(result.current.pending?.submissionHash).toBeUndefined();
+    expect(result.current.receipt).toBeNull();
+    expect(result.current.completion).toBeNull();
+    await act(async () => { await expect(result.current.reconcilePending(uncertain, HASH, false)).rejects.toThrow("queue"); });
+    await act(async () => { expect((await result.current.reconcilePending(uncertain, HASH, true)).status).toBe("reconciled"); });
     expect(result.current.pending).toBeNull();
+    expect(result.current.receipt).toBeNull();
+    expect(result.current.tx.status).not.toBe("success");
     expect(mocks.write).toHaveBeenCalledTimes(1);
   });
+  it("does not poison the saved record with an invalid candidate hash", async () => {
+    const { result } = renderActions();
+    mocks.write.mockRejectedValue(new Error("connection lost"));
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    mocks.getReceipt.mockRejectedValue(new Error("unavailable"));
+    await act(async () => { expect(await result.current.refreshPending(PROPOSAL)).toBeNull(); });
+    expect(result.current.pending?.submissionHash).toBeUndefined();
+    expect(JSON.parse(localStorage.getItem(recoveryPendingKey(1, ADDRESS))!).submissionHash).toBeUndefined();
+    expect(result.current.completion).toBeNull();
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
+  it.each([false, true])("never binds an older Safe candidate as the original submission (different call: %s)", async differentCall => {
+    mocks.account.connector.id = "safe";
+    mocks.write.mockRejectedValue(new Error("response lost"));
+    const { result } = renderActions();
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    mocks.getReceipt.mockImplementation(async ({ hash }) => {
+      if (hash !== HASH) throw Object.assign(new Error("not an Ethereum hash"), { name: "TransactionReceiptNotFoundError" });
+      return executed(true);
+    });
+    mocks.provider.mockResolvedValue({ id: PROPOSAL, chainId: "0x1", status: 200, receipts: [{ transactionHash: HASH }] });
+    const zero = "0x0000000000000000000000000000000000000000";
+    mocks.getTransaction.mockResolvedValue({
+      hash: HASH, from: RECOVERY_WRAPPER, to: ADDRESS, value: 0n, chainId: 1, blockNumber: 101n, blockHash: BLOCK,
+      input: encodeFunctionData({ abi: safeExecTransactionAbi, functionName: "execTransaction", args: [
+        RECOVERY_AUCTION, 0n, differentCall ? "0x1234" : encodeFunctionData({ abi: recoveryAuctionAbi, functionName: "take", args: [RECOVERY_WETH, parseEther("1"), ADDRESS] }),
+        0, 0n, 0n, 0n, zero, zero, "0x",
+      ] }),
+    });
+    await act(async () => {
+      const candidate = await result.current.refreshPending(PROPOSAL);
+      expect(candidate).toEqual(differentCall ? null : { status: "reconciliation-required", hash: HASH });
+    });
+    expect(result.current.pending?.submissionHash).toBeUndefined();
+    expect(result.current.completion).toBeNull();
+    expect(result.current.receipt).toBeNull();
+    expect(mocks.cancel).not.toHaveBeenCalled();
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
+  it("requires acknowledgment for no-hash reconciliation and restores only a neutral outcome", async () => {
+    mocks.write.mockRejectedValue(new Error("response lost"));
+    const first = renderActions();
+    await act(async () => { await expect(first.result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    const uncertain = first.result.current.pending!;
+    await act(async () => { await expect(first.result.current.reconcilePending(uncertain, undefined, false)).rejects.toThrow("queue"); });
+    await act(async () => { await first.result.current.reconcilePending(uncertain, undefined, true); });
+    expect(first.result.current.completion).toMatchObject({ status: "reconciled" });
+    expect(first.result.current.completion?.hash).toBeUndefined();
+    expect(first.result.current.receipt).toBeNull();
+    expect(first.result.current.tx.status).not.toBe("success");
+    first.unmount();
+    const key = recoveryPendingKey(1, ADDRESS) + ":completed";
+    localStorage.setItem(key, localStorage.getItem(key)! + " ");
+    const restored = renderActions();
+    expect(restored.result.current.completion?.status).toBe("reconciled");
+    expect(restored.result.current.receipt).toBeNull();
+    expect(restored.result.current.tx.status).not.toBe("success");
+    expect(mocks.getReceipt).not.toHaveBeenCalled();
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
+  it("rejects manual reconciliation if a missing hash becomes known while the candidate is checked", async () => {
+    mocks.write.mockRejectedValue(new Error("response lost"));
+    const { result } = renderActions();
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    const uncertain = result.current.pending!;
+    let release!: (value: unknown) => void;
+    mocks.getTransaction.mockImplementation(() => new Promise(resolve => { release = resolve; }));
+    let reconciling!: Promise<unknown>;
+    await act(async () => { reconciling = result.current.reconcilePending(uncertain, HASH, true).catch(error => error); });
+    await waitFor(() => expect(mocks.getTransaction).toHaveBeenCalled());
+    await act(async () => {
+      await withRecoveryPendingLock(1, ADDRESS, async () => saveRecoveryPending({ ...uncertain, submissionHash: PROPOSAL }, uncertain));
+    });
+    await act(async () => {
+      release({ hash: HASH, from: ADDRESS, to: RECOVERY_AUCTION, input: encodeFunctionData({ abi: recoveryAuctionAbi, functionName: "take", args: [RECOVERY_WETH, parseEther("1"), ADDRESS] }), value: 0n, chainId: 1, blockNumber: 101n, blockHash: BLOCK });
+      expect(await reconciling).toBeInstanceOf(Error);
+    });
+    expect(result.current.pending?.submissionHash).toBe(PROPOSAL);
+    expect(result.current.completion).toBeNull();
+    expect(result.current.receipt).toBeNull();
+  });
+
+  it("does not clear an intent when the wallet changes during a candidate check", async () => {
+    mocks.write.mockRejectedValue(new Error("response lost"));
+    const { result } = renderActions();
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    const uncertain = result.current.pending!;
+    mocks.getTransaction.mockImplementation(async () => {
+      mocks.account.address = "0x2222222222222222222222222222222222222222";
+      return { hash: HASH, from: ADDRESS, to: RECOVERY_AUCTION, input: encodeFunctionData({ abi: recoveryAuctionAbi, functionName: "take", args: [RECOVERY_WETH, parseEther("1"), ADDRESS] }), value: 0n, chainId: 1, blockNumber: 101n, blockHash: BLOCK };
+    });
+    await act(async () => { await expect(result.current.reconcilePending(uncertain, HASH, true)).rejects.toThrow("wallet"); });
+    expect(getRecoveryPending(1, ADDRESS)?.id).toBe(uncertain.id);
+    expect(getRecoveryPending(1, ADDRESS)?.submissionHash).toBeUndefined();
+    expect(result.current.receipt).toBeNull();
+  });
+
+  it("keeps a Safe proposal pending if its canonical block changes during financial reads", async () => {
+    mocks.account.connector.id = "safe";
+    mocks.write.mockResolvedValue(PROPOSAL);
+    mocks.provider.mockResolvedValue({ id: PROPOSAL, chainId: "0x1", status: 200, receipts: [{ transactionHash: HASH }] });
+    mocks.getReceipt.mockResolvedValue(executed(true));
+    mocks.readContract.mockImplementation(async () => {
+      mocks.getBlock.mockResolvedValue({ hash: "0x" + "d".repeat(64) });
+      return parseEther("9");
+    });
+    const { result } = renderActions();
+    await act(async () => { expect(await result.current.take(createRecoveryActionQuote(state()))).toBeNull(); });
+    expect(result.current.pending?.submissionHash).toBe(PROPOSAL);
+    expect(result.current.completion).toBeNull();
+    expect(result.current.receipt).toBeNull();
+  });
+
+  it("classifies a Safe connected through WalletConnect using the shared wallet context", async () => {
+    mocks.account.connector.id = "walletConnect";
+    mocks.context.mockImplementation(async () => ({
+      account: ADDRESS, chainId: 1, connectorId: "walletConnect", kind: "safe", hashKind: "unknown", submittedBlock: "100", provider: { request: mocks.provider },
+    }));
+    mocks.write.mockResolvedValue(PROPOSAL);
+    mocks.getReceipt.mockRejectedValue(Object.assign(new Error("not mined"), { name: "TransactionReceiptNotFoundError" }));
+    mocks.provider.mockResolvedValue({ id: PROPOSAL, chainId: "0x1", status: 100 });
+    const { result } = renderActions();
+    await act(async () => { expect(await result.current.take(createRecoveryActionQuote(state()))).toBeNull(); });
+    expect(result.current.pending).toMatchObject({ kind: "safe", hashKind: "unknown", connectorId: "walletConnect", submissionHash: PROPOSAL });
+    expect(mocks.wait).not.toHaveBeenCalled();
+    expect(mocks.provider).toHaveBeenCalledWith(expect.objectContaining({ method: "wallet_getCallsStatus" }));
+  });
+
+  it.each([false, true])("verifies an explicit WalletConnect Safe execution without changing the proposal (wrong call: %s)", async wrongCall => {
+    mocks.account.connector.id = "walletConnect";
+    mocks.context.mockImplementation(async () => ({
+      account: ADDRESS, chainId: 1, connectorId: "walletConnect", kind: "safe", hashKind: "unknown", submittedBlock: "100", provider: { request: mocks.provider },
+    }));
+    mocks.write.mockResolvedValue(PROPOSAL);
+    mocks.getReceipt.mockRejectedValue(Object.assign(new Error("not mined"), { name: "TransactionReceiptNotFoundError" }));
+    mocks.provider.mockRejectedValue({ code: 4100, message: "wallet_getCallsStatus not granted" });
+    const { result } = renderActions();
+    await act(async () => { await result.current.take(createRecoveryActionQuote(state())); });
+    expect(result.current.pending?.submissionHash).toBe(PROPOSAL);
+    mocks.getReceipt.mockImplementation(async ({ hash }) => {
+      if (hash !== HASH) throw Object.assign(new Error("not mined"), { name: "TransactionReceiptNotFoundError" });
+      return executed(true);
+    });
+    const zero = "0x0000000000000000000000000000000000000000";
+    mocks.getTransaction.mockResolvedValue({
+      hash: HASH, from: RECOVERY_WRAPPER, to: ADDRESS, value: 0n, chainId: 1, blockNumber: 101n, blockHash: BLOCK,
+      input: encodeFunctionData({ abi: safeExecTransactionAbi, functionName: "execTransaction", args: [
+        RECOVERY_AUCTION, 0n, wrongCall ? "0x1234" : encodeFunctionData({ abi: recoveryAuctionAbi, functionName: "take", args: [RECOVERY_WETH, parseEther("1"), ADDRESS] }),
+        0, 0n, 0n, 0n, zero, zero, "0x",
+      ] }),
+    });
+    await act(async () => {
+      const completed = await result.current.refreshPending(undefined, HASH);
+      expect(completed?.status ?? null).toBe(wrongCall ? null : "confirmed");
+    });
+    if (wrongCall) {
+      expect(result.current.pending?.submissionHash).toBe(PROPOSAL);
+      expect(result.current.receipt).toBeNull();
+    } else {
+      expect(result.current.pending).toBeNull();
+      expect(result.current.completion?.intent.submissionHash).toBe(PROPOSAL);
+      expect(result.current.receipt?.hash).toBe(HASH);
+    }
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
+  it.each(["setItem", "getItem"] as const)("retains a returned hash when post-send storage %s fails", async method => {
+    mocks.write.mockImplementation(async () => {
+      vi.spyOn(Storage.prototype, method).mockImplementation(() => { throw new Error("storage unavailable"); });
+      return HASH;
+    });
+    const { result } = renderActions();
+    await act(async () => { expect(await result.current.take(createRecoveryActionQuote(state()))).toBeNull(); });
+    expect(result.current.pending?.submissionHash).toBe(HASH);
+    expect(result.current.completion).toBeNull();
+    expect(mocks.write).toHaveBeenCalledOnce();
+  });
+
+  it.each(["unsupported", "busy"] as const)("does not submit when the wallet lock is %s", async lock => {
+    Object.defineProperty(navigator, "locks", { configurable: true, value: lock === "unsupported" ? undefined : { request: async (_key: string, _options: unknown, callback: (lock: null) => unknown) => callback(null) } });
+    const { result } = renderActions();
+    await act(async () => { await expect(result.current.take(createRecoveryActionQuote(state()))).rejects.toThrow(); });
+    expect(mocks.write).not.toHaveBeenCalled();
+  });
+
   it("releases a consumed Safe nonce neutrally, without inventing a transaction or payout", async () => {
     mocks.account.connector.id = "safe";
     mocks.write.mockResolvedValue(PROPOSAL);

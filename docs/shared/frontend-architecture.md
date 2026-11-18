@@ -137,20 +137,43 @@ domain eligibility -> useTx -> prepare/simulate -> receipt -> query invalidation
 - Wrong-network and simulation failures block normal submission.
 - UI code never fabricates canonical history while a producer feed catches up.
 
-### Safe transaction boundary
+### Safe transaction tracking
 
-The default receipt path expects an Ethereum transaction hash.
-The Safe Apps provider can return a Safe proposal hash instead.
-Generic stYFI, veYFI, Teams, YBC, and legacy yETH writes do not resolve that proposal to its execution receipt.
-A timeout does not prove failure. Check the Safe queue before another submission.
+The shared writer saves the exact call before it opens a smart-contract wallet.
+The record includes the account, chain, target, calldata, value, and submission block.
+A Web Lock serializes updates for that account and chain across tabs.
+An unresolved record blocks another submission of the same call.
+Records survive reloads in local storage. Unavailable or damaged storage blocks new smart-wallet submissions.
 
-The live yETH recovery flow has separate persisted intents and canonical Safe execution verification.
-Those guarantees do not apply to the generic transaction hook.
-DAO also requires direct sender and call checks that need separate Safe inner-call validation.
+stYFI, veYFI, Teams, YBC, legacy yETH, and token approvals use this writer.
+The shared status panel resumes their pending submissions after navigation or reload.
+DAO and live yETH recovery retain their domain-specific intent stores and validation.
+All three paths use the same wallet identification and canonical receipt verifier.
+Ordinary accounts and EIP-7702 delegated accounts retain the Ethereum receipt path.
 
-Shared Safe support requires persisted submission ownership, duplicate prevention, resume controls, and execution-event verification.
-Acceptance must cover queued approval, reload, cancellation, account changes, and inner failure despite a successful outer receipt.
-Embedding policy and wallet connection alone do not establish transaction compatibility.
+A Safe proposal hash is not an Ethereum transaction hash.
+The wallet can supply an execution candidate through `wallet_getCallsStatus` or its legacy receipt method.
+Only the configured public RPC can establish the canonical receipt, block, and Safe execution event.
+Shared and DAO completion also require the exact inner `CALL` target, calldata, and value.
+Nested operations and delegate calls remain unresolved.
+
+A successful outer receipt does not prove that the Safe action succeeded.
+An inner `ExecutionFailure` consumes the proposal but reports failure.
+An outer revert leaves the proposal pending because it can execute again.
+A consumed nonce can release the retry block without claiming that the action succeeded.
+The UI links only verified Ethereum execution hashes.
+
+A lost wallet response leaves an uncertain intent, including when an error contains the word "rejected".
+Only explicit wallet rejection code `4001` permits automatic removal before a submission identifier exists.
+A manually supplied hash can prove an identical call, but cannot identify the original uncertain proposal.
+The user must check the wallet queue and recent activity before explicit reconciliation of an uncertain submission.
+If no identifier exists, this manual review can remove the local retry block without an execution receipt.
+It does not cancel a wallet proposal or prove that no proposal exists.
+This reconciliation has a neutral outcome and never invokes the original action's success callback.
+
+The recovery controls never send a transaction.
+Local storage and Web Locks coordinate tabs on the same origin, not other devices or separate app origins.
+Clearing browser storage removes that local protection. The Safe queue remains the source for outstanding proposals.
 
 ### Query lifetime and independent reads
 

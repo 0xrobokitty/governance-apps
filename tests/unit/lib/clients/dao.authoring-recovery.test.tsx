@@ -6,7 +6,7 @@ import { DAO_EXECUTOR_VALID_SCRIPT_VECTORS } from "@/lib/clients/dao";
 
 const { bytes, identity, address, review } = recoveredReview();
 const key = daoAuthoringStorageKey("deployment-1", address);
-beforeEach(() => sessionStorage.clear());
+beforeEach(() => { sessionStorage.clear(); localStorage.clear(); });
 afterEach(() => vi.restoreAllMocks());
 
 it("retains original B and its topic/script/identity before any publication", () => {

@@ -1,5 +1,10 @@
 import { describe, expect, it, vi } from "vitest";
-import type { TransactionReceipt, Address } from "viem";
+import { encodeFunctionData, type TransactionReceipt, type Address, type Hex } from "viem";
+import { safeExecTransactionAbi } from "@/lib/tx/safe-call";
+import { resolveWalletReceipt } from "@/lib/tx/wallet-receipt";
+import { resolveSafeCancellation } from "@/lib/tx/safe-cancellation";
+vi.mock("@/lib/tx/wallet-receipt", () => ({ resolveWalletReceipt: vi.fn() }));
+vi.mock("@/lib/tx/safe-cancellation", () => ({ resolveSafeCancellation: vi.fn() }));
 vi.mock("@/web3/wagmi", () => ({ wagmiConfig: {} }));
 vi.mock("wagmi/actions", () => ({ getPublicClient: vi.fn() }));
 import { getPublicClient } from "wagmi/actions";
@@ -69,5 +74,58 @@ describe("verified wallet replacements", () => {
     const { client } = setup("cancelled");
     client.getBlock.mockResolvedValue({ hash: v2Hash(9), timestamp: BigInt(expected.blockTimestamp) });
     await expect(waitForDaoReceipt(hash, 1, call.from, call)).rejects.toThrow("canonical block");
+  });
+});
+
+
+describe("canonical Safe DAO execution", () => {
+  const relayer = "0x3333333333333333333333333333333333333333" as Address;
+  const zero = "0x0000000000000000000000000000000000000000" as Address;
+  const call = { chainId: 1, from: V2_ACCOUNT as Address, to: V2_VOTING as Address, data: "0x1234" as Hex };
+  const submission = { account: call.from, chainId: 1, kind: "safe" as const, submissionHash: hash, submittedBlock: "0", hashKind: "safe-proposal" as const };
+  function setup() {
+    const mined = { ...receipt(), from: relayer, transactionHash: v2Hash(3) };
+    const transaction = { chainId: 1, hash: mined.transactionHash, blockHash, blockNumber: 1n, from: relayer, to: call.from, value: 0n,
+      input: encodeFunctionData({ abi: safeExecTransactionAbi, functionName: "execTransaction", args: [call.to, 0n, call.data, 0, 0n, 0n, 0n, zero, zero, "0x1234"] }) };
+    const client = { getChainId: vi.fn(async () => 1), getTransaction: vi.fn(async () => transaction), getBlock: vi.fn(async () => ({ hash: blockHash, timestamp: BigInt(expected.blockTimestamp) })) };
+    vi.mocked(getPublicClient).mockReturnValue(client as unknown as ReturnType<typeof getPublicClient>);
+    vi.mocked(resolveWalletReceipt).mockResolvedValue({ status: "mined", receipt: mined, failed: false, nonceConsumed: true, safeExecution: { safe: call.from, proposalHash: hash } });
+    vi.mocked(resolveSafeCancellation).mockResolvedValue(null);
+    return { mined, transaction, client };
+  }
+  it("accepts a proven exact inner call sent by a relayer", async () => {
+    const { mined } = setup();
+    expect((await waitForDaoReceipt(hash, 1, call.from, call, { submission })).transactionHash).toBe(mined.transactionHash);
+  });
+  it("requires canonical Safe proof after wallet contract detection was unavailable", async () => {
+    const { mined } = setup();
+    const unknown = { ...submission, kind: "transaction" as const, hashKind: "unknown" as const };
+    expect((await waitForDaoReceipt(hash, 1, call.from, call, { submission: unknown, executionHash: mined.transactionHash })).transactionHash).toBe(mined.transactionHash);
+    vi.mocked(resolveWalletReceipt).mockResolvedValue({ status: "mined", receipt: mined, failed: false, nonceConsumed: false });
+    await expect(waitForDaoReceipt(hash, 1, call.from, call, { submission: unknown })).rejects.toMatchObject({ code: "DAO_TRANSACTION_PENDING" });
+  });
+  it("retains a queued proposal instead of treating it as a failed transaction", async () => {
+    setup();
+    vi.mocked(resolveWalletReceipt).mockResolvedValue({ status: "pending" });
+    await expect(waitForDaoReceipt(hash, 1, call.from, call, { submission })).rejects.toMatchObject({ code: "DAO_TRANSACTION_PENDING" });
+  });
+  it("rejects outer success when the proven Safe execution failed", async () => {
+    const { mined } = setup();
+    vi.mocked(resolveWalletReceipt).mockResolvedValue({ status: "mined", receipt: mined, failed: true, nonceConsumed: true, safeExecution: { safe: call.from, proposalHash: hash } });
+    await expect(waitForDaoReceipt(hash, 1, call.from, call, { submission })).rejects.toMatchObject({ code: "DAO_TRANSACTION_REVERTED", transactionHash: mined.transactionHash });
+  });
+  it("rejects an unrelated successful call or a changed canonical block", async () => {
+    const { transaction, client } = setup();
+    transaction.input = encodeFunctionData({ abi: safeExecTransactionAbi, functionName: "execTransaction", args: [call.to, 0n, "0xabcd", 0, 0n, 0n, 0n, zero, zero, "0x1234"] });
+    await expect(waitForDaoReceipt(hash, 1, call.from, call, { submission })).rejects.toThrow("reviewed call");
+    setup();
+    vi.mocked(getPublicClient).mockReturnValue({ ...client, getBlock: async () => ({ hash: v2Hash(9) }) } as unknown as ReturnType<typeof getPublicClient>);
+    await expect(waitForDaoReceipt(hash, 1, call.from, call, { submission })).rejects.toThrow("canonical block");
+  });
+  it("keeps consumed-nonce evidence neutral instead of claiming DAO success", async () => {
+    setup();
+    vi.mocked(resolveWalletReceipt).mockResolvedValue({ status: "pending" });
+    vi.mocked(resolveSafeCancellation).mockResolvedValue({ submissionHash: hash, proposalNonce: 1n, currentNonce: 2n, blockNumber: 1n, blockHash });
+    await expect(waitForDaoReceipt(hash, 1, call.from, call, { submission, checkCancellation: true })).rejects.toMatchObject({ code: "DAO_SAFE_NONCE_CONSUMED" });
   });
 });

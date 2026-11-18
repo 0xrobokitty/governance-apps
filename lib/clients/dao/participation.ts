@@ -55,7 +55,7 @@ export function deriveDaoParticipation(
       (pending.receiptState === undefined || pending.receiptState === "unknown" || pending.receiptState === "confirmed") &&
       !proposal.events.some((candidate) => candidate.type === "vote" &&
         candidate.actor?.toLowerCase() === address.toLowerCase() &&
-        candidate.log.transactionHash?.toLowerCase() === pending.transactionHash.toLowerCase())) {
+        pending.transactionHash !== null && candidate.log.transactionHash?.toLowerCase() === pending.transactionHash.toLowerCase())) {
     return "pending";
   }
   if (!event) return "not-voted";

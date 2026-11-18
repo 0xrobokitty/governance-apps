@@ -1,3 +1,4 @@
+import { confirmDaoAction, readDaoActionRaw } from "@/lib/clients/dao/action-recovery";
 import { act, waitFor } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { Hex } from "viem";
@@ -5,7 +6,7 @@ import { renderHookWithProviders } from "@/tests/test-utils";
 import { useDaoProposalActions } from "@/lib/hooks/useDao";
 import { useDaoAuthoringServices } from "@/lib/hooks/useDaoAuthoring";
 import { OnchainDaoClient } from "@/lib/clients/dao/onchain";
-import { waitForDaoReceipt, DaoTransactionReplacedError, DaoTransactionRevertedError } from "@/lib/clients/dao/live-receipt";
+import { waitForDaoReceipt, DaoTransactionReplacedError, DaoTransactionRevertedError, DaoTransactionPendingError, DaoSafeNonceConsumedError } from "@/lib/clients/dao/live-receipt";
 import { applyDaoMockFixture, getDaoMockSnapshot, DAO_MOCK_ACCOUNT_ADDRESS, DAO_MOCK_VOTING_ADDRESS, deriveDaoProposerState, getDaoMockFixture, deriveDaoProposalContentIdentity, encodeDaoProposeLog } from "@/lib/clients/dao";
 import { daoAuthoringStorageKey, saveDaoAuthoringRecovery, readDaoAuthoringRecovery } from "@/lib/clients/dao/authoring-recovery";
 import { daoDeploymentScope, getDaoDeployments } from "@/lib/clients/dao/deployment";
@@ -13,10 +14,19 @@ import { createDaoAuthoringReview } from "@/app/dao/propose/authoring";
 import { recoveredReview } from "@/tests/fixtures/dao-pinata-recovery";
 import { DaoPreparationChangedError } from "@/lib/clients/dao/writes";
 vi.mock("@/lib/clients/dao/live-receipt", async importOriginal => ({ ...await importOriginal<typeof import("@/lib/clients/dao/live-receipt")>(), waitForDaoReceipt: vi.fn() }));
+import { restoreDaoWalletSubmission, assertDaoSubmissionWallet, prepareDaoWalletSubmission } from "@/lib/clients/dao/wallet-submission";
+vi.mock("@/lib/clients/dao/wallet-submission", async importOriginal => ({
+  ...await importOriginal<typeof import("@/lib/clients/dao/wallet-submission")>(),
+  restoreDaoWalletSubmission: vi.fn(async () => undefined), assertDaoSubmissionWallet: vi.fn(), prepareDaoWalletSubmission: vi.fn(), daoWalletProvider: vi.fn(async () => undefined),
+}));
 const hash = ("0x" + "11".repeat(32)) as Hex, replacement = ("0x" + "22".repeat(32)) as Hex, blockHash = ("0x" + "33".repeat(32)) as Hex;
 const receipt = { transactionHash: replacement, status: "success" as const, blockNumber: 1n, blockHash, blockTimestamp: 1789000000, transactionIndex: 0, logs: [] };
 beforeEach(() => {
-  vi.clearAllMocks(); sessionStorage.clear(); applyDaoMockFixture("voting");
+  vi.clearAllMocks();
+  vi.mocked(waitForDaoReceipt).mockReset();
+  vi.mocked(prepareDaoWalletSubmission).mockImplementation(async call => ({ submission: { account: call.from, chainId: call.chainId, kind: "transaction", hashKind: "transaction", submittedBlock: "0" }, provider: undefined }));
+  sessionStorage.clear(); localStorage.clear();
+  Object.defineProperty(navigator, "locks", { configurable: true, value: { request: async (_key: string, _options: unknown, run: (lock: object) => unknown) => run({}) } }); applyDaoMockFixture("voting");
   vi.stubEnv("NEXT_PUBLIC_RUNTIME_MODE", "development"); vi.stubEnv("NEXT_PUBLIC_USE_MOCKS", "false"); vi.stubEnv("NEXT_PUBLIC_E2E", "false");
   vi.stubEnv("NEXT_PUBLIC_DAO_DEPLOYMENTS", JSON.stringify([{ chainId: 1, votingAddress: DAO_MOCK_VOTING_ADDRESS, deploymentBlock: "0", genesis: 0, active: true, supportedVoters: [], supportedExecutors: [] }]));
   vi.spyOn(OnchainDaoClient.prototype, "getFeed").mockResolvedValue(getDaoMockSnapshot().feed);
@@ -226,6 +236,282 @@ describe("creation replacement recovery", () => {
     const second = renderHookWithProviders(() => useDaoAuthoringServices(proposer.address, proposer));
     expect(second.result.current.recovery?.transactionHash).toBe(replacement);
     await act(async () => { await second.result.current.services.confirm(review, publication, replacement, proposer.expectedVotingEpoch); });
-    expect(waitForDaoReceipt).toHaveBeenLastCalledWith(replacement, 1, proposer.address, expect.any(Object));
+    expect(waitForDaoReceipt).toHaveBeenLastCalledWith(replacement, 1, proposer.address, expect.any(Object), undefined);
+  });
+});
+
+
+describe("DAO Safe proposal persistence", () => {
+  function safeContext() {
+    vi.mocked(prepareDaoWalletSubmission).mockImplementation(async call => ({ submission: { account: call.from, chainId: call.chainId, kind: "safe", hashKind: "safe-proposal", submittedBlock: "0" }, provider: undefined }));
+  }
+  function action(send: () => Promise<Hex>) {
+    const proposal = getDaoMockSnapshot().feed.proposals[0];
+    vi.spyOn(OnchainDaoClient.prototype, "prepareVote").mockResolvedValue(Object.assign(send,
+      { daoCall: { from: DAO_MOCK_ACCOUNT_ADDRESS, to: DAO_MOCK_VOTING_ADDRESS, chainId: 1, data: "0x1234" as Hex } }));
+    return () => useDaoProposalActions(proposal.ref, DAO_MOCK_ACCOUNT_ADDRESS, { submittedMessage: "Submitted" });
+  }
+  it("keeps a queued Safe proposal across reload and stores the separate execution hash", async () => {
+    safeContext();
+    const send = vi.fn(async () => hash);
+    const useActions = action(send);
+    vi.mocked(waitForDaoReceipt).mockRejectedValueOnce(new DaoTransactionPendingError());
+    const first = renderHookWithProviders(useActions);
+    await act(async () => { await first.result.current.vote("yea"); });
+    expect(first.result.current.state.status).toBe("pending");
+    expect(first.result.current.state.hash).toBeUndefined();
+    expect(first.result.current.state.submissionHash).toBe(hash);
+    expect(first.result.current.pendingAction).toMatchObject({ transactionHash: hash, walletSubmission: { kind: "safe", submissionHash: hash }, receiptState: "unknown" });
+    first.unmount();
+    const second = renderHookWithProviders(useActions);
+    await act(async () => { await second.result.current.vote("nay"); });
+    expect(send).toHaveBeenCalledOnce();
+    vi.mocked(waitForDaoReceipt).mockResolvedValueOnce(receipt);
+    await act(async () => { await second.result.current.retryConfirmation(replacement); });
+    expect(second.result.current.pendingAction).toMatchObject({ transactionHash: replacement, walletSubmission: { submissionHash: hash, executionHash: replacement }, receiptState: "confirmed" });
+    expect(waitForDaoReceipt).toHaveBeenLastCalledWith(hash, 1, DAO_MOCK_ACCOUNT_ADDRESS, expect.any(Object), expect.objectContaining({ executionHash: replacement, submission: expect.objectContaining({ submissionHash: hash }) }));
+  });
+  it("persists intent before an uncertain send and recovers explicitly without resubmitting", async () => {
+    safeContext();
+    const send = vi.fn(async () => { expect(localStorage.length).toBeGreaterThan(0); throw new Error("Wallet disconnected"); });
+    const useActions = action(send);
+    const first = renderHookWithProviders(useActions);
+    await act(async () => { await first.result.current.vote("yea"); });
+    expect(first.result.current.pendingAction).toMatchObject({ transactionHash: null, receiptState: "unknown", walletSubmission: { kind: "safe" } });
+    first.unmount();
+    const second = renderHookWithProviders(useActions);
+    await act(async () => { await second.result.current.vote("yea"); });
+    expect(send).toHaveBeenCalledOnce();
+    vi.mocked(waitForDaoReceipt).mockResolvedValueOnce(receipt);
+    await act(async () => { await second.result.current.retryConfirmation(hash); });
+    expect(second.result.current.pendingAction).toMatchObject({ transactionHash: replacement, walletSubmission: { submissionHash: hash, hashKind: "unknown", reconciliationVerified: true }, receiptState: "reconciliation_required" });
+    expect(send).toHaveBeenCalledOnce();
+    await act(async () => { await second.result.current.vote("yea"); });
+    expect(send).toHaveBeenCalledOnce();
+    await act(async () => { await second.result.current.finishWalletReview(); });
+    expect(second.result.current.pendingAction).toBeNull();
+    expect(second.result.current.state.status).toBe("idle");
+  });
+  it("retires an explicitly rejected pre-send intent and keeps nonce consumption neutral", async () => {
+    safeContext();
+    const useActions = action(async () => { throw Object.assign(new Error("Rejected"), { code: 4001 }); });
+    const first = renderHookWithProviders(useActions);
+    await act(async () => { await first.result.current.vote("yea"); });
+    expect(first.result.current.pendingAction).toBeNull();
+    first.unmount();
+    const next = renderHookWithProviders(action(async () => hash));
+    vi.mocked(waitForDaoReceipt).mockRejectedValueOnce(new DaoSafeNonceConsumedError(hash));
+    await act(async () => { await next.result.current.vote("yea"); });
+    expect(next.result.current.pendingAction).toMatchObject({ receiptState: "consumed", transactionHash: hash });
+  });
+  it("does not retire a known Safe proposal because an RPC error contains revert text", async () => {
+    safeContext();
+    const b = recoveredReview();
+    const proposer = { ...deriveDaoProposerState(getDaoMockFixture("discussion").proposer), address: b.address };
+    const publication = { fingerprint: b.identity.digest, cid: b.identity.cid, canonicalBytes: b.bytes, publishedAt: 100 };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new Uint8Array(b.bytes))));
+    const send = vi.fn(async () => hash);
+    vi.spyOn(OnchainDaoClient.prototype, "preparePropose").mockResolvedValue(Object.assign(send, { daoCall: { from: b.address, to: DAO_MOCK_VOTING_ADDRESS, chainId: 1, data: "0x1234" as Hex } }));
+    vi.mocked(waitForDaoReceipt).mockRejectedValue(new Error("execution reverted while checking RPC Safe metadata"));
+    const hook = renderHookWithProviders(() => useDaoAuthoringServices(b.address, proposer));
+    await act(async () => { expect(await hook.result.current.services.submit({ review: b.review, publication, outcome: "success" })).toMatchObject({ state: "submitted", transactionHash: hash }); });
+    const key = daoAuthoringStorageKey(daoDeploymentScope(getDaoDeployments()), b.address);
+    expect(readDaoAuthoringRecovery(key, b.address)).toMatchObject({ transactionHash: hash, lastFailure: undefined, walletSubmission: { submissionHash: hash } });
+    await act(async () => { await hook.result.current.services.submit({ review: b.review, publication, outcome: "success" }); });
+    expect(send).toHaveBeenCalledOnce();
+  });
+  it("retains creation bytes and unknown intent through reload, then restores the supplied hash", async () => {
+    safeContext();
+    const b = recoveredReview();
+    const proposer = { ...deriveDaoProposerState(getDaoMockFixture("discussion").proposer), address: b.address };
+    const publication = { fingerprint: b.identity.digest, cid: b.identity.cid, canonicalBytes: b.bytes, publishedAt: 100 };
+    vi.stubGlobal("fetch", vi.fn(async () => new Response(new Uint8Array(b.bytes))));
+    const send = vi.fn(async () => { throw new Error("Wallet disconnected"); });
+    const prepare = vi.spyOn(OnchainDaoClient.prototype, "preparePropose").mockResolvedValue(Object.assign(send, { daoCall: { from: b.address, to: DAO_MOCK_VOTING_ADDRESS, chainId: 1, data: "0x1234" as Hex } }));
+    const first = renderHookWithProviders(() => useDaoAuthoringServices(b.address, proposer));
+    await act(async () => { expect(await first.result.current.services.submit({ review: b.review, publication, outcome: "success" })).toMatchObject({ state: "failed", error: { code: "SUBMISSION_UNKNOWN" } }); });
+    first.unmount();
+    const second = renderHookWithProviders(() => useDaoAuthoringServices(b.address, proposer));
+    expect(second.result.current.recovery).toMatchObject({ transactionHash: null, walletSubmission: { kind: "safe" }, publication: { fingerprint: b.identity.digest } });
+    await act(async () => { await second.result.current.services.submit({ review: b.review, publication, outcome: "success" }); });
+    expect(prepare).toHaveBeenCalledOnce(); expect(send).toHaveBeenCalledOnce();
+    await act(async () => { expect(await second.result.current.services.recoverSubmission!(hash)).toMatchObject({ state: "submitted", transactionHash: hash, walletSubmission: { submissionHash: hash } }); });
+    const saved = readDaoAuthoringRecovery(daoAuthoringStorageKey(daoDeploymentScope(getDaoDeployments()), b.address), b.address);
+    expect(Array.from(saved!.publication!.canonicalBytes)).toEqual(Array.from(b.bytes));
+    expect(saved?.walletSubmission?.submissionHash).toBe(hash);
+  });
+});
+
+describe("durable DAO submission fences", () => {
+  function setupAction(send: () => Promise<Hex>) {
+    const proposal = getDaoMockSnapshot().feed.proposals[0];
+    vi.spyOn(OnchainDaoClient.prototype, "prepareVote").mockResolvedValue(Object.assign(send,
+      { daoCall: { from: DAO_MOCK_ACCOUNT_ADDRESS, to: DAO_MOCK_VOTING_ADDRESS, chainId: 1, data: "0x1234" as Hex } }));
+    return () => useDaoProposalActions(proposal.ref, DAO_MOCK_ACCOUNT_ADDRESS, { submittedMessage: "Submitted" });
+  }
+  it("keeps an uncertain action after tab storage is lost, then permits only explicit neutral review", async () => {
+    const send = vi.fn(async () => { throw new Error("Transport rejected the response"); });
+    const useActions = setupAction(send);
+    const first = renderHookWithProviders(useActions);
+    await act(async () => { await first.result.current.vote("yea"); });
+    expect(first.result.current.pendingAction?.transactionHash).toBeNull();
+    first.unmount(); sessionStorage.clear();
+    const second = renderHookWithProviders(useActions);
+    expect(second.result.current.pendingAction?.walletSubmission).toBeDefined();
+    await act(async () => { await second.result.current.vote("yea"); });
+    expect(send).toHaveBeenCalledOnce();
+    await act(async () => { await second.result.current.finishWalletReview(); });
+    expect(assertDaoSubmissionWallet).toHaveBeenCalled();
+    expect(second.result.current.pendingAction).toBeNull();
+    expect(second.result.current.state.status).toBe("idle");
+    expect(waitForDaoReceipt).not.toHaveBeenCalled();
+  });
+  it("retains the original uncertain fence after a manually supplied earlier transaction reverted", async () => {
+    const useActions = setupAction(async () => { throw new Error("Lost response"); });
+    const hook = renderHookWithProviders(useActions);
+    await act(async () => { await hook.result.current.vote("yea"); });
+    vi.mocked(waitForDaoReceipt).mockRejectedValueOnce(new DaoTransactionRevertedError(hash));
+    await act(async () => { await hook.result.current.retryConfirmation(hash); });
+    expect(hook.result.current.pendingAction).toMatchObject({ receiptState: "reconciliation_required", walletSubmission: { reconciliationVerified: true } });
+    expect(hook.result.current.state.status).toBe("pending");
+  });
+  it("uses the shared wallet lock and blocks a second tab while the first wallet call is unresolved", async () => {
+    let release!: (hash: Hex) => void;
+    const send = vi.fn(() => new Promise<Hex>(resolve => { release = resolve; }));
+    const useActions = setupAction(send);
+    const first = renderHookWithProviders(useActions), second = renderHookWithProviders(useActions);
+    let original!: Promise<void>;
+    act(() => { original = first.result.current.vote("yea"); });
+    await waitFor(() => expect(send).toHaveBeenCalledOnce());
+    await act(async () => { await second.result.current.vote("nay"); });
+    expect(send).toHaveBeenCalledOnce();
+    vi.mocked(waitForDaoReceipt).mockRejectedValueOnce(new DaoTransactionPendingError());
+    await act(async () => { release(hash); await original; });
+    expect(second.result.current.pendingAction?.transactionHash).toBe(hash);
+  });
+  it("fails before wallet preparation when browser submission locks are unavailable", async () => {
+    Object.defineProperty(navigator, "locks", { configurable: true, value: undefined });
+    const send = vi.fn(async () => hash);
+    const hook = renderHookWithProviders(setupAction(send));
+    await act(async () => { await hook.result.current.vote("yea"); });
+    expect(send).not.toHaveBeenCalled();
+    expect(hook.result.current.state.status).toBe("error");
+  });
+  it("does not replace a damaged durable action record with a fresh wallet send", async () => {
+    const send = vi.fn(async () => { throw new Error("Lost response"); });
+    const useActions = setupAction(send), first = renderHookWithProviders(useActions);
+    await act(async () => { await first.result.current.vote("yea"); });
+    first.unmount();
+    const key = Object.keys(localStorage).find(key => key.startsWith("yearn.dao.live.action.v1:"))!;
+    localStorage.setItem(key, "{damaged");
+    const second = renderHookWithProviders(useActions);
+    await act(async () => { await second.result.current.vote("yea"); });
+    expect(send).toHaveBeenCalledOnce();
+    expect(second.result.current.state.errorMessage).toContain("cannot be read");
+    expect(localStorage.getItem(key)).toBe("{damaged");
+  });
+  it("does not treat a manually recovered earlier creation as the interrupted proposal", async () => {
+    const b = recoveredReview();
+    const proposer = { ...deriveDaoProposerState(getDaoMockFixture("discussion").proposer), address: b.address };
+    const publication = { fingerprint: b.identity.digest, cid: b.identity.cid, canonicalBytes: b.bytes, publishedAt: 100 };
+    const key = daoAuthoringStorageKey(daoDeploymentScope(getDaoDeployments()), b.address);
+    const submission = { account: b.address, chainId: 1, kind: "safe" as const, hashKind: "safe-proposal" as const, submittedBlock: "0" };
+    saveDaoAuthoringRecovery(key, b.review, publication, null, proposer.expectedVotingEpoch, undefined, submission);
+    sessionStorage.clear();
+    const hook = renderHookWithProviders(() => useDaoAuthoringServices(b.address, proposer));
+    await act(async () => { await hook.result.current.services.recoverSubmission!(hash); });
+    vi.mocked(waitForDaoReceipt).mockResolvedValue({ ...receipt, logs: [encodeDaoProposeLog({ address: DAO_MOCK_VOTING_ADDRESS, contentDigest: b.identity.digest,
+      logIndex: 0, proposalId: 0n, proposer: b.address, script: "0x", votingEpoch: proposer.expectedVotingEpoch })] });
+    await act(async () => { await expect(hook.result.current.services.confirm(b.review, publication, hash, proposer.expectedVotingEpoch)).rejects.toMatchObject({ code: "DAO_RECONCILIATION_REQUIRED" }); });
+    const current = readDaoAuthoringRecovery(key, b.address)!;
+    expect(current.walletSubmission?.reconciliationVerified).toBe(true);
+    expect(current.transactionHash).toBe(replacement);
+    expect(await hook.result.current.services.finishWalletReview!(submission)).toBe(false);
+    await act(async () => { expect(await hook.result.current.services.finishWalletReview!(current.walletSubmission!)).toBe(true); });
+    expect(readDaoAuthoringRecovery(key, b.address)).toMatchObject({ transactionHash: null, walletSubmission: undefined, publication: { fingerprint: b.identity.digest } });
+  });
+  it.each(["replaced", "removed"])("discards a failed-write fallback after another tab %s its disk intent", async kind => {
+    const originalSet = Storage.prototype.setItem;
+    vi.spyOn(Storage.prototype, "setItem").mockImplementation(function (this: Storage, key, value) {
+      if (this === localStorage && value.includes('"submissionHash"')) throw new Error("Quota");
+      originalSet.call(this, key, value);
+    });
+    const useActions = setupAction(async () => hash);
+    vi.mocked(waitForDaoReceipt).mockRejectedValueOnce(new DaoTransactionPendingError());
+    const hook = renderHookWithProviders(useActions);
+    await act(async () => { await hook.result.current.vote("yea"); });
+    const key = Object.keys(localStorage).find(key => key.startsWith("yearn.dao.live.action.v1:"))!;
+    const old = hook.result.current.pendingAction!;
+    expect(old.transactionHash).toBe(hash);
+    hook.unmount();
+    const next = kind === "removed" ? null : JSON.stringify({ ...JSON.parse(localStorage.getItem(key)!), walletSubmission: {
+      ...old.walletSubmission, submissionHash: replacement, intentId: crypto.randomUUID(),
+    }, transactionHash: replacement });
+    if (next) originalSet.call(localStorage, key, next); else localStorage.removeItem(key);
+    expect(readDaoActionRaw(key)).toBe(next);
+    vi.mocked(waitForDaoReceipt).mockResolvedValueOnce(receipt);
+    await expect(confirmDaoAction(key, old as import("@/lib/clients/dao/action-recovery").DaoActionRecovery)).rejects.toThrow("changed");
+    expect(localStorage.getItem(key)).toBe(next);
+  });
+  it("restores the wallet context of a legacy Safe action before canonical confirmation", async () => {
+    const useActions = setupAction(async () => hash);
+    vi.mocked(waitForDaoReceipt).mockRejectedValueOnce(new DaoTransactionPendingError());
+    const first = renderHookWithProviders(useActions);
+    await act(async () => { await first.result.current.vote("yea"); });
+    first.unmount();
+    const key = Object.keys(localStorage).find(key => key.startsWith("yearn.dao.live.action.v1:"))!;
+    const legacy = JSON.parse(localStorage.getItem(key)!); delete legacy.walletSubmission;
+    localStorage.removeItem(key); sessionStorage.setItem(key, JSON.stringify(legacy));
+    vi.mocked(restoreDaoWalletSubmission).mockResolvedValueOnce({ account: DAO_MOCK_ACCOUNT_ADDRESS, chainId: 1, kind: "safe", submissionHash: hash, submittedBlock: "0", hashKind: "unknown" });
+    vi.mocked(waitForDaoReceipt).mockResolvedValueOnce(receipt);
+    const second = renderHookWithProviders(useActions);
+    await act(async () => { await second.result.current.retryConfirmation(); });
+    expect(second.result.current.pendingAction).toMatchObject({ transactionHash: replacement, walletSubmission: { kind: "safe", submissionHash: hash }, receiptState: "confirmed" });
+    expect(localStorage.getItem(key)).not.toBeNull();
+    expect(sessionStorage.getItem(key)).toBeNull();
+  });
+  it("keeps neutral review available after an unverified candidate for an originally unknown creation", async () => {
+    const b = recoveredReview();
+    const proposer = { ...deriveDaoProposerState(getDaoMockFixture("discussion").proposer), address: b.address };
+    const publication = { fingerprint: b.identity.digest, cid: b.identity.cid, canonicalBytes: b.bytes, publishedAt: 100 };
+    const key = daoAuthoringStorageKey(daoDeploymentScope(getDaoDeployments()), b.address);
+    const submission = { account: b.address, chainId: 1, kind: "safe" as const, hashKind: "safe-proposal" as const, submittedBlock: "0" };
+    saveDaoAuthoringRecovery(key, b.review, publication, null, proposer.expectedVotingEpoch, undefined, submission);
+    const hook = renderHookWithProviders(() => useDaoAuthoringServices(b.address, proposer));
+    await hook.result.current.services.recoverSubmission!(hash);
+    vi.mocked(waitForDaoReceipt).mockRejectedValue(new DaoTransactionPendingError());
+    await expect(hook.result.current.services.confirm(b.review, publication, hash, proposer.expectedVotingEpoch)).rejects.toThrow();
+    const current = readDaoAuthoringRecovery(key, b.address)!;
+    expect(current.walletSubmission?.reconciliationVerified).toBe(false);
+    expect(await hook.result.current.services.finishWalletReview!(current.walletSubmission!)).toBe(true);
+    saveDaoAuthoringRecovery(key, b.review, publication, hash, proposer.expectedVotingEpoch, undefined, { ...submission, submissionHash: hash });
+    expect(await hook.result.current.services.finishWalletReview!({ ...submission, submissionHash: hash })).toBe(false);
+  });
+  it("refuses an old creation receipt after a newer intent replaces the saved submission", async () => {
+    const b = recoveredReview();
+    const proposer = { ...deriveDaoProposerState(getDaoMockFixture("discussion").proposer), address: b.address };
+    const publication = { fingerprint: b.identity.digest, cid: b.identity.cid, canonicalBytes: b.bytes, publishedAt: 100 };
+    const key = daoAuthoringStorageKey(daoDeploymentScope(getDaoDeployments()), b.address);
+    const newer = { account: b.address, chainId: 1, kind: "transaction" as const, hashKind: "transaction" as const, submissionHash: replacement, submittedBlock: "0" };
+    saveDaoAuthoringRecovery(key, b.review, publication, replacement, proposer.expectedVotingEpoch, undefined, newer);
+    const raw = localStorage.getItem(key);
+    const hook = renderHookWithProviders(() => useDaoAuthoringServices(b.address, proposer));
+    await expect(hook.result.current.services.confirm(b.review, publication, hash, proposer.expectedVotingEpoch)).rejects.toThrow("changed");
+    expect(waitForDaoReceipt).not.toHaveBeenCalled();
+    expect(localStorage.getItem(key)).toBe(raw);
+  });
+  it("allows no-hash creation review without a receipt and refuses a stale original intent", async () => {
+    const b = recoveredReview();
+    const proposer = { ...deriveDaoProposerState(getDaoMockFixture("discussion").proposer), address: b.address };
+    const publication = { fingerprint: b.identity.digest, cid: b.identity.cid, canonicalBytes: b.bytes, publishedAt: 100 };
+    const key = daoAuthoringStorageKey(daoDeploymentScope(getDaoDeployments()), b.address);
+    const submission = { account: b.address, chainId: 1, kind: "safe" as const, submittedBlock: "0", intentId: crypto.randomUUID() };
+    saveDaoAuthoringRecovery(key, b.review, publication, null, proposer.expectedVotingEpoch, undefined, submission);
+    const hook = renderHookWithProviders(() => useDaoAuthoringServices(b.address, proposer));
+    await act(async () => { expect(await hook.result.current.services.finishWalletReview!({ ...submission, intentId: crypto.randomUUID() })).toBe(false); });
+    expect(localStorage.getItem(key)).not.toBeNull();
+    await act(async () => { expect(await hook.result.current.services.finishWalletReview!(submission)).toBe(true); });
+    expect(localStorage.getItem(key)).toBeNull();
+    expect(waitForDaoReceipt).not.toHaveBeenCalled();
   });
 });

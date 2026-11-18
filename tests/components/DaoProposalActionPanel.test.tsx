@@ -1,3 +1,4 @@
+import type { Hex } from "viem";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { DaoProposalActionPanelView } from "@/app/dao/proposals/[id]/DaoProposalActionPanel";
@@ -21,6 +22,7 @@ import {
 import type { TxState } from "@/lib/tx/types";
 
 const handlers = {
+  onFinishWalletReview: vi.fn(async () => undefined),
   onRetryReceipt: vi.fn(async () => undefined),
   onExecute: vi.fn(async () => undefined),
   onFlag: vi.fn(async () => undefined),
@@ -47,6 +49,35 @@ describe("DAO proposal action panel", () => {
     expect(screen.getByRole("button", { name: "Review vote" })).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: "Retry receipt confirmation" }));
     expect(handlers.onRetryReceipt).toHaveBeenCalledOnce();
+    expect(handlers.onVote).not.toHaveBeenCalled();
+  });
+
+  it("links queued Safe proposals to the Safe queue instead of an Ethereum transaction", () => {
+    applyDaoMockFixture("voting");
+    const proposal = selectedProposal();
+    const hash = ("0x" + "ab".repeat(32)) as Hex;
+    renderSelected({ pendingAction: { action: "vote", ref: proposal.ref, actor: DAO_MOCK_ACCOUNT_ADDRESS,
+      transactionHash: hash, submittedAt: DAO_MOCK_NOW, direction: "yea", effectiveVotingWeight: null, reason: null, receiptState: "unknown",
+      walletSubmission: { account: DAO_MOCK_ACCOUNT_ADDRESS, chainId: 1, kind: "safe", submissionHash: hash, submittedBlock: "0" } },
+      txState: { status: "pending", hash } });
+    expect(screen.getByRole("link", { name: "Check in Safe" })).toHaveAttribute("href", "https://app.safe.global/transactions/queue?safe=eth:" + DAO_MOCK_ACCOUNT_ADDRESS);
+    expect(screen.queryByRole("link", { name: "View transaction" })).toBeNull();
+    expect(screen.getByRole("button", { name: "Review vote" })).toBeDisabled();
+  });
+  it("requires a separate explicit queue review before clearing a missing-hash intent", () => {
+    applyDaoMockFixture("voting");
+    const proposal = selectedProposal();
+    renderSelected({ pendingAction: { action: "vote", ref: proposal.ref, actor: DAO_MOCK_ACCOUNT_ADDRESS,
+      transactionHash: null, submittedAt: DAO_MOCK_NOW, direction: "yea", effectiveVotingWeight: null, reason: null, receiptState: "unknown",
+      walletSubmission: { account: DAO_MOCK_ACCOUNT_ADDRESS, chainId: 1, kind: "safe", submittedBlock: "0" } },
+      txState: { status: "error" } });
+    expect(screen.getByRole("button", { name: "Retry receipt confirmation" })).toBeDisabled();
+    expect(screen.queryByRole("button", { name: /I checked the wallet queue/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Review uncertain submission" }));
+    expect(screen.getByText(/It does not cancel a wallet proposal/)).toBeVisible();
+    expect(handlers.onFinishWalletReview).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /I checked the wallet queue/ }));
+    expect(handlers.onFinishWalletReview).toHaveBeenCalledOnce();
     expect(handlers.onVote).not.toHaveBeenCalled();
   });
 

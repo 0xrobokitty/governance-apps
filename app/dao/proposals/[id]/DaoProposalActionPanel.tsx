@@ -1,4 +1,6 @@
 "use client";
+import type { Hex } from "viem";
+import { isDaoSmartWalletSubmission, daoWalletSubmissionUrl, isDaoSubmissionHash } from "@/lib/clients/dao/wallet-submission";
 
 import { getDaoDisplayTitle } from "@/lib/clients/dao/title-overrides";
 import { ProposalTitleCorrection } from "../../components/ProposalTitleCorrection";
@@ -74,6 +76,7 @@ export function DaoProposalActionPanel({ proposal }: { proposal: DaoProposal }) 
       activeAction={writes.activeAction}
       executionGuard={runtime?.executionGuard ?? accountQuery.data?.liveProposal?.rules.executionGuard ?? "guarded"}
       onRetryReceipt={writes.retryConfirmation}
+      onFinishWalletReview={writes.finishWalletReview}
       onExecute={writes.executeProposal}
       onFlag={writes.flag}
       onRetract={writes.retract}
@@ -94,6 +97,7 @@ export function DaoProposalActionPanelView({
   activeAction,
   executionGuard,
   onRetryReceipt,
+  onFinishWalletReview,
   onExecute,
   onFlag,
   onRetract,
@@ -108,7 +112,8 @@ export function DaoProposalActionPanelView({
   accountLoading: boolean;
   activeAction: DaoActionType | null;
   executionGuard: DaoExecutionGuard;
-  onRetryReceipt?: () => Promise<void>;
+  onRetryReceipt?: (recoveredHash?: Hex) => Promise<void>;
+  onFinishWalletReview?: () => Promise<void>;
   onExecute: () => Promise<void>;
   onFlag: (reason: string) => Promise<void>;
   onRetract: () => Promise<void>;
@@ -177,6 +182,7 @@ export function DaoProposalActionPanelView({
 
       <TransactionNotice
         onRetryReceipt={onRetryReceipt}
+        onFinishWalletReview={onFinishWalletReview}
         activeAction={activeAction}
         pendingAction={pendingAction}
         state={txState}
@@ -797,6 +803,7 @@ function ReasonField({
 
 function TransactionNotice({
   onRetryReceipt,
+  onFinishWalletReview,
   activeAction,
   pendingAction,
   state,
@@ -804,9 +811,15 @@ function TransactionNotice({
   activeAction: DaoActionType | null;
   pendingAction: DaoPendingAction | null;
   state: TxState;
-  onRetryReceipt?: () => Promise<void>;
+  onRetryReceipt?: (recoveredHash?: Hex) => Promise<void>;
+  onFinishWalletReview?: () => Promise<void>;
 }) {
+  const [recoveredHash, setRecoveredHash] = useState("");
+  const [reviewedUncertainId, setReviewedUncertainId] = useState<string | null>(null);
+  const uncertainId = JSON.stringify(pendingAction?.walletSubmission);
   if (pendingAction) {
+    const recoverable = pendingAction.transactionHash === null || (pendingAction.walletSubmission?.reconciliationRequired && pendingAction.receiptState === "unknown");
+    const safePending = isDaoSmartWalletSubmission(pendingAction.walletSubmission) && (pendingAction.receiptState === "unknown" || pendingAction.receiptState === "consumed" || pendingAction.receiptState === "reconciliation_required");
     return (
       <div
         role="status"
@@ -814,16 +827,19 @@ function TransactionNotice({
         className="space-y-1 rounded-box bg-blue-50 p-3 text-blue-950 dark:bg-blue-950/40 dark:text-blue-100"
       >
         <p className="text-pretty text-sm font-bold">
-          {pendingAction.receiptState === "unknown" ? daoCopy.actions.transaction.receiptUnknown :
+          {pendingAction.receiptState === "reconciliation_required" ? daoCopy.actions.transaction.walletReview : pendingAction.transactionHash === null ? daoCopy.actions.transaction.submissionUnknown : pendingAction.receiptState === "consumed" ? daoCopy.actions.transaction.safeConsumed : safePending ? daoCopy.actions.transaction.safePending : pendingAction.receiptState === "unknown" ? daoCopy.actions.transaction.receiptUnknown :
             pendingAction.receiptState === "reverted" || pendingAction.receiptState === "replaced" ? daoCopy.actions.transaction.failed : daoCopy.actions.transaction.awaitingIndex}
         </p>
         <p className="text-pretty text-xs leading-5">
           {pendingAction.confirmationError ?? (pendingAction.receiptState === "unknown"
             ? daoCopy.actions.transaction.receiptUnknownBody : daoCopy.actions.transaction.awaitingIndexBody)}
         </p>
-        <a className="block break-all text-sm underline" href={getEtherscanTransactionUrl(pendingAction.transactionHash) ?? undefined} target="_blank" rel="noopener noreferrer">{daoCopy.actions.transaction.viewTransaction}</a>
+        {safePending && pendingAction.walletSubmission ? <a className="block break-all text-sm underline" href={daoWalletSubmissionUrl(pendingAction.walletSubmission)} target="_blank" rel="noopener noreferrer">{daoCopy.actions.transaction.viewSafe}</a> : pendingAction.transactionHash ? <a className="block break-all text-sm underline" href={getEtherscanTransactionUrl(pendingAction.transactionHash) ?? undefined} target="_blank" rel="noopener noreferrer">{daoCopy.actions.transaction.viewTransaction}</a> : null}
+        {(recoverable || safePending && pendingAction.receiptState === "unknown") ? <label className="block text-sm">{recoverable ? daoCopy.actions.transaction.recoverHash : daoCopy.actions.transaction.executionHash}<input className="mt-1 block w-full rounded border border-border bg-surface p-2" value={recoveredHash} onChange={event => setRecoveredHash(event.target.value.trim())} placeholder="0x…" /></label> : null}
+        {recoverable && onFinishWalletReview ? <div className="space-y-2">{reviewedUncertainId === uncertainId ? <><p>{daoCopy.actions.transaction.reviewUncertainBody}</p><Button type="button" variant="secondary" onClick={() => { void onFinishWalletReview(); }}>{daoCopy.actions.transaction.finishWalletReview}</Button></> : <Button type="button" variant="secondary" onClick={() => setReviewedUncertainId(uncertainId)}>{daoCopy.actions.transaction.reviewUncertain}</Button>}</div> : null}
+        {pendingAction.receiptState === "reconciliation_required" && onFinishWalletReview ? <Button type="button" variant="secondary" onClick={() => { void onFinishWalletReview(); }}>{daoCopy.actions.transaction.finishWalletReview}</Button> : null}
         {pendingAction.receiptState === "unknown" && onRetryReceipt ? (
-          <Button type="button" variant="secondary" size="sm" disabled={state.status === "mining" || state.status === "submitted"} onClick={() => { void onRetryReceipt(); }}>
+          <Button type="button" variant="secondary" size="sm" disabled={state.status === "mining" || state.status === "submitted" || ((recoverable || recoveredHash.length > 0) && !isDaoSubmissionHash(recoveredHash))} onClick={() => { void onRetryReceipt(isDaoSubmissionHash(recoveredHash) ? recoveredHash : undefined); }}>
             {daoCopy.actions.transaction.retryReceipt}
           </Button>
         ) : null}

@@ -18,7 +18,7 @@ function controller(): RecoveryController {
     snapshot: new MockRecoveryPreviewClient().getSnapshot(),
     error: null, refresh: vi.fn(), approve: vi.fn(), take: vi.fn(), redeem: vi.fn(),
     tx: { state: { status: "pending", hash: proposal }, reset: vi.fn() } as unknown as RecoveryController["tx"],
-    pendingExecution: pending, refreshPending: vi.fn().mockResolvedValue(null),
+    pendingExecution: pending, refreshPending: vi.fn().mockResolvedValue(null), reconcilePending: vi.fn().mockResolvedValue(null),
   };
 }
 afterEach(cleanup);
@@ -56,6 +56,77 @@ describe("pending recovery execution", () => {
     await act(async () => { fireEvent.click(screen.getByRole("button", { name: "Check Safe execution" })); });
     expect(c.refreshPending).toHaveBeenCalledWith();
     expect(c.take).not.toHaveBeenCalled();
+    expect(c.redeem).not.toHaveBeenCalled();
+  });
+
+  it("checks an execution-hash fallback while keeping the original Safe proposal", async () => {
+    const c = controller();
+    render(<RecoveryDashboard controller={c} mode="live" />);
+    fireEvent.click(screen.getByRole("button", { name: "Transaction details" }));
+    fireEvent.change(screen.getByLabelText("Execution transaction hash"), { target: { value: execution } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Check execution transaction" })));
+    expect(c.refreshPending).toHaveBeenCalledExactlyOnceWith(undefined, execution);
+    expect(screen.getByText(new RegExp(proposal))).toBeVisible();
+    expect(document.querySelector('a[href*="/tx/"]')).toBeNull();
+    expect(c.take).not.toHaveBeenCalled();
+    expect(c.reconcilePending).not.toHaveBeenCalled();
+  });
+
+  it("requires explicit acknowledgment for a no-hash review and resets it for a changed intent", async () => {
+    const c = controller();
+    c.pendingExecution = { ...pending, submissionHash: undefined, status: "attention" };
+    const view = render(<RecoveryDashboard controller={c} mode="live" />);
+    fireEvent.click(screen.getByRole("button", { name: "Troubleshoot transaction" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review uncertain submission" }));
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Finish queue reconciliation" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    expect(screen.getByRole("button", { name: "Finish queue reconciliation" })).toBeEnabled();
+    c.pendingExecution = { ...c.pendingExecution, maxShares: "101" };
+    view.rerender(<RecoveryDashboard controller={c} mode="live" />);
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Troubleshoot transaction" }));
+    fireEvent.click(screen.getByRole("button", { name: "Review uncertain submission" }));
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    fireEvent.click(screen.getByRole("checkbox"));
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Finish queue reconciliation" })));
+    expect(c.reconcilePending).toHaveBeenCalledExactlyOnceWith(c.pendingExecution, undefined, true);
+    expect(c.refreshPending).not.toHaveBeenCalled();
+    expect(c.take).not.toHaveBeenCalled();
+    expect(c.redeem).not.toHaveBeenCalled();
+  });
+
+  it("does not confirm a manually checked candidate and resets acknowledgment when it changes", async () => {
+    const c = controller();
+    c.pendingExecution = { ...pending, submissionHash: undefined, status: "attention" };
+    c.refreshPending = vi.fn().mockResolvedValue({ status: "reconciliation-required", hash: execution });
+    render(<RecoveryDashboard controller={c} mode="live" />);
+    fireEvent.click(screen.getByRole("button", { name: "Troubleshoot transaction" }));
+    const input = screen.getByRole("textbox");
+    fireEvent.change(input, { target: { value: proposal } });
+    await act(async () => fireEvent.click(screen.getByRole("button", { name: "Check Safe execution" })));
+    expect(c.refreshPending).toHaveBeenCalledWith(proposal);
+    expect(screen.getByText(/A matching execution was verified/)).toBeVisible();
+    expect(screen.getByRole("checkbox")).not.toBeChecked();
+    expect(screen.getByRole("button", { name: "Finish queue reconciliation" })).toBeDisabled();
+    fireEvent.click(screen.getByRole("checkbox"));
+    fireEvent.change(input, { target: { value: execution } });
+    expect(screen.queryByRole("checkbox")).not.toBeInTheDocument();
+    expect(c.reconcilePending).not.toHaveBeenCalled();
+    expect(document.querySelector('a[href*="/tx/"]')).toBeNull();
+    expect(screen.queryByText("Transaction confirmed on Ethereum.")).not.toBeInTheDocument();
+  });
+
+  it("shows a reconciled outcome without implying payout, cancellation, or automatic redemption", () => {
+    const c = controller();
+    c.pendingExecution = null;
+    c.completion = { action: "take", status: "reconciled", hash: execution, exitMode: "complete" };
+    c.tx = { ...c.tx, state: { status: "idle" } };
+    render(<RecoveryDashboard controller={c} mode="live" />);
+    expect(screen.getByText(/original submission outcome remains unknown/)).toBeVisible();
+    expect(screen.queryByText(/can no longer execute|Transaction confirmed on Ethereum/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Continue remaining redemption" })).not.toBeInTheDocument();
+    expect(document.querySelector('a[href*="/tx/"]')).toBeNull();
     expect(c.redeem).not.toHaveBeenCalled();
   });
 

@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { normalizeTxError } from "@/lib/tx/errors";
+import { isExplicitWalletRejection, normalizeTxError } from "@/lib/tx/errors";
 
 describe("normalizeTxError", () => {
   it("maps user rejection", () => {
@@ -44,5 +44,18 @@ describe("normalizeTxError", () => {
     const err = normalizeTxError(new Error("HTTP request failed"));
     expect(err.code).toBe("network");
     expect(err.message).toContain("Network issue");
+  });
+});
+
+describe("definite wallet rejection", () => {
+  it("requires an explicit numeric 4001 code in a bounded cause chain", () => {
+    expect(isExplicitWalletRejection({ cause: { cause: { code: 4001 } } })).toBe(true);
+    expect(isExplicitWalletRejection({ name: "UserRejectedRequestError", message: "RPC rejected after submission" })).toBe(false);
+    expect(isExplicitWalletRejection({ code: "4001" })).toBe(false);
+    const cycle: { cause?: unknown } = {}; cycle.cause = cycle;
+    expect(isExplicitWalletRejection(cycle)).toBe(false);
+    let nested: unknown = { code: 4001 };
+    for (let depth = 0; depth < 11; depth++) nested = { cause: nested };
+    expect(isExplicitWalletRejection(nested)).toBe(false);
   });
 });

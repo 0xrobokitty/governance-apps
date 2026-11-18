@@ -1,12 +1,15 @@
 "use client";
 
-import { useEffect, useRef, useSyncExternalStore } from "react";
+import { useCallback, useEffect, useRef, useSyncExternalStore } from "react";
 import { useQuery } from "@tanstack/react-query";
-import { erc20Abi, type Address, type Hash, type PublicClient } from "viem";
+import { encodeFunctionData, erc20Abi, type Address, type Hash, type PublicClient } from "viem";
+import { readWalletSubmissionContext } from "@/lib/tx/wallet-context";
+import { validateSafeMinedCall } from "@/lib/tx/safe-call";
 import { useAccount, usePublicClient, type Config } from "wagmi";
 import { getAccount, simulateContract, writeContract } from "wagmi/actions";
 import { wagmiConfig } from "@/web3/wagmi";
 import { useTx } from "@/lib/tx/useTx";
+import { isExplicitWalletRejection } from "@/lib/tx/errors";
 import { YETH_RECOVERY_VAULT } from "@/lib/clients/yeth/deployment";
 import { getRecoveryEnvironment } from "@/lib/clients/yeth/recovery/environment";
 import {
@@ -24,6 +27,11 @@ import {
 } from "@/lib/clients/yeth/recovery/onchain";
 import {
   clearRecoveryPending,
+  completeRecoveryPending,
+  assertRecoveryPending,
+  sameRecoveryIntent,
+  retainRecoveryPending,
+  withRecoveryPendingLock,
   dismissRecoveryCompletion,
   getRecoveryCompletion,
   getRecoveryPending,
@@ -62,16 +70,6 @@ export type RecoveryExitStep = {
 
 const recoveryWagmiConfig: Config = wagmiConfig;
 const noPending = () => null;
-function explicitlyRejected(error: unknown): boolean {
-  let current = error;
-  for (let i = 0; i < 6 && current && typeof current === "object"; i++) {
-    const value = current as { code?: number; name?: string; cause?: unknown };
-    if (value.code === 4001 || value.name === "UserRejectedRequestError")
-      return true;
-    current = value.cause;
-  }
-  return false;
-}
 export function useYethRecoveryActions(indexedBlock?: bigint) {
   const account = useAccount();
   const environment = getRecoveryEnvironment();
@@ -122,7 +120,7 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
   const refresh = async () => {
     await accountQuery.refetch();
   };
-  const context = (expected?: Address) => {
+  const context = useCallback((expected?: Address) => {
     const current = getAccount(wagmiConfig);
     if (
       !publicClient ||
@@ -140,7 +138,7 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
       address: current.address,
       connector: current.connector,
     };
-  };
+  }, [publicClient, environment.chainId, environment.fork]);
   const getExitWallet = (): RecoveryExitWallet => {
     const current = context();
     return { address: current.address, chainId: environment.chainId, connectorId: current.connector?.id ?? "unknown" };
@@ -158,19 +156,29 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
     if (minimumBlock !== undefined && state.blockNumber < minimumBlock) throw new Error("The wallet balance is still updating. Continue after it refreshes.");
     return state;
   };
-  const providerFor = async (
-    record: RecoveryPending,
-  ): Promise<RecoveryWalletProvider | undefined> => {
-    const { connector } = context(record.account);
-    if (record.kind === "safe" && connector?.id !== "safe") return undefined;
-    if (!connector?.getProvider) return undefined;
-    const provider = await connector.getProvider();
-    if (
-      !provider ||
-      typeof (provider as RecoveryWalletProvider).request !== "function"
-    )
-      throw new Error("The Safe provider is unavailable.");
-    return provider as RecoveryWalletProvider;
+  const walletContext = (client: PublicClient) => readWalletSubmissionContext(client, () => {
+    const current = getAccount(wagmiConfig);
+    return { account: current.address, chainId: current.chainId, connector: current.connector };
+  });
+  const providerFor = async (record: RecoveryPending): Promise<RecoveryWalletProvider | undefined> => {
+    const wallet = await walletContext(context(record.account).client);
+    context(record.account);
+    return wallet.provider;
+  };
+  const updatePending = async (record: RecoveryPending, patch: Partial<RecoveryPending>) =>
+    withRecoveryPendingLock(record.chainId, record.account, async () => {
+      context(record.account);
+      const current = assertRecoveryPending(record);
+      const updated = { ...current, ...patch };
+      saveRecoveryPending(updated, current);
+      return updated;
+    });
+  const assertCanonical = async (client: PublicClient, record: RecoveryPending, proof: { blockNumber: bigint; blockHash: Hash }) => {
+    const [block, chainId] = await Promise.all([client.getBlock({ blockNumber: proof.blockNumber }), client.getChainId()]);
+    if (!block.hash || block.hash.toLowerCase() !== proof.blockHash.toLowerCase() || chainId !== record.chainId) {
+      throw new Error("The execution block changed. Check the transaction again.");
+    }
+    context(record.account);
   };
   const prove = async (
     record: RecoveryPending,
@@ -249,12 +257,7 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
   };
   const currentRecord = (record: RecoveryPending) => {
     const current = getRecoveryPending(record.chainId, record.account);
-    return current?.id === record.id &&
-      current.submissionHash === record.submissionHash &&
-      current.replacementHash === record.replacementHash &&
-      current.originalSignedTransaction === record.originalSignedTransaction
-      ? current
-      : null;
+    return current && sameRecoveryIntent(current, record) ? current : null;
   };
   const priorResult = (record: RecoveryPending) => {
     const prior = getRecoveryCompletion(record.chainId, record.account);
@@ -283,68 +286,57 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
     verificationHash?: Hash,
   ): Promise<RecoveryCompletion | null> => {
     if (record.originalSignedTransaction && record.replacementHash) {
-      const replacement = await resolveRecoveryReplacement(
-        client,
-        record,
-        record.originalSignedTransaction,
-        record.replacementHash,
-      );
-      if (replacement.status === "nonce-consumed")
-        return neutralCompletion(record, replacement.receipt.transactionHash);
-      try {
-        return await prove(record, client, {
-          status: "mined",
-          receipt: replacement.receipt,
-          failed: replacement.receipt.status !== "success",
-          nonceConsumed: true,
-        });
-      } catch {
-        return neutralCompletion(record, replacement.receipt.transactionHash);
+      const replacement = await resolveRecoveryReplacement(client, record, record.originalSignedTransaction, record.replacementHash);
+      let result: RecoveryCompletion;
+      if (replacement.status === "nonce-consumed") result = neutralCompletion(record, replacement.receipt.transactionHash);
+      else {
+        try {
+          result = await prove(record, client, {
+            status: "mined", receipt: replacement.receipt,
+            failed: replacement.receipt.status !== "success", nonceConsumed: true,
+          });
+        } catch { result = neutralCompletion(record, replacement.receipt.transactionHash); }
       }
+      await assertCanonical(client, record, replacement.receipt);
+      return result;
     }
-    const resolution = await resolveRecoveryReceipt(
-      client,
-      record,
-      provider,
-      verificationHash,
-    );
+    const resolution = await resolveRecoveryReceipt(client, record, provider, verificationHash);
     if (resolution.status === "mined") {
-      try {
-        return await prove(record, client, resolution);
-      } catch (error) {
-        // Execution can be final while its financial outcome is unproved,
-        // for example an approval followed by spending in the same block.
-        if (resolution.nonceConsumed)
-          return neutralCompletion(record, resolution.receipt.transactionHash);
-        throw error;
-      }
+      // An outer Safe execution can revert without consuming the proposal.
+      if (!resolution.nonceConsumed) return null;
+      if (resolution.safeExecution || verificationHash) await verifyExecutionCall(record, client, resolution);
+      let result: RecoveryCompletion;
+      try { result = await prove(record, client, resolution); }
+      catch { result = neutralCompletion(record, resolution.receipt.transactionHash); }
+      // Reorgs must never be converted into a consumed-nonce outcome.
+      await assertCanonical(client, record, resolution.receipt);
+      return result;
     }
     if (record.kind === "safe" && resolution.error) {
       try {
-        if (await resolveSafeCancellation(client, record))
+        const proof = await resolveSafeCancellation(client, record);
+        if (proof) {
+          await assertCanonical(client, record, proof);
           return neutralCompletion(record);
+        }
       } catch {
         /* Unverified SDK metadata cannot release a queued proposal. */
       }
     }
     if (record.kind === "transaction" && record.originalSignedTransaction) {
       try {
-        if (
-          await resolveRecoveryTransactionNonce(
-            client,
-            record,
-            record.originalSignedTransaction,
-          )
-        )
+        const proof = await resolveRecoveryTransactionNonce(client, record, record.originalSignedTransaction);
+        if (proof) {
+          await assertCanonical(client, record, proof);
           return neutralCompletion(record);
+        }
       } catch {
         /* Keep unknown nonce/replacement states pending. */
       }
     }
     const current = currentRecord(record);
     if (current)
-      saveRecoveryPending({
-        ...current,
+      await updatePending(current, {
         status: resolution.error
           ? "attention"
           : record.kind === "safe"
@@ -374,9 +366,7 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
       );
       const current = currentRecord(record);
       if (!current) return record;
-      const captured = { ...current, originalSignedTransaction };
-      saveRecoveryPending(captured);
-      return captured;
+      return await updatePending(current, { originalSignedTransaction });
     } catch {
       return record;
     } // Opaque proposal IDs are not normal Ethereum hashes.
@@ -385,60 +375,95 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
     record: RecoveryPending,
     client: PublicClient,
     provider?: RecoveryWalletProvider,
+    verificationHash?: Hash,
   ): Promise<RecoveryCompletion | null> => {
     const latest = getRecoveryPending(record.chainId, record.account);
-    if (
-      latest?.id === record.id &&
-      latest.submissionHash === record.submissionHash
-    )
-      record = latest;
+    if (latest && sameRecoveryIntent(latest, record)) record = latest;
     record = await captureOriginal(record, client);
     if (!currentRecord(record)) return priorResult(record);
-    const result = await resolveOutcome(record, client, provider);
+    const result = await resolveOutcome(record, client, provider, verificationHash);
     if (!currentRecord(record)) return priorResult(record);
     if (!result) return null;
-    saveRecoveryCompletion(result);
-    clearRecoveryPending(record);
-    return result;
+    return withRecoveryPendingLock(record.chainId, record.account, async () => {
+      context(record.account);
+      completeRecoveryPending(result);
+      return result;
+    });
   };
-  const preserveAttention = (record: RecoveryPending, message: string) => {
-    const current = currentRecord(record);
-    if (current)
-      saveRecoveryPending({ ...current, status: "attention", error: message });
+  const preserveAttention = async (record: RecoveryPending, message: string) => {
+    if (!currentRecord(record)) return;
+    try { await updatePending(record, { status: "attention", error: message }); }
+    catch { /* A changed intent or another tab's lock must retain its own state. */ }
   };
-  const refreshPending = async (
-    submissionHash?: Hash,
-  ): Promise<RecoveryCompletion | null> => {
+  const verifyExecutionCall = async (record: RecoveryPending, client: PublicClient, resolution: Extract<Awaited<ReturnType<typeof resolveRecoveryReceipt>>, { status: "mined" }>) => {
+    const expected = {
+      account: record.account, chainId: record.chainId, value: 0n,
+      to: record.action === "take" ? RECOVERY_AUCTION : YETH_RECOVERY_VAULT,
+      data: record.action === "approve" || record.action === "reset"
+        ? encodeFunctionData({ abi: erc20Abi, functionName: "approve", args: [RECOVERY_AUCTION, BigInt(record.maxShares)] })
+        : record.action === "take"
+          ? encodeFunctionData({ abi: recoveryAuctionAbi, functionName: "take", args: [RECOVERY_WETH, BigInt(record.requestedWeth ?? "0"), record.account] })
+          : encodeFunctionData({ abi: recoveryVaultAbi, functionName: "redeem", args: [BigInt(record.maxShares), record.account, record.account] }),
+    };
+    const receipt = resolution.receipt;
+    const transaction = await client.getTransaction({ hash: receipt.transactionHash });
+    if (transaction.hash.toLowerCase() !== receipt.transactionHash.toLowerCase() || transaction.blockNumber !== receipt.blockNumber ||
+        transaction.blockHash?.toLowerCase() !== receipt.blockHash.toLowerCase()) throw new Error("The execution does not match its canonical receipt.");
+    if (resolution.safeExecution) validateSafeMinedCall(transaction, expected, resolution.safeExecution);
+    else if (record.kind === "safe" || transaction.from.toLowerCase() !== record.account.toLowerCase() ||
+        transaction.to?.toLowerCase() !== expected.to.toLowerCase() || transaction.input.toLowerCase() !== expected.data.toLowerCase() ||
+        transaction.value !== 0n || (transaction.chainId !== undefined && transaction.chainId !== record.chainId)) {
+      throw new Error("The candidate execution does not match the recovery call.");
+    }
+    await assertCanonical(client, record, receipt);
+  };
+  const candidateExecution = async (record: RecoveryPending, client: PublicClient, candidate: Hash): Promise<Hash> => {
+    if (record.submissionHash || !isRecoveryHash(candidate)) throw new Error("Enter a valid candidate hash for an unidentified submission.");
+    const resolution = await resolveRecoveryReceipt(client, { ...record, submissionHash: candidate, hashKind: "unknown" }, await providerFor(record));
+    if (resolution.status !== "mined" || !resolution.nonceConsumed) throw new Error("The candidate execution could not be verified. The original submission remains unresolved.");
+    await verifyExecutionCall(record, client, resolution);
+    return resolution.receipt.transactionHash;
+  };
+  const refreshPending = async (submissionHash?: Hash, executionHash?: Hash): Promise<RecoveryCompletion | { status: "reconciliation-required"; hash: Hash } | null> => {
     const { client, address } = context();
-    let record = getRecoveryPending(environment.chainId, address);
-    if (!record || checking.current || record.corrupt) return null;
-    if (
-      !record.submissionHash &&
-      isRecoverySubmissionActive(record.chainId, record.account)
-    )
-      return null;
+    const record = getRecoveryPending(environment.chainId, address);
+    if (!record || checking.current || record.corrupt || isRecoverySubmissionActive(record.chainId, record.account)) return null;
     checking.current = true;
     try {
       if (submissionHash) {
-        if (record.submissionHash || !isRecoveryHash(submissionHash))
-          throw new Error(
-            "Only an unknown submission can be linked to a valid wallet hash.",
-          );
-        record = { ...record, submissionHash };
-        saveRecoveryPending(record);
+        const hash = await candidateExecution(record, client, submissionHash);
+        return await withRecoveryPendingLock(record.chainId, record.account, async () => {
+          context(record.account);
+          assertRecoveryPending(record);
+          return { status: "reconciliation-required" as const, hash };
+        });
       }
-      const result = await inspect(record, client, await providerFor(record));
+      if (!record.submissionHash) return null;
+      if (executionHash && !isRecoveryHash(executionHash)) throw new Error("Enter a valid execution transaction hash.");
+      const result = await inspect(record, client, await providerFor(record), executionHash);
       if (result) await refresh();
       return result;
-    } catch {
-      preserveAttention(
-        record,
-        "Execution could not be verified. No transaction was resubmitted. Check this transaction in your wallet and refresh its status.",
-      );
+    } catch (error) {
+      await preserveAttention(record, error instanceof Error ? error.message : "Execution could not be verified. No transaction was resubmitted.");
       return null;
-    } finally {
-      checking.current = false;
-    }
+    } finally { checking.current = false; }
+  };
+  const reconcilePending = async (record: RecoveryPending, submissionHash: Hash | undefined, queueChecked: boolean): Promise<RecoveryCompletion> => {
+    if (!queueChecked) throw new Error("Check the wallet queue and recent activity for unresolved duplicate proposals first.");
+    const { client } = context(record.account);
+    if (record.chainId !== environment.chainId || record.corrupt || record.submissionHash) throw new Error("Only an unidentified submission can be reconciled manually.");
+    assertRecoveryPending(record);
+    const hash = submissionHash ? await candidateExecution(record, client, submissionHash) : undefined;
+    const result: RecoveryCompletion = {
+      ...neutralCompletion(record, hash), status: "reconciled",
+      error: "Queue review recorded. The original submission outcome remains unknown. No recovery payout was established.",
+    };
+    await withRecoveryPendingLock(record.chainId, record.account, async () => {
+      context(record.account);
+      completeRecoveryPending(result);
+    });
+    await refresh();
+    return result;
   };
   const latestNeutral = useRef(neutralCompletion);
   useEffect(() => {
@@ -452,6 +477,7 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
     if (
       !storedCompletion ||
       storedCompletion.verified ||
+      pending?.id === storedCompletion.id ||
       !publicClient ||
       storedCompletion.account.toLowerCase() !==
         account.address?.toLowerCase() ||
@@ -482,7 +508,11 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
           getRecoveryCompletion(environment.chainId, account.address)?.id ===
             storedCompletion.id
         )
-          saveRecoveryCompletion(verified);
+          await withRecoveryPendingLock(verified.chainId, verified.account, async () => {
+            context(verified.account);
+            const current = getRecoveryCompletion(verified.chainId, verified.account);
+            if (!cancelled && current?.id === storedCompletion.id && sameRecoveryIntent(current.intent, storedCompletion.intent) && current.hash === storedCompletion.hash && current.status === storedCompletion.status) saveRecoveryCompletion(verified);
+          });
       } catch {
         /* An unverified persisted receipt must not be displayed as confirmed. */
       }
@@ -492,10 +522,12 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
     };
   }, [
     storedCompletion,
+    pending?.id,
     publicClient,
     account.address,
     account.chainId,
     environment.chainId,
+    context,
   ]);
   const latestRefresh = useRef(refreshPending);
   useEffect(() => {
@@ -622,17 +654,22 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
             throw new Error(
               "A recovery submission is already pending in another tab.",
             );
+          const wallet = await walletContext(client);
+          context(address);
+          if (wallet.account.toLowerCase() !== address.toLowerCase() || wallet.connectorId !== connector?.id) throw new Error("Your wallet changed. Review the transaction again.");
+          if (exitStep?.shouldContinue && !exitStep.shouldContinue()) throw new Error("The exit was paused.");
           record = {
             version: 1,
             id: crypto.randomUUID(),
             account: address,
             chainId: environment.chainId,
             connectorId: connector?.id ?? "unknown",
-            kind: connector?.id === "safe" ? "safe" : "transaction",
+            kind: wallet.kind,
+            hashKind: wallet.hashKind,
             action,
             status: "submitting",
             createdAt: Math.floor(Date.now() / 1000),
-            submittedBlock: state.blockNumber.toString(),
+            submittedBlock: wallet.submittedBlock,
             maxShares: maxShares.toString(),
             requestedWeth: quote?.requestedWeth.toString(),
             exitMode,
@@ -645,36 +682,32 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
           try {
             hash = await send();
           } catch (error) {
-            if (explicitlyRejected(error)) clearRecoveryPending(record);
+            if (isExplicitWalletRejection(error)) clearRecoveryPending(record);
             else
-              preserveAttention(
-                record,
-                "Wallet submission is unresolved. Check your wallet for a transaction or Safe proposal hash. Do not submit again.",
-              );
+              saveRecoveryPending({ ...record, status: "attention", error: "Wallet submission is unresolved. Check your wallet for a transaction or Safe proposal hash. Do not submit again." }, record);
             throw error;
           }
           if (!isRecoveryHash(hash)) {
-            preserveAttention(
-              record,
-              "The wallet did not return a valid transaction hash. Check your wallet before continuing.",
-            );
+            saveRecoveryPending({ ...record, status: "attention", error: "The wallet did not return a valid transaction hash. Check your wallet before continuing." }, record);
             throw new Error("The wallet returned an invalid transaction hash.");
           }
-          record = {
-            ...record,
-            submissionHash: hash,
-            status: record.kind === "safe" ? "awaiting-execution" : "mining",
-          };
-          saveRecoveryPending(record);
+          const beforeResponse = record;
+          record = { ...record, submissionHash: hash, status: record.kind === "safe" ? "awaiting-execution" : "mining" };
+          // The wallet already sent this call. Keep its identifier even if storage fails now.
+          try { saveRecoveryPending(record, beforeResponse); }
+          catch {
+            retainRecoveryPending({ ...record, status: "attention", error: "The wallet returned a submission hash, but it could not be saved. Keep this page open and check the wallet before retrying." }, beforeResponse);
+          }
           return hash;
         }),
       {
+        tracking: "domain",
         retries: 0,
         waitForReceipt: async (hash) => {
           if (!record)
             throw new Error("The submitted transaction record is unavailable.");
           try {
-            if (record.kind === "transaction") {
+            if (record.kind === "transaction" && record.hashKind !== "unknown") {
               record = await captureOriginal(record, client);
               let replacementCapture: Promise<void> | undefined;
               try {
@@ -693,15 +726,10 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
                         );
                       const current = currentRecord(record);
                       if (!current) return;
-                      record = {
-                        ...current,
-                        originalSignedTransaction,
-                        replacementHash: replacement.transaction.hash,
-                      };
-                      saveRecoveryPending(record);
-                    })().catch(() => {
+                      record = await updatePending(current, { originalSignedTransaction, replacementHash: replacement.transaction.hash });
+                    })().catch(async () => {
                       if (record)
-                        preserveAttention(
+                        await preserveAttention(
                           record,
                           "The wallet reported a replacement, but its transaction proof could not be verified.",
                         );
@@ -724,7 +752,7 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
               getRecoveryPending(record.chainId, record.account)?.id ===
               record.id
             ) {
-              preserveAttention(
+              await preserveAttention(
                 record,
                 "Execution could not be verified. Check the wallet status; no transaction was resubmitted.",
               );
@@ -744,7 +772,7 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
   };
   const restoredState =
     completion && ["idle", "pending"].includes(lifecycle.status)
-      ? completion.status === "nonce-consumed"
+      ? (completion.status === "nonce-consumed" || completion.status === "reconciled")
         ? { status: "idle" as const }
         : completion.status === "failed"
           ? {
@@ -779,10 +807,13 @@ export function useYethRecoveryActions(indexedBlock?: bigint) {
     completion,
     pending,
     refreshPending,
+    reconcilePending,
     refresh,
-    dismissCompletion: () => {
-      if (account.address)
-        dismissRecoveryCompletion(environment.chainId, account.address);
+    dismissCompletion: async () => {
+      if (account.address) await withRecoveryPendingLock(environment.chainId, account.address, async () => {
+        context(account.address);
+        dismissRecoveryCompletion(environment.chainId, account.address!);
+      });
     },
     approve: async (quote: RecoveryActionQuote) =>
       (await submit("approve", quote.maxShares, quote))?.hash ?? null,

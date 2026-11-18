@@ -51,6 +51,7 @@ const walletMethods = [
   "eth_sendTransaction", "personal_sign", "eth_signTypedData", "eth_signTypedData_v4",
   "wallet_switchEthereumChain",
 ];
+const walletStatusMethods = ["wallet_getCallsStatus"];
 const readMethods = new Set([
   "eth_blockNumber", "eth_call", "eth_chainId", "eth_estimateGas", "eth_feeHistory",
   "eth_gasPrice", "eth_getBalance", "eth_getBlockByHash", "eth_getBlockByNumber",
@@ -316,6 +317,15 @@ export function walletConnect(parameters: WalletConnectParameters) {
       if (args.method === "net_version") return String(activeChain);
       if (!config.chains.some((chain) => chain.id === activeChain))
         throw rpcError(4902, "This network is not supported by this app.");
+      if (walletStatusMethods.includes(args.method)) {
+        if (!grant().methods.has(args.method))
+          throw rpcError(4200, "The wallet did not approve execution-status requests. Use the execution transaction hash instead.");
+        const values = Array.isArray(args.params) ? args.params : [];
+        if (values.length !== 1 || typeof values[0] !== "string" || !/^0x[0-9a-fA-F]{64}$/.test(values[0]))
+          throw rpcError(-32602, "A valid submission hash is required.");
+        // Status is wallet-owned and optional. It must never fall through to RPC.
+        return sdk.request(args, "eip155:" + activeChain);
+      }
       if (walletMethods.includes(args.method)) {
         if (!grant().methods.has(args.method))
           throw rpcError(4200, "The wallet did not approve this request type. Connect again.");
@@ -456,7 +466,7 @@ export function walletConnect(parameters: WalletConnectParameters) {
               optionalNamespaces: {
                 eip155: {
                   chains: chains.map((value) => `eip155:${value}`),
-                  methods: walletMethods,
+                  methods: [...walletMethods, ...walletStatusMethods],
                   events: ["accountsChanged", "chainChanged"],
                   rpcMap: Object.fromEntries(chains.map((value) => [String(value), parameters.rpcMap[value]])),
                   defaultChain: String(target),

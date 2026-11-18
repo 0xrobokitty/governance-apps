@@ -1,8 +1,30 @@
 import type { Address, Hex, TransactionReceipt, Transaction } from "viem";
 import { getPublicClient } from "wagmi/actions";
 import { wagmiConfig } from "@/web3/wagmi";
+import { isDaoSmartWalletSubmission } from "./wallet-submission";
 import type { DaoTransactionCall } from "./writes";
 import type { DaoTransactionReceipt } from "./types";
+import { resolveWalletReceipt, type WalletSubmission, type WalletReceiptProvider } from "@/lib/tx/wallet-receipt";
+import { resolveSafeCancellation } from "@/lib/tx/safe-cancellation";
+import { validateSafeMinedCall } from "@/lib/tx/safe-call";
+
+export class DaoTransactionPendingError extends Error {
+  readonly code = "DAO_TRANSACTION_PENDING";
+  constructor(message = "The wallet proposal is saved and is awaiting verified execution.") { super(message); }
+}
+export class DaoReconciliationRequiredError extends Error {
+  readonly code = "DAO_RECONCILIATION_REQUIRED";
+  constructor(readonly transactionHash?: Hex) {
+    super("Recovered wallet activity was verified, but it cannot identify the interrupted wallet submission. Check the wallet queue for any duplicate or unresolved proposal, then finish the wallet review explicitly.");
+  }
+}
+export class DaoSafeNonceConsumedError extends Error {
+  readonly code = "DAO_SAFE_NONCE_CONSUMED";
+  constructor(readonly transactionHash?: Hex) {
+    super("The Safe proposal nonce has been used. This does not prove the DAO action succeeded or failed. Check the Safe and proposal history before another action.");
+  }
+}
+export type DaoReceiptOptions = { submission: WalletSubmission; provider?: WalletReceiptProvider; executionHash?: Hex; checkCancellation?: boolean };
 
 export class DaoTransactionRevertedError extends Error {
   readonly code = "DAO_TRANSACTION_REVERTED";
@@ -15,15 +37,41 @@ export class DaoTransactionReplacedError extends Error {
     super(reason === "cancelled" ? "The wallet cancelled this DAO transaction." : "The wallet replaced this DAO transaction with a different call.");
   }
 }
-export function isDaoTerminalTransactionError(error: unknown): error is DaoTransactionRevertedError | DaoTransactionReplacedError {
-  return error instanceof DaoTransactionRevertedError || error instanceof DaoTransactionReplacedError;
+export function isDaoTerminalTransactionError(error: unknown): error is DaoTransactionRevertedError | DaoTransactionReplacedError | DaoSafeNonceConsumedError {
+  return error instanceof DaoTransactionRevertedError || error instanceof DaoTransactionReplacedError || error instanceof DaoSafeNonceConsumedError;
 }
 
 /** Receipt confirmation uses the configured app RPC, with no alternate transport. */
-export async function waitForDaoReceipt(hash: Hex, chainId: number, sender: Address, call: DaoTransactionCall): Promise<DaoTransactionReceipt> {
+export async function waitForDaoReceipt(hash: Hex, chainId: number, sender: Address, call: DaoTransactionCall, options?: DaoReceiptOptions): Promise<DaoTransactionReceipt> {
   if (chainId !== 1) throw new Error("Unsupported DAO receipt chain.");
+  if (call.chainId !== chainId || call.from.toLowerCase() !== sender.toLowerCase()) throw new Error("DAO call differs from the submitted wallet scope.");
   const client = getPublicClient(wagmiConfig, { chainId: 1 });
   if (!client || await client.getChainId() !== chainId) throw new Error("DAO receipt RPC is on the wrong chain.");
+  if (options && isDaoSmartWalletSubmission(options.submission)) {
+    const submission = options.submission;
+    if (submission.account.toLowerCase() !== sender.toLowerCase() || submission.chainId !== chainId) throw new Error("DAO wallet submission scope differs from the reviewed action.");
+    const resolution = await resolveWalletReceipt(client, submission, options.provider, options.executionHash);
+    if (resolution.status === "pending") {
+      if (options.checkCancellation) {
+        const consumed = await resolveSafeCancellation(client, submission).catch(() => null);
+        if (consumed) throw new DaoSafeNonceConsumedError(submission.submissionHash);
+      }
+      throw new DaoTransactionPendingError(resolution.error);
+    }
+    if (!resolution.safeExecution) throw new DaoTransactionPendingError("The receipt does not prove this Safe proposal executed.");
+    const receipt = resolution.receipt;
+    const [transaction, block] = await Promise.all([
+      client.getTransaction({ hash: receipt.transactionHash }),
+      client.getBlock({ blockNumber: receipt.blockNumber }),
+    ]);
+    if (transaction.hash !== receipt.transactionHash || transaction.blockHash !== receipt.blockHash ||
+        transaction.blockNumber !== receipt.blockNumber || transaction.from.toLowerCase() !== receipt.from.toLowerCase() || block.hash !== receipt.blockHash) {
+      throw new Error("DAO Safe execution or canonical block differs from the receipt.");
+    }
+    validateSafeMinedCall(transaction, { account: sender, chainId, to: call.to, data: call.data, value: 0n }, resolution.safeExecution);
+    if (resolution.failed) throw new DaoTransactionRevertedError(receipt.transactionHash);
+    return validateDaoLiveReceipt(receipt, { hash: receipt.transactionHash, sender: transaction.from, blockHash: block.hash, blockTimestamp: Number(block.timestamp) });
+  }
   let replacedTransaction: Transaction | undefined;
   const receipt = await client.waitForTransactionReceipt({
     hash, confirmations: 1, timeout: 120_000, checkReplacement: true,

@@ -1,3 +1,6 @@
+// Domain tests own preflight and simulation; shared wallet tracking has separate integration coverage.
+vi.mock("@/lib/tx/tracked-write", () => ({ trackedContractWrite: (_request: unknown, send: () => Promise<unknown>) => send() }));
+
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { getAccount, simulateContract, writeContract } from "wagmi/actions";
 import { OnchainYethClient } from "@/lib/clients/yeth/onchain";

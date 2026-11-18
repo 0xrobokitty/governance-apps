@@ -96,3 +96,9 @@ Unavailable team routes return to the directory after data resolves. URL updates
 Funding forms reset their values and validation state before the changed approval or wallet renders.
 
 See the [compiler and linter requirements](../../shared/testing.md#compiler-and-linter-compatibility) for toolchain compatibility.
+
+## Safe submissions
+
+The shared transaction writer retains unresolved Safe submissions across reloads.
+The wallet status panel checks execution without sending another transaction.
+See [Safe transaction tracking](../../shared/frontend-architecture.md#safe-transaction-tracking) for receipt checks and recovery limits.

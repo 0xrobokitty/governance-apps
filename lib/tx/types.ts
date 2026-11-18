@@ -34,6 +34,8 @@ export type TxErrorType =
 export type TxState = {
   status: TxStatus;
   hash?: TransactionHash;
+  submissionHash?: TransactionHash;
+  pendingId?: string;
   errorType?: TxErrorType;
   errorMessage?: string;
 };

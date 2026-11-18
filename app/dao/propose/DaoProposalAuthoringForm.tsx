@@ -12,6 +12,8 @@ import {
   type RefObject,
 } from "react";
 import type { Address, Hex } from "viem";
+import type { DaoWalletSubmission as WalletSubmission } from "@/lib/clients/dao/wallet-submission";
+import { isDaoSmartWalletSubmission, daoWalletSubmissionUrl, isDaoSubmissionHash } from "@/lib/clients/dao/wallet-submission";
 import { IconCopy } from "@/components/icons/IconCopy";
 import { IconLinkOut } from "@/components/icons/IconLinkOut";
 import { Badge } from "@/components/ui/Badge";
@@ -84,16 +86,19 @@ type PublicationState =
   | { state: "failed"; message: string }
   | { state: "published"; publication: DaoPublishedContent };
 
-type WalletState =
+type WalletState = (
   | { state: "idle" }
   | { state: "waiting" }
   | {
       state: "failed";
-      code: "WALLET_REJECTED" | "PROPOSAL_REVERTED" | "PROPOSAL_REPLACED" | "PREPARATION_CHANGED" | "NETWORK_ERROR";
+      code: "WALLET_REJECTED" | "PROPOSAL_REVERTED" | "PROPOSAL_REPLACED" | "PREPARATION_CHANGED" | "NETWORK_ERROR" | "SUBMISSION_UNKNOWN" | "PROPOSAL_CONSUMED";
       failedTransactionHash?: Hex;
       message: string;
     }
   | { state: "receipt_pending"; transactionHash: Hex }
+  | { state: "awaiting_execution"; transactionHash: Hex; message: string }
+  | { state: "reconciliation_required"; transactionHash: Hex; message: string }
+  | { state: "reconciled"; message: string }
   | {
       state: "receipt_failed";
       transactionHash: Hex;
@@ -109,7 +114,7 @@ type WalletState =
       transactionHash: Hex;
       identity: DaoDecodedProposeIdentity;
       message?: string;
-    };
+    }) & { walletSubmission?: WalletSubmission };
 
 type DaoProposalAuthoringFormProps = {
   services?: DaoAuthoringServices;
@@ -165,7 +170,7 @@ function DaoProposalAuthoringFormState({
   const [storageWarning, setStorageWarning] = useState(false);
   const [importStatus, setImportStatus] = useState<string | null>(null);
   const [importing, setImporting] = useState(false);
-  const [wallet, setWallet] = useState<WalletState>(recovery?.lastFailure ? { state: "failed", code: recovery.lastFailure.code, message: recovery.lastFailure.message, failedTransactionHash: recovery.lastFailure.transactionHash } : { state: "idle" });
+  const [wallet, setWallet] = useState<WalletState>(recovery?.lastFailure ? { state: "failed", code: recovery.lastFailure.code, message: recovery.lastFailure.message, failedTransactionHash: recovery.lastFailure.transactionHash, walletSubmission: recovery.walletSubmission } : recovery?.walletSubmission && !recovery.transactionHash ? { state: "failed", code: "SUBMISSION_UNKNOWN", message: daoProposeCopy.proposal.submissionUnknown, walletSubmission: recovery.walletSubmission } : { state: "idle" });
   const forumRequest = useRef(0);
   const publicationLock = useRef(recovery?.state === "published");
   const forumInputRef = useRef<HTMLInputElement>(null);
@@ -441,7 +446,7 @@ function DaoProposalAuthoringFormState({
 
     setWallet({ state: "waiting" });
     const result = await (services?.submit ?? submitMockDaoProposal)({
-      onSubmitted: hash => setWallet({ state: "receipt_pending", transactionHash: hash }),
+      onSubmitted: (hash, walletSubmission) => setWallet({ state: "receipt_pending", transactionHash: hash, walletSubmission }),
       review,
       publication: publication.publication,
       outcome: transactionOutcome,
@@ -451,6 +456,7 @@ function DaoProposalAuthoringFormState({
       setWallet({
         state: "failed",
         code: result.error.code,
+        walletSubmission: result.walletSubmission,
         message: result.error.message,
         failedTransactionHash: result.error.transactionHash,
       });
@@ -458,15 +464,15 @@ function DaoProposalAuthoringFormState({
     }
     setWallet({
       state: "receipt_pending",
-      transactionHash: result.transactionHash,
+      transactionHash: result.transactionHash, walletSubmission: result.walletSubmission,
     });
 
-    await confirmAndIndex(result.transactionHash);
+    await confirmAndIndex(result.transactionHash, result.walletSubmission);
   };
 
-  const confirmAndIndex = async (hash: Hex) => {
+  const confirmAndIndex = async (hash: Hex, walletSubmission = wallet.walletSubmission ?? recovery?.walletSubmission) => {
     if (!review || publication.state !== "published") return;
-    setWallet({ state: "receipt_pending", transactionHash: hash });
+    setWallet({ state: "receipt_pending", transactionHash: hash, walletSubmission });
     try {
       const receipt = await (services?.confirm ?? confirmMockDaoProposalReceipt)(
         review,
@@ -500,11 +506,16 @@ function DaoProposalAuthoringFormState({
         identity
       );
     } catch (error) {
-      if (error instanceof Error && "code" in error && (error.code === "DAO_TRANSACTION_REVERTED" || error.code === "DAO_TRANSACTION_REPLACED")) {
-        setWallet({ state: "failed", code: error.code === "DAO_TRANSACTION_REPLACED" ? "PROPOSAL_REPLACED" : "PROPOSAL_REVERTED", message: error.message,
+      if (error instanceof Error && "code" in error && error.code === "DAO_RECONCILIATION_REQUIRED") {
+        setWallet({ state: "reconciliation_required", transactionHash: "transactionHash" in error && error.transactionHash ? error.transactionHash as Hex : hash, message: error.message,
+          walletSubmission: walletSubmission ? { ...walletSubmission, reconciliationVerified: true } : undefined });
+      } else if (error instanceof Error && "code" in error && error.code === "DAO_TRANSACTION_PENDING") {
+        setWallet({ state: "awaiting_execution", transactionHash: hash, message: error.message, walletSubmission });
+      } else if (error instanceof Error && "code" in error && (error.code === "DAO_TRANSACTION_REVERTED" || error.code === "DAO_TRANSACTION_REPLACED" || error.code === "DAO_SAFE_NONCE_CONSUMED")) {
+        setWallet({ state: "failed", code: error.code === "DAO_SAFE_NONCE_CONSUMED" ? "PROPOSAL_CONSUMED" : error.code === "DAO_TRANSACTION_REPLACED" ? "PROPOSAL_REPLACED" : "PROPOSAL_REVERTED", message: error.message, walletSubmission,
           failedTransactionHash: "transactionHash" in error ? error.transactionHash as Hex : hash });
       } else {
-        setWallet({ state: "receipt_failed", transactionHash: hash, code: "RECEIPT_UNAVAILABLE", message: error instanceof Error ? error.message : "Receipt confirmation failed." });
+        setWallet({ state: "receipt_failed", transactionHash: hash, code: "RECEIPT_UNAVAILABLE", message: error instanceof Error ? error.message : "Receipt confirmation failed.", walletSubmission });
       }
     }
   };
@@ -566,25 +577,33 @@ function DaoProposalAuthoringFormState({
   useEffect(() => {
     if (!resumed.current && recovery?.transactionHash) {
       resumed.current = true;
-      void confirmAndIndex(recovery.transactionHash);
+      void confirmAndIndex(recovery.transactionHash, recovery.walletSubmission);
     }
   });
   const handleRetryIndexing = async () => {
     if (
       !review ||
       publication.state !== "published" ||
-      (wallet.state !== "index_failed" && wallet.state !== "receipt_failed")
+      (wallet.state !== "index_failed" && wallet.state !== "receipt_failed" && wallet.state !== "awaiting_execution")
     ) {
       return;
     }
 
-    if (wallet.state === "receipt_failed") { await confirmAndIndex(wallet.transactionHash); return; }
+    if (wallet.state === "receipt_failed" || wallet.state === "awaiting_execution") { await confirmAndIndex(wallet.transactionHash); return; }
     await indexProposal(
       review,
       publication.publication,
       wallet.transactionHash,
       wallet.identity
     );
+  };
+
+  const handleRecoverSubmission = async (hash: Hex) => {
+    if (!services?.recoverSubmission) return;
+    const result = await services.recoverSubmission(hash);
+    if (result.state === "failed") { setWallet({ state: "failed", code: result.error.code,
+        walletSubmission: result.walletSubmission, message: result.error.message }); return; }
+    await confirmAndIndex(result.transactionHash, result.walletSubmission);
   };
 
   if (review) {
@@ -599,6 +618,10 @@ function DaoProposalAuthoringFormState({
           if (value) setConfirmationError(null);
         }}
         onCreateProposal={handleCreateProposal}
+        onRecoverSubmission={services?.recoverSubmission ? handleRecoverSubmission : undefined}
+        onFinishWalletReview={services?.finishWalletReview ? async () => {
+          if ((wallet.walletSubmission ?? recovery?.walletSubmission) && await services.finishWalletReview!((wallet.walletSubmission ?? recovery?.walletSubmission)!)) setWallet({ state: "reconciled", message: daoProposeCopy.proposal.reconciled });
+        } : undefined}
         onEdit={handleEdit}
         onPublish={handlePublish}
         onRetryIndexing={handleRetryIndexing}
@@ -943,6 +966,8 @@ function DaoFinalReview({
   confirmationError,
   onConfirm,
   onCreateProposal,
+  onRecoverSubmission,
+  onFinishWalletReview,
   onEdit,
   onPublish,
   onRetryIndexing,
@@ -960,6 +985,8 @@ function DaoFinalReview({
   confirmationError: string | null;
   onConfirm: (value: boolean) => void;
   onCreateProposal: () => Promise<void>;
+  onRecoverSubmission?: (hash: Hex) => Promise<void>;
+  onFinishWalletReview?: () => Promise<void>;
   onEdit: () => void;
   onPublish: () => Promise<void>;
   onRetryIndexing: () => Promise<void>;
@@ -972,6 +999,19 @@ function DaoFinalReview({
   wallet: WalletState;
 }) {
   const [proposalLinkCopied, setProposalLinkCopied] = useState(false);
+  const [recoveredHash, setRecoveredHash] = useState("");
+  const [reviewedUncertainId, setReviewedUncertainId] = useState<string | null>(null);
+  const uncertainId = JSON.stringify(wallet.walletSubmission);
+  const walletAwaiting = wallet.state === "receipt_pending" || wallet.state === "awaiting_execution" || wallet.state === "reconciliation_required";
+  const safePending = isDaoSmartWalletSubmission(wallet.walletSubmission) && (walletAwaiting || wallet.state === "receipt_failed" || (wallet.state === "failed" && wallet.code === "PROPOSAL_CONSUMED"));
+  const uncertainReview = ((wallet.state === "failed" && wallet.code === "SUBMISSION_UNKNOWN") ||
+    ((wallet.state === "receipt_failed" || wallet.state === "awaiting_execution") && wallet.walletSubmission?.reconciliationRequired)) &&
+    onFinishWalletReview ? <div className="space-y-2">
+      {reviewedUncertainId === uncertainId ? <>
+        <p>{daoProposeCopy.proposal.reviewUncertainBody}</p>
+        <Button type="button" variant="secondary" onClick={() => { void onFinishWalletReview(); }}>{daoProposeCopy.proposal.finishWalletReview}</Button>
+      </> : <Button type="button" variant="secondary" onClick={() => setReviewedUncertainId(uncertainId)}>{daoProposeCopy.proposal.reviewUncertain}</Button>}
+    </div> : null;
   const publicationLocked =
     publication.state === "publishing" || publication.state === "published";
   const contentPublished = publication.state === "published";
@@ -997,8 +1037,8 @@ function DaoFinalReview({
           ? daoProposeCopy.proposal.waiting
           : wallet.state === "failed"
             ? wallet.message
-            : wallet.state === "receipt_pending"
-              ? daoProposeCopy.proposal.receiptPending
+            : walletAwaiting
+              ? wallet.state === "reconciliation_required" ? daoProposeCopy.proposal.walletReview : safePending ? daoProposeCopy.proposal.safePending : daoProposeCopy.proposal.receiptPending
               : wallet.state === "receipt_failed"
                 ? wallet.message
                 : wallet.state === "identity_decoded"
@@ -1227,7 +1267,7 @@ function DaoFinalReview({
             </Button>
             <Button
               type="button"
-              disabled={!proposer.canPropose}
+              disabled={!proposer.canPropose || (wallet.state === "failed" && wallet.code === "SUBMISSION_UNKNOWN")}
               isLoading={publication.state === "publishing"}
               className="w-full motion-reduce:transition-none motion-reduce:active:scale-100 sm:w-auto"
               onClick={() => {
@@ -1294,19 +1334,25 @@ function DaoFinalReview({
                 <StateNotice
                   tone="error"
                   title={
-                    wallet.code === "PROPOSAL_REPLACED" ? daoProposeCopy.proposal.replacedTitle : wallet.code === "WALLET_REJECTED"
+                    wallet.code === "PROPOSAL_CONSUMED" ? daoProposeCopy.proposal.safeConsumed : wallet.code === "PROPOSAL_REPLACED" ? daoProposeCopy.proposal.replacedTitle : wallet.code === "WALLET_REJECTED"
                       ? daoProposeCopy.proposal.rejectedTitle
                       : wallet.code === "PREPARATION_CHANGED"
                         ? daoProposeCopy.proposal.preparationChangedTitle
-                      : wallet.code === "NETWORK_ERROR"
+                      : (wallet.code === "NETWORK_ERROR" || wallet.code === "SUBMISSION_UNKNOWN")
                         ? daoProposeCopy.proposal.networkErrorTitle
                         : daoProposeCopy.proposal.revertedTitle
                   }
                   body={wallet.message}
                 />
-                {wallet.failedTransactionHash ? <a className="block text-sm underline" href={getEtherscanTransactionUrl(wallet.failedTransactionHash) ?? undefined} target="_blank" rel="noopener noreferrer">{daoProposeCopy.proposal.viewTransaction}</a> : null}
+                {wallet.failedTransactionHash ? <a className="block text-sm underline" href={safePending && wallet.walletSubmission ? daoWalletSubmissionUrl(wallet.walletSubmission) : getEtherscanTransactionUrl(wallet.failedTransactionHash) ?? undefined} target="_blank" rel="noopener noreferrer">{safePending ? daoProposeCopy.proposal.viewSafe : daoProposeCopy.proposal.viewTransaction}</a> : null}
               </>) : null}
 
+              {wallet.state === "reconciled" ? <StateNotice tone="warning" title={daoProposeCopy.proposal.walletReview} body={wallet.message} /> : null}
+              {wallet.state === "failed" && wallet.code === "SUBMISSION_UNKNOWN" && onRecoverSubmission ? <div className="space-y-2">
+                <label className="block text-sm">{daoProposeCopy.proposal.recoverHash}<input className="mt-1 block w-full rounded border border-border bg-surface p-2" placeholder="0x…" value={recoveredHash} onChange={event => setRecoveredHash(event.target.value.trim())} /></label>
+                <Button type="button" variant="secondary" disabled={!isDaoSubmissionHash(recoveredHash)} onClick={() => { if (isDaoSubmissionHash(recoveredHash)) void onRecoverSubmission(recoveredHash); }}>{daoProposeCopy.proposal.recoverSubmission}</Button>
+              </div> : null}
+              {uncertainReview}
               <div className="space-y-3">
                 {!proposer.canPropose ? (
                   <StateNotice
@@ -1330,7 +1376,7 @@ function DaoFinalReview({
                   </Button>
                   <Button
                     type="button"
-                    disabled={!proposer.canPropose}
+                    disabled={!proposer.canPropose || (wallet.state === "failed" && wallet.code === "SUBMISSION_UNKNOWN")}
                     isLoading={wallet.state === "waiting"}
                     className="w-full motion-reduce:transition-none motion-reduce:active:scale-100 sm:w-auto"
                     onClick={() => {
@@ -1353,7 +1399,7 @@ function DaoFinalReview({
                 "space-y-4 rounded-box border p-4 sm:p-5",
                 wallet.state === "receipt_failed"
                   ? "border-red-300 bg-red-50 text-red-950 dark:border-red-900 dark:bg-red-950/35 dark:text-red-100"
-                  : wallet.state === "receipt_pending"
+                  : walletAwaiting
                     ? "border-yearn-blue/50 bg-surface text-text-primary dark:border-blue-700"
                     : "border-green-300 bg-green-50 text-green-950 dark:border-green-900 dark:bg-green-950/35 dark:text-green-100"
               )}
@@ -1367,8 +1413,8 @@ function DaoFinalReview({
                 tabIndex={-1}
                 className="w-fit max-w-full rounded-box text-balance text-xl font-bold outline-none focus-visible:ring-2 focus-visible:ring-text-primary focus-visible:ring-offset-2 focus-visible:ring-offset-app"
               >
-                {wallet.state === "receipt_pending"
-                  ? daoProposeCopy.proposal.submittedTitle
+                {walletAwaiting
+                  ? wallet.state === "reconciliation_required" ? daoProposeCopy.proposal.walletReview : safePending ? daoProposeCopy.proposal.safePending : daoProposeCopy.proposal.submittedTitle
                   : wallet.state === "receipt_failed"
                     ? daoProposeCopy.proposal.identityUnavailableTitle
                     : wallet.state === "indexed"
@@ -1377,7 +1423,7 @@ function DaoFinalReview({
                         ? daoProposeCopy.proposal.indexingDelayedTitle
                         : daoProposeCopy.proposal.identityConfirmed}
               </h3>
-              <ReviewFact label={daoProposeCopy.proposal.transaction} mono>
+              <ReviewFact label={safePending ? daoProposeCopy.proposal.safeHash : daoProposeCopy.proposal.transaction} mono>
                 {transactionHash}
               </ReviewFact>
               {proposalIdentity ? (
@@ -1385,6 +1431,11 @@ function DaoFinalReview({
                   {serializeDaoProposalRef(proposalIdentity.ref)}
                 </ReviewFact>
               ) : null}
+              {uncertainReview}
+              {(wallet.state === "receipt_failed" || wallet.state === "awaiting_execution") && wallet.walletSubmission?.reconciliationRequired && onRecoverSubmission ? <div className="space-y-2"><label className="block text-sm">{daoProposeCopy.proposal.recoverHash}<input className="mt-1 block w-full rounded border border-border bg-surface p-2" value={recoveredHash} onChange={event => setRecoveredHash(event.target.value.trim())} /></label><Button type="button" variant="secondary" disabled={!isDaoSubmissionHash(recoveredHash)} onClick={() => { if (isDaoSubmissionHash(recoveredHash)) void onRecoverSubmission(recoveredHash); }}>{daoProposeCopy.proposal.recoverSubmission}</Button></div> : null}
+              {(wallet.state === "awaiting_execution" || wallet.state === "receipt_failed") && isDaoSmartWalletSubmission(wallet.walletSubmission) && !wallet.walletSubmission.reconciliationRequired && onRecoverSubmission ? <div className="space-y-2"><label className="block text-sm">{daoProposeCopy.proposal.executionHash}<input className="mt-1 block w-full rounded border border-border bg-surface p-2" value={recoveredHash} onChange={event => setRecoveredHash(event.target.value.trim())} /></label><Button type="button" variant="secondary" disabled={!isDaoSubmissionHash(recoveredHash)} onClick={() => { if (isDaoSubmissionHash(recoveredHash)) void onRecoverSubmission(recoveredHash); }}>{daoProposeCopy.proposal.recoverSubmission}</Button></div> : null}
+              {wallet.state === "reconciliation_required" ? <div className="space-y-2"><StateNotice tone="warning" title={daoProposeCopy.proposal.walletReview} body={wallet.message} />{onFinishWalletReview ? <Button type="button" variant="secondary" onClick={() => { void onFinishWalletReview(); }}>{daoProposeCopy.proposal.finishWalletReview}</Button> : null}</div> : null}
+              {wallet.state === "awaiting_execution" ? <StateNotice tone="warning" title={daoProposeCopy.proposal.safePending} body={wallet.message} /> : null}
               {wallet.state === "receipt_failed" ? (
                 <StateNotice
                   tone="error"
@@ -1396,8 +1447,8 @@ function DaoFinalReview({
                 className="rounded-box bg-surface p-4 text-text-primary shadow-sm"
               >
                 <p className="font-bold">
-                  {wallet.state === "receipt_pending"
-                    ? daoProposeCopy.proposal.receiptPending
+                  {walletAwaiting
+                    ? wallet.state === "reconciliation_required" ? daoProposeCopy.proposal.walletReview : safePending ? daoProposeCopy.proposal.safePending : daoProposeCopy.proposal.receiptPending
                     : wallet.state === "receipt_failed"
                       ? daoProposeCopy.proposal.identityUnavailableTitle
                       : wallet.state === "indexed"
@@ -1414,11 +1465,11 @@ function DaoFinalReview({
                     : wallet.state === "index_failed"
                       ? (wallet.message ??
                         daoProposeCopy.proposal.indexingDelayedBody)
-                      : daoProposeCopy.proposal.submittedBody}
+                      : safePending ? daoProposeCopy.proposal.safePendingBody : daoProposeCopy.proposal.submittedBody}
                 </p>
               </div>
               <div className="flex flex-col gap-2 sm:flex-row sm:flex-wrap">
-                {wallet.state === "index_failed" || wallet.state === "receipt_failed" ? (
+                {wallet.state === "index_failed" || wallet.state === "receipt_failed" || wallet.state === "awaiting_execution" ? (
                   <Button
                     type="button"
                     className="w-full motion-reduce:transition-none motion-reduce:active:scale-100 sm:w-auto"
@@ -1426,7 +1477,7 @@ function DaoFinalReview({
                       void onRetryIndexing();
                     }}
                   >
-                    {wallet.state === "receipt_failed" ? daoProposeCopy.proposal.retryReceipt : daoProposeCopy.proposal.retryIndexing}
+                    {wallet.state === "receipt_failed" || wallet.state === "awaiting_execution" ? daoProposeCopy.proposal.retryReceipt : daoProposeCopy.proposal.retryIndexing}
                   </Button>
                 ) : null}
                 {proposalHref ? (
@@ -1464,7 +1515,7 @@ function DaoFinalReview({
                   </>
                 ) : null}
                 <a
-                  href={getEtherscanTransactionUrl(transactionHash) ?? undefined}
+                  href={safePending && wallet.walletSubmission ? daoWalletSubmissionUrl(wallet.walletSubmission) : getEtherscanTransactionUrl(transactionHash) ?? undefined}
                   target="_blank"
                   rel="noopener noreferrer"
                   className={getButtonClassName({
@@ -1473,7 +1524,7 @@ function DaoFinalReview({
                       "w-full gap-2 motion-reduce:transition-none motion-reduce:active:scale-100 sm:w-auto",
                   })}
                 >
-                  {daoProposeCopy.proposal.viewTransaction}
+                  {safePending ? daoProposeCopy.proposal.viewSafe : daoProposeCopy.proposal.viewTransaction}
                   <IconLinkOut className="size-4" aria-hidden />
                 </a>
               </div>

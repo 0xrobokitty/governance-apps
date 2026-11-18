@@ -24,7 +24,7 @@ Production rejects the local fork transport.
 
 The dashboard supports ordinary injected accounts and accounts with EIP-7702 delegation.
 The native Safe Apps connector supports queued proposals and later execution.
-Other wallet providers must return an Ethereum transaction hash for the standard transaction path.
+Externally owned wallets use the Ethereum transaction path. Safe accounts connected through WalletConnect use the shared wallet identity and receipt checks.
 Safe and delegated browser acceptance passed on a disposable Ethereum fork.
 Deployment and mainnet acceptance require a separate release decision.
 
@@ -372,6 +372,26 @@ Switching away from the recovery network hides its cached completion.
 Raw test hashes and repeated test notices stay out of the main page.
 Normal wallet confirmation never asks for a transaction hash.
 An uncertain response retains its pending record. Hash recovery is behind an explicit troubleshooting action.
+A manually entered hash remains a candidate; it never replaces the saved submission identity.
+For a saved proposal, open transaction details to enter its execution transaction hash.
+This supports wallets that cannot resolve the proposal through their status method.
+The original proposal and exact recovery call must match the canonical execution.
+Safe executions must use a direct CALL; batches, nested calls, and delegate calls remain unresolved.
+A candidate check must verify the exact recovery call against canonical transaction data.
+Even a matching execution cannot prove which proposal caused the lost wallet response.
+
+To clear an unidentified submission, review the wallet queue and recent activity.
+Confirm that no unresolved duplicate proposal remains, then finish queue reconciliation.
+If no proposal was created, the same review can clear the record without a hash.
+This result is neutral: it does not confirm a payout, prove cancellation, or advance the exit sequence.
+Changing the candidate or saved intent resets the acknowledgment.
+
+All pending-record mutations require an account-and-chain Web Lock.
+Browsers without Web Locks cannot submit or clear recovery intents.
+A late proof must match the current saved intent before it can clear that record.
+If post-send storage fails, the page retains the returned hash in memory.
+Keep that page open until the wallet outcome is resolved or storage recovers.
+The final receipt check verifies the canonical block again after financial reads.
 
 ## Local position fixture
 
@@ -431,8 +451,10 @@ Stale or incomplete accounting removes the projection but retains the full targe
 
 Wallet behavior determines the transaction path.
 The application does not reject an account because it has deployed or delegated code.
-A normal wallet must return an Ethereum transaction hash.
-A native Safe Apps connection can return a proposal ID first.
+An externally owned wallet must return an Ethereum transaction hash.
+A Safe Apps connection can return a proposal ID first.
+Safe accounts connected through WalletConnect can return either identifier type.
+The shared wallet context selects the receipt strategy; canonical chain data must still prove execution.
 The pending-action record preserves that distinction.
 
 The page prevents duplicate submissions while execution remains unresolved.
@@ -461,3 +483,6 @@ Use live Stats for public history and fork receipts for transaction behavior.
 The seeded test account uses the synthetic principal described in Local position fixture.
 Other personal recovery percentages require matching Stats accounting.
 A complete accounting rehearsal requires a producer or fixture that includes the fork events.
+
+Recovery percentages use decimal percent formatting. For example, 48.45% displays as 48.5%.
+An incomplete recovery that rounds to 100% still displays as <100%.

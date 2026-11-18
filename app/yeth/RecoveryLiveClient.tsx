@@ -83,6 +83,7 @@ function RecoveryLiveSession() {
     pendingExecution: actions.pending,
     completion: actions.wrongChain ? null : actions.completion,
     refreshPending: actions.refreshPending,
+    reconcilePending: actions.reconcilePending,
     refresh: () => Promise.all([feed.refetch(), ...(account.address ? [actions.accountQuery.refetch()] : [])]),
     reviewAuction: async (weth, shares, round) => {
       const result = await actions.accountQuery.refetch();

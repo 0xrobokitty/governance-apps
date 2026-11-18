@@ -3,6 +3,8 @@ import { simulateThenWrite } from "@/lib/tx/simulateWrite";
 import { MAINNET_CHAIN_ID } from "@/lib/tx/network";
 import { simulateContract, writeContract } from "wagmi/actions";
 
+vi.mock("@/lib/tx/tracked-write", () => ({ trackedContractWrite: (_request: unknown, send: () => Promise<unknown>) => send() }));
+
 vi.mock("wagmi/actions", () => ({
   simulateContract: vi.fn(),
   writeContract: vi.fn(),
@@ -99,4 +101,12 @@ describe("simulateThenWrite", () => {
     expect(hash).toBe("0xunknown-fallback");
     expect(writeContract).toHaveBeenCalledTimes(1);
   });
+  it("does not retry a wallet send through the simulation fallback", async () => {
+    process.env.NEXT_PUBLIC_ENABLE_SIMULATION_TRANSPORT_FALLBACK = "true";
+    vi.mocked(simulateContract).mockResolvedValue({ request: REQUEST } as never);
+    vi.mocked(writeContract).mockImplementation(() => { throw new Error("RPC request failed after send"); });
+    await expect(simulateThenWrite(REQUEST as never, REQUEST as never, "test send error")).rejects.toThrow(/after send/);
+    expect(writeContract).toHaveBeenCalledOnce();
+  });
+
 });

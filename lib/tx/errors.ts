@@ -103,3 +103,15 @@ export function normalizeTxError(raw: unknown): NormalizedError {
 }
 
 export type { NormalizedError, NormalizedErrorCode };
+
+/** Only an explicit wallet rejection can release an unidentified submission.
+ * Display-oriented names and messages are not proof that no call was sent. */
+export function isExplicitWalletRejection(error: unknown): boolean {
+  const seen = new Set<unknown>();
+  for (let depth = 0; depth < 10 && error && typeof error === "object" && !seen.has(error); depth++) {
+    seen.add(error);
+    if ("code" in error && error.code === 4001) return true;
+    error = "cause" in error ? error.cause : undefined;
+  }
+  return false;
+}

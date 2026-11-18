@@ -339,12 +339,12 @@ describe("one-consent recovery exit sequence", () => {
     expect(f.actions.submitExitStep).toHaveBeenCalledOnce();
   });
 
-  it("a neutral nonce outcome cannot trigger the next financial step", async () => {
+  it.each(["nonce-consumed", "reconciled"] as const)("a neutral %s outcome cannot trigger the next financial step", async status => {
     const f = fixture();
     f.chain.allowance = E(".8");
     f.actions.submitExitStep.mockImplementation(async step => {
       const intent = f.record(step);
-      return { id: intent.id, account: address, chainId: 1, action: step.action, intent, status: "nonce-consumed", verified: true, createdAt: 1001 };
+      return { id: intent.id, account: address, chainId: 1, action: step.action, intent, status, verified: true, createdAt: 1001 };
     });
     const { result } = renderHook(() => useYethRecoveryExit(f.actions));
     await act(() => result.current.start(f.request()));

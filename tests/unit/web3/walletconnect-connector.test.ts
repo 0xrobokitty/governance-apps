@@ -656,3 +656,39 @@ describe("WalletConnect request and event boundaries", () => {
     expect(await connector.getAccounts()).toEqual([]);
   });
 });
+
+describe("WalletConnect optional execution-status requests", () => {
+  const hash = ("0x" + "a".repeat(64)) as `0x${string}`;
+  it("requests the optional status method and forwards only a granted request", async () => {
+    const f = runtime();
+    f.sdk.nextSession.namespaces.eip155.methods = [...methods, "wallet_getCallsStatus"];
+    await f.connector.connect();
+    expect(f.sdk.connect).toHaveBeenCalledWith(expect.objectContaining({
+      optionalNamespaces: expect.objectContaining({
+        eip155: expect.objectContaining({ methods: expect.arrayContaining(["wallet_getCallsStatus"]) }),
+      }),
+    }));
+    const provider = await f.connector.getProvider();
+    await provider.request({ method: "wallet_getCallsStatus", params: [hash] });
+    expect(f.sdk.request).toHaveBeenCalledWith({ method: "wallet_getCallsStatus", params: [hash] }, "eip155:1");
+  });
+  it("keeps older wallet sessions usable and never sends an unapproved status request to RPC", async () => {
+    const f = runtime();
+    await f.connector.connect();
+    const fetcher = vi.fn();
+    vi.stubGlobal("fetch", fetcher);
+    const provider = await f.connector.getProvider();
+    await expect(provider.request({ method: "wallet_getCallsStatus", params: [hash] })).rejects.toMatchObject({ code: 4200 });
+    expect(f.sdk.request).not.toHaveBeenCalled();
+    expect(fetcher).not.toHaveBeenCalled();
+    expect(await f.connector.getAccounts()).toEqual([getAddress(A)]);
+  });
+  it("rejects malformed proposal identifiers before wallet dispatch", async () => {
+    const f = runtime();
+    f.sdk.nextSession.namespaces.eip155.methods = [...methods, "wallet_getCallsStatus"];
+    await f.connector.connect();
+    const provider = await f.connector.getProvider();
+    await expect(provider.request({ method: "wallet_getCallsStatus", params: ["bad"] })).rejects.toMatchObject({ code: -32602 });
+    expect(f.sdk.request).not.toHaveBeenCalled();
+  });
+});

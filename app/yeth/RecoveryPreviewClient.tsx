@@ -4,7 +4,7 @@ import { useState } from "react";
 import type { useTx } from "@/lib/tx/useTx";
 import { TransactionLink } from "@/components/ui/ExplorerLink";
 import { formatEther } from "viem";
-import { isRecoveryHash, type RecoveryPending } from "@/lib/clients/yeth/recovery/pending";
+import { isRecoveryHash, recoveryPendingIdentity, type RecoveryPending } from "@/lib/clients/yeth/recovery/pending";
 import type { RecoveryActionReceipt } from "@/lib/clients/yeth/recovery/onchain";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
@@ -48,8 +48,9 @@ export type RecoveryController = {
   resetAllowance?: () => Promise<unknown>;
   allowanceNeedsReset?: (shares: bigint) => boolean;
   pendingExecution?: RecoveryPending | null;
-  completion?: { intent?: Pick<RecoveryPending, "kind">; status: "confirmed" | "failed" | "nonce-consumed"; action: string; hash?: `0x${string}`; exitMode?: ExitMode; receipt?: RecoveryActionReceipt } | null;
-  refreshPending?: (submissionHash?: `0x${string}`) => Promise<unknown>;
+  completion?: { intent?: Pick<RecoveryPending, "kind">; status: "confirmed" | "failed" | "nonce-consumed" | "reconciled"; action: string; hash?: `0x${string}`; exitMode?: ExitMode; receipt?: RecoveryActionReceipt } | null;
+  refreshPending?: (submissionHash?: `0x${string}`, executionHash?: `0x${string}`) => Promise<unknown>;
+  reconcilePending?: (record: RecoveryPending, submissionHash: `0x${string}` | undefined, queueChecked: boolean) => Promise<unknown>;
   canTransact?: boolean;
   canRedeem?: boolean;
   unavailableReason?: string | null;
@@ -110,7 +111,7 @@ export function RecoveryDashboard({ controller: preview, mode: runtime = "mock",
 
   if (!s) return <div className="container mx-auto max-w-5xl px-4 py-12">
     <p className="mb-6 text-sm text-text-secondary">{isLive ? liveCopy.live : copy.preview}</p>
-    {execution && <PendingExecution pending={execution} refresh={preview.refreshPending} runtime={runtime} walletPromptActive={preview.walletPromptActive} />}
+    {execution && <PendingExecution key={recoveryPendingIdentity(execution)} pending={execution} refresh={preview.refreshPending} reconcile={preview.reconcilePending} runtime={runtime} walletPromptActive={preview.walletPromptActive} />}
     <Card><h1 className="text-2xl font-bold">{preview.error ? words.error : isLive ? liveCopy.loading : words.loading}</h1>
       {preview.error && <><p role="alert" className="my-4">{preview.error}</p><Button onClick={() => isLive ? preview.refresh() : changeScenario("active")}>{isLive ? liveCopy.refresh : words.retry}</Button></>}
     </Card>
@@ -184,10 +185,11 @@ export function RecoveryDashboard({ controller: preview, mode: runtime = "mock",
     {preview.unavailableReason && <p role="status" className="mb-5 text-sm text-text-secondary">{preview.unavailableReason}{s.connected && connect && <span className="ml-3 inline-flex">{connect}</span>}</p>}
     {actionError && !modal && <p role="alert" className="mb-5 text-sm text-error-700">{actionError}</p>}
     {preview.error && <p role="alert" className="mb-5 text-sm text-text-secondary">{preview.error} <button type="button" onClick={() => preview.refresh()} className="underline underline-offset-4">{liveCopy.refresh}</button></p>}
+    {completion?.status === "reconciled" && !execution && <p role="status" className="mb-5 rounded-box border border-border p-4 text-sm">{exitCopy.reconciled}</p>}
     {completion?.status === "nonce-consumed" && !execution && <p role="status" className="mb-5 rounded-box border border-border p-4 text-sm">{completion.intent?.kind === "safe" ? liveCopy.proposalNonceConsumed : liveCopy.transactionNonceConsumed}</p>}
     {completion?.status === "failed" && !execution && <p role="alert" className="mb-5 rounded-box border border-border p-4 text-sm">{liveCopy.executionFailed}</p>}
     {flow?.phase === "paused" && !flow.canContinue && !modal && <p role="status" className="mb-5 text-sm text-text-secondary">{flow.error}</p>}
-    {execution && !modal && <PendingExecution pending={execution} refresh={preview.refreshPending} runtime={runtime} walletPromptActive={preview.walletPromptActive} />}
+    {execution && !modal && <PendingExecution key={recoveryPendingIdentity(execution)} pending={execution} refresh={preview.refreshPending} reconcile={preview.reconcilePending} runtime={runtime} walletPromptActive={preview.walletPromptActive} />}
     {flow?.phase === "paused" && flow.canContinue && !modal ? <section className="mb-6 flex flex-wrap items-center justify-between gap-4 rounded-box border border-tokyo-600 p-5">
       <div><h2 className="font-bold">{flow.receivedWeth > 0n ? exitCopy.partComplete : exitCopy.paused}</h2><p className="mt-1 text-sm text-text-secondary">{flow.receivedWeth > 0n ? exitCopy.received(amount(flow.receivedWeth)) : flow.error}</p></div>
       <Button variant="yeth" disabled={!!execution} onClick={resumeFlow}>{exitCopy.continue}</Button>
@@ -252,7 +254,7 @@ export function RecoveryDashboard({ controller: preview, mode: runtime = "mock",
     </section>
 
     <Modal className="max-h-[calc(100dvh-2rem)] overflow-y-auto" isOpen={modal !== null} onClose={preview.exit ? close : () => { if (!busy) setModal(null); }} title={preview.exit ? modal === "auction" ? review?.mode === "auction" ? exitCopy.takeAuction : exitCopy.exitAuction : words.exitAction : pending ? text.secondStep : review?.mode === "auction" && modal === "auction" ? polish.reviewPartial : polish.reviewFull}>
-      {preview.exit ? flowActive && flow ? <RecoveryExitProgress auction={!!review || flow.receivedWeth > 0n && flow.step === "redeem"} redeem={!review || review.mode === "complete" && review.originalShares > review.shares + 2n} state={flow} walletPromptActive={preview.walletPromptActive ?? false} pending={execution && (execution.kind === "safe" || execution.status === "attention" || flow.phase === "awaiting") ? <PendingExecution pending={execution} refresh={preview.refreshPending} runtime={runtime} walletPromptActive={preview.walletPromptActive} /> : undefined} onContinue={() => void preview.exit!.continue()} onClose={close} /> : <div className="space-y-5">
+      {preview.exit ? flowActive && flow ? <RecoveryExitProgress auction={!!review || flow.receivedWeth > 0n && flow.step === "redeem"} redeem={!review || review.mode === "complete" && review.originalShares > review.shares + 2n} state={flow} walletPromptActive={preview.walletPromptActive ?? false} pending={execution && (execution.kind === "safe" || execution.status === "attention" || flow.phase === "awaiting") ? <PendingExecution key={recoveryPendingIdentity(execution)} pending={execution} refresh={preview.refreshPending} reconcile={preview.reconcilePending} runtime={runtime} walletPromptActive={preview.walletPromptActive} /> : undefined} onContinue={() => void preview.exit!.continue()} onClose={close} /> : <div className="space-y-5">
         <div className="rounded-box bg-surface-secondary p-5">
           <p className="text-sm text-text-secondary">{exitCopy.estimatedRecovery}</p>
           {reviewRate !== null && <p className="mt-2 font-number text-5xl font-bold tracking-tight">{pct(reviewRate)}</p>}
@@ -280,7 +282,7 @@ export function RecoveryDashboard({ controller: preview, mode: runtime = "mock",
         <Button variant="ghost" className="w-full" onClick={close}>{words.close}</Button>
       </div> : <div className="space-y-5">
         <p className="text-sm text-text-secondary">{isLive ? modal === "auction" ? liveCopy.auctionLimit : liveCopy.redeemReview : copy.confirm.simulation}</p>
-        {execution && <PendingExecution pending={execution} refresh={preview.refreshPending} runtime={runtime} walletPromptActive={preview.walletPromptActive} />}
+        {execution && <PendingExecution key={recoveryPendingIdentity(execution)} pending={execution} refresh={preview.refreshPending} reconcile={preview.reconcilePending} runtime={runtime} walletPromptActive={preview.walletPromptActive} />}
         {modal === "auction" && review && <div data-testid="review-choice" className="rounded-box border border-tokyo-600 p-4">
           <p className="text-xs text-text-secondary">{polish.yourChoice}</p>
           <p className="mt-1 font-bold">{review.mode === "auction" ? polish.auctionOnly : polish.exitFully}</p>
@@ -327,14 +329,18 @@ function Row({ label, value }: { label: string; value: string }) {
   return <div className="flex flex-wrap items-start justify-between gap-x-4 gap-y-1"><span className="text-text-secondary">{label}</span><span className="font-number text-right">{value}</span></div>;
 }
 
-function PendingExecution({ pending, refresh, runtime, walletPromptActive = false }: {
-  pending: RecoveryPending; refresh?: (submissionHash?: `0x${string}`) => Promise<unknown>; runtime: "mock" | "live" | "fork"; walletPromptActive?: boolean;
+function PendingExecution({ pending, refresh, reconcile, runtime, walletPromptActive = false }: {
+  pending: RecoveryPending; refresh?: (submissionHash?: `0x${string}`, executionHash?: `0x${string}`) => Promise<unknown>; reconcile?: RecoveryController["reconcilePending"]; runtime: "mock" | "live" | "fork"; walletPromptActive?: boolean;
 }) {
   const [checking, setChecking] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const safe = pending.kind === "safe";
   const [recoveredHash, setRecoveredHash] = useState("");
+  const [executionHash, setExecutionHash] = useState("");
   const [detailsOpen, setDetailsOpen] = useState(false);
+  const [reconciliation, setReconciliation] = useState(false);
+  const [queueChecked, setQueueChecked] = useState(false);
+  const [candidateChecked, setCandidateChecked] = useState(false);
   if (walletPromptActive && pending.status === "submitting") return <p role="status" className="text-sm text-text-secondary">{exitCopy.confirmWallet}</p>;
   return <section data-testid={safe ? "recovery-safe-pending" : "recovery-transaction-pending"} className="space-y-3 rounded-box border border-border p-4" aria-label={safe ? liveCopy.safePendingTitle : liveCopy.transactionPendingTitle}>
     <h3 className="text-sm font-bold">{safe ? liveCopy.safePendingTitle : liveCopy.transactionPendingTitle}</h3>
@@ -351,15 +357,43 @@ function PendingExecution({ pending, refresh, runtime, walletPromptActive = fals
       {detailsOpen && <>
       {pending.submissionHash && <p className="my-2 break-all">{safe ? liveCopy.safeProposal : liveCopy.walletSubmission}: {pending.submissionHash}</p>}
       {pending.transactionHash && runtime === "live" && <TransactionLink hash={pending.transactionHash} />}
+      {pending.submissionHash && !pending.corrupt && <div className="my-3 space-y-3">
+        <label className="block space-y-2"><span>{exitCopy.executionHash}</span><input className="block w-full rounded border border-border bg-surface px-3 py-2 font-mono text-xs" value={executionHash} onChange={event => setExecutionHash(event.target.value.trim())} autoComplete="off" spellCheck={false} maxLength={66} /></label>
+        <Button variant="secondary" disabled={checking || !refresh || !isRecoveryHash(executionHash)} isLoading={checking} onClick={async () => {
+          if (!isRecoveryHash(executionHash)) return;
+          setChecking(true); setError(null);
+          try { await refresh?.(undefined, executionHash); }
+          catch (cause) { setError(cause instanceof Error ? cause.message : liveCopy.failed); }
+          finally { setChecking(false); }
+        }}>{exitCopy.checkExecutionHash}</Button>
+      </div>}
       {!pending.submissionHash && !pending.corrupt && <div className="space-y-3">
         <p>{exitCopy.recoveryHelp}</p>
-        <label className="block space-y-2"><span>{safe ? liveCopy.recoverSafeHash : liveCopy.recoverTransactionHash}</span><input className="block w-full rounded border border-border bg-surface px-3 py-2 font-mono text-xs" value={recoveredHash} onChange={event => setRecoveredHash(event.target.value.trim())} autoComplete="off" spellCheck={false} /></label>
+        <label className="block space-y-2"><span>{safe ? liveCopy.recoverSafeHash : liveCopy.recoverTransactionHash}</span><input className="block w-full rounded border border-border bg-surface px-3 py-2 font-mono text-xs" value={recoveredHash} onChange={event => { setRecoveredHash(event.target.value.trim()); setReconciliation(false); setQueueChecked(false); setCandidateChecked(false); }} autoComplete="off" spellCheck={false} /></label>
         <Button variant="secondary" disabled={checking || !refresh || !isRecoveryHash(recoveredHash)} isLoading={checking} onClick={async () => {
           if (!isRecoveryHash(recoveredHash)) return;
           setChecking(true); setError(null);
-          try { await refresh?.(recoveredHash); } catch (cause) { setError(cause instanceof Error ? cause.message : liveCopy.failed); }
+          try {
+            const result = await refresh?.(recoveredHash);
+            if (result && typeof result === "object" && "status" in result && result.status === "reconciliation-required") {
+              setCandidateChecked(true); setReconciliation(true); setQueueChecked(false);
+            }
+          } catch (cause) { setError(cause instanceof Error ? cause.message : liveCopy.failed); }
           finally { setChecking(false); }
         }}>{safe ? liveCopy.checkSafeExecution : liveCopy.checkExecution}</Button>
+        <p>{exitCopy.originalCall}: {pending.action}; {exitCopy.shareLimit}: {pending.maxShares}{pending.requestedWeth ? "; WETH: " + pending.requestedWeth : ""}</p>
+        {!reconciliation && <Button variant="ghost" disabled={checking || !reconcile} onClick={() => { setReconciliation(true); setQueueChecked(false); }}>{exitCopy.reviewUncertain}</Button>}
+        {reconciliation && <div className="space-y-3">
+          {candidateChecked && <p>{exitCopy.candidateVerified}</p>}
+          <p>{exitCopy.queueReviewHelp}</p>
+          <label className="flex items-start gap-2"><input type="checkbox" checked={queueChecked} onChange={event => setQueueChecked(event.target.checked)} /><span>{exitCopy.queueAcknowledgment}</span></label>
+          <Button variant="secondary" disabled={checking || !reconcile || !queueChecked || (!!recoveredHash && !candidateChecked)} isLoading={checking} onClick={async () => {
+            setChecking(true); setError(null);
+            try { await reconcile?.(pending, isRecoveryHash(recoveredHash) ? recoveredHash : undefined, queueChecked); }
+            catch (cause) { setError(cause instanceof Error ? cause.message : liveCopy.failed); }
+            finally { setChecking(false); }
+          }}>{exitCopy.finishQueueReview}</Button>
+        </div>}
       </div>}
       </>}
     </div>

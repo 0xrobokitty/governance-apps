@@ -1,3 +1,6 @@
+// Domain tests own preflight and simulation; shared wallet tracking has separate integration coverage.
+vi.mock("@/lib/tx/tracked-write", () => ({ trackedContractWrite: (_request: unknown, send: () => Promise<unknown>) => send() }));
+
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { getAddress, type Address, type PublicClient } from "viem";
 import {

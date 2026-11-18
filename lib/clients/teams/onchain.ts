@@ -1,3 +1,4 @@
+import { trackedContractWrite } from "@/lib/tx/tracked-write";
 import {
   erc20Abi,
   formatUnits,
@@ -517,10 +518,10 @@ async function simulateValidatedTeamsWrite(
       continue;
     }
     await context.assertWalletAndChain();
-    return context.runtime.writeContract(
-      context.runtime.wagmiConfig,
-      removeTeamsSimulationBlock(simulation.request) as never
-    );
+    const walletRequest = removeTeamsSimulationBlock(simulation.request);
+    return trackedContractWrite(walletRequest, () => context.runtime.writeContract(
+      context.runtime.wagmiConfig, walletRequest as never
+    ), "Teams transaction");
   }
 
   throw new TeamsWriteValidationError(

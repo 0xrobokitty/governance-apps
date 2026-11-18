@@ -64,3 +64,9 @@ The [recovery auction milestone](recovery-auctions.md) records the mock preview,
 The [live dashboard runbook](recovery-live.md) defines the Stats v3 integration, transaction limits, and local fork review.
 Production and preprod builds set the live-dashboard flag. The exposure flag controls public access.
 See the runbook for receipt verification, pending actions, and fork acceptance cases.
+
+## Safe submissions
+
+The shared transaction writer retains unresolved Safe submissions across reloads.
+The wallet status panel checks execution without sending another transaction.
+See [Safe transaction tracking](../../shared/frontend-architecture.md#safe-transaction-tracking) for receipt checks and recovery limits.

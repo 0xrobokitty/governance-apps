@@ -102,3 +102,9 @@ The bootstrap indicator starts disabled for live data and for mock sessions with
 Mock initialization retains cancellation checks before it updates the runtime store.
 
 See the [compiler and linter requirements](../../shared/testing.md#compiler-and-linter-compatibility) for toolchain compatibility.
+
+## Safe submissions
+
+The shared transaction writer retains unresolved Safe submissions across reloads.
+The wallet status panel checks execution without sending another transaction.
+See [Safe transaction tracking](../../shared/frontend-architecture.md#safe-transaction-tracking) for receipt checks and recovery limits.

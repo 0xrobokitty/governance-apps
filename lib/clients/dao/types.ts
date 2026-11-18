@@ -1,3 +1,4 @@
+import type { DaoWalletSubmission as WalletSubmission } from "./wallet-submission";
 import type { Address, Hex } from "viem";
 
 export type DaoUnixSeconds = number;
@@ -635,12 +636,13 @@ export type DaoMockTransactionOutcome =
   | "network-error";
 
 export type DaoPendingAction = {
-  receiptState?: "unknown" | "confirmed" | "reverted" | "replaced";
+  receiptState?: "unknown" | "confirmed" | "reverted" | "replaced" | "consumed" | "reconciliation_required";
+  walletSubmission?: WalletSubmission;
   confirmationError?: string;
   action: DaoActionType;
   ref: DaoProposalRef;
   actor: Address;
-  transactionHash: Hex;
+  transactionHash: Hex | null;
   submittedAt: DaoUnixSeconds;
   direction: DaoVoteDirection | null;
   effectiveVotingWeight: bigint | null;

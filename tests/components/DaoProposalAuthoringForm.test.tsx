@@ -1,3 +1,7 @@
+import type { Hex } from "viem";
+import { recoveredReview } from "@/tests/fixtures/dao-pinata-recovery";
+import type { DaoAuthoringServices } from "@/lib/clients/dao/authoring-services";
+import { DaoTransactionPendingError, DaoReconciliationRequiredError } from "@/lib/clients/dao/live-receipt";
 import * as mockServices from "@/app/dao/propose/mock-services";
 import { act, fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -794,3 +798,69 @@ function proposerInput(): DaoProposerEligibilityInput {
 function proposerState(patch: Partial<DaoProposerEligibilityInput>) {
   return deriveDaoProposerState({ ...proposerInput(), ...patch });
 }
+
+describe("DAO Safe creation recovery UI", () => {
+  function setup(hash: Hex | null) {
+    const b = recoveredReview(), proposer = { ...deriveDaoProposerState(proposerInput()), address: b.address };
+    const walletSubmission = { account: b.address, chainId: 1, kind: "safe" as const, submittedBlock: "0", ...(hash ? { submissionHash: hash } : {}) };
+    const services: DaoAuthoringServices = {
+      validateForum: vi.fn(), publish: vi.fn(), submit: vi.fn(), confirm: vi.fn().mockRejectedValue(new DaoTransactionPendingError()),
+      register: vi.fn(), index: vi.fn(), recoverSubmission: vi.fn(), finishWalletReview: vi.fn(async () => true),
+    };
+    render(<DaoProposalAuthoringForm address={b.address} now={NOW} proposer={proposer} services={services} recovery={{
+      state: "published", review: b.review, publication: { fingerprint: b.identity.digest, cid: b.identity.cid, canonicalBytes: b.bytes, publishedAt: 100 },
+      transactionHash: hash, expectedEpoch: proposer.expectedVotingEpoch, walletSubmission,
+    }} />);
+    return { services, walletSubmission };
+  }
+  it("shows a queued Safe creation without registering or creating another proposal", async () => {
+    const hash = ("0x" + "ab".repeat(32)) as Hex;
+    const { services } = setup(hash);
+    await screen.findByRole("button", { name: "Retry receipt confirmation" });
+    expect(screen.getByRole("link", { name: "Check in Safe" })).toBeVisible();
+    expect(services.register).not.toHaveBeenCalled();
+    expect(services.submit).not.toHaveBeenCalled();
+  });
+  it("passes the verified original intent to the final manual review", async () => {
+    const { services, walletSubmission } = setup(null);
+    const hash = ("0x" + "ab".repeat(32)) as Hex;
+    const recovered = { ...walletSubmission, submissionHash: hash, hashKind: "unknown" as const, reconciliationRequired: true, reconciliationVerified: false };
+    vi.mocked(services.recoverSubmission!).mockResolvedValue({ state: "submitted", transactionHash: hash, walletSubmission: recovered });
+    vi.mocked(services.confirm).mockRejectedValue(new DaoReconciliationRequiredError(hash));
+    fireEvent.change(screen.getByRole("textbox", { name: "Transaction or Safe proposal hash from your wallet" }), { target: { value: hash } });
+    fireEvent.click(screen.getByRole("button", { name: "Check recovered submission" }));
+    fireEvent.click(await screen.findByRole("button", { name: /I checked the wallet queue/ }));
+    await waitFor(() => expect(services.finishWalletReview).toHaveBeenCalledWith({ ...recovered, reconciliationVerified: true }));
+    expect(services.register).not.toHaveBeenCalled();
+  });
+  it.each(["unmined", "invalid"])("keeps explicit neutral review reachable after an %s candidate", async kind => {
+    const { services, walletSubmission } = setup(null);
+    const hash = ("0x" + "ab".repeat(32)) as Hex;
+    const recovered = { ...walletSubmission, submissionHash: hash, hashKind: "unknown" as const, reconciliationRequired: true, reconciliationVerified: false };
+    vi.mocked(services.recoverSubmission!).mockResolvedValue({ state: "submitted", transactionHash: hash, walletSubmission: recovered });
+    vi.mocked(services.confirm).mockRejectedValue(kind === "unmined" ? new DaoTransactionPendingError() : new Error("Candidate call differs."));
+    fireEvent.change(screen.getByRole("textbox", { name: "Transaction or Safe proposal hash from your wallet" }), { target: { value: hash } });
+    fireEvent.click(screen.getByRole("button", { name: "Check recovered submission" }));
+    await screen.findByRole("button", { name: "Retry receipt confirmation" });
+    expect(screen.queryByRole("button", { name: /I checked the wallet queue/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Review uncertain submission" }));
+    expect(screen.getByText(/It does not cancel a wallet proposal/)).toBeVisible();
+    expect(services.finishWalletReview).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /I checked the wallet queue/ }));
+    await waitFor(() => expect(services.finishWalletReview).toHaveBeenCalledWith(recovered));
+    expect(services.submit).not.toHaveBeenCalled();
+    expect(services.register).not.toHaveBeenCalled();
+  });
+  it("requires explicit acknowledgment for a creation intent with no returned hash", async () => {
+    const { services, walletSubmission } = setup(null);
+    expect(screen.queryByRole("button", { name: /I checked the wallet queue/ })).toBeNull();
+    fireEvent.click(screen.getByRole("button", { name: "Review uncertain submission" }));
+    expect(screen.getByText(/It does not cancel a wallet proposal/)).toBeVisible();
+    expect(services.finishWalletReview).not.toHaveBeenCalled();
+    fireEvent.click(screen.getByRole("button", { name: /I checked the wallet queue/ }));
+    await waitFor(() => expect(services.finishWalletReview).toHaveBeenCalledWith(walletSubmission));
+    expect(services.submit).not.toHaveBeenCalled();
+    expect(services.confirm).not.toHaveBeenCalled();
+    expect(services.register).not.toHaveBeenCalled();
+  });
+});
